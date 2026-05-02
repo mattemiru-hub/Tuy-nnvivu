@@ -76,11 +76,11 @@ export default function ProgramManager({ state, updateState }: { state: AppState
   return (
     <div className="space-y-12 pb-20">
       {/* Create Section */}
-      <section className="bg-white p-10 rounded-[2.5rem] border border-slate-100 shadow-xl shadow-slate-200/40">
-        <h3 className="text-2xl font-black italic tracking-tighter uppercase text-slate-800 mb-8 border-b-4 border-indigo-600 inline-block">{t('setup.create_title')}</h3>
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-10">
-          <div className="lg:col-span-2 space-y-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <section className="bg-white p-6 md:p-10 rounded-[2rem] md:rounded-[2.5rem] border border-slate-100 shadow-xl shadow-slate-200/40">
+        <h3 className="text-xl md:text-2xl font-black italic tracking-tighter uppercase text-slate-800 mb-6 md:mb-8 border-b-4 border-indigo-600 inline-block">{t('setup.create_title')}</h3>
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 md:gap-10">
+          <div className="lg:col-span-2 space-y-4 md:space-y-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
               <div className="space-y-3">
                 <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] pl-1">{t('setup.program_name')}</label>
                 <input 

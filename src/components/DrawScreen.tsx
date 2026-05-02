@@ -82,17 +82,25 @@ export default function DrawScreen({ state, updateState, onNavigate }: { state: 
         if (poolTickets.length > 0) {
           setVisualPool(shuffleArray(poolTickets).slice(0, 5));
         }
-        sounds.playTick();
+        
+        // Fast energetic spinning sounds
+        sounds.playSpinProgress(0.08);
+        
         count++;
         if (count < maxTicks) {
           const factor = count > (maxTicks * 0.7) ? Math.pow(count - (maxTicks * 0.7), 1.6) * 5 : 0;
           animationRef.current = setTimeout(tick, baseInterval + factor);
         } else {
-          setCurrentWinner(winner);
-          setIsDrawing(false);
-          sounds.playSuccess();
-          fireConfetti();
-          recordWinner(winner, selectedPrize);
+          // Play final dramatic drumroll before reveal
+          sounds.playDrumroll();
+          
+          setTimeout(() => {
+            setCurrentWinner(winner);
+            setIsDrawing(false);
+            sounds.playSuccess();
+            fireConfetti();
+            recordWinner(winner, selectedPrize);
+          }, 300);
         }
       } catch (err) {
         setIsDrawing(false);
@@ -145,10 +153,10 @@ export default function DrawScreen({ state, updateState, onNavigate }: { state: 
   const programWinners = state.winners.filter(w => w.programId === currentProgram.id);
 
   return (
-    <div className="flex flex-col lg:flex-row gap-8 pb-12">
-      {/* Selection Side */}
-      <div className="w-full lg:w-80 space-y-6">
-        <div className="relative">
+    <div className="flex flex-col lg:flex-row gap-6 lg:gap-8 pb-32 md:pb-12">
+      {/* Selection Side - Scrollable on top for mobile */}
+      <div className="w-full lg:w-80 space-y-4 lg:space-y-6">
+        <div className="relative order-1 lg:order-none">
           <div className="flex items-center justify-between mb-2 px-1">
             <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">{t('dashboard.library')}</h3>
             <div className={cn(
@@ -160,86 +168,57 @@ export default function DrawScreen({ state, updateState, onNavigate }: { state: 
             </div>
           </div>
           
-          <div className="p-5 bg-white border-2 border-slate-100 rounded-[2rem] shadow-sm">
+          <div className="p-4 lg:p-5 bg-white border-2 border-slate-100 rounded-[1.5rem] lg:rounded-[2rem] shadow-sm">
              <p className="text-[10px] font-black uppercase text-indigo-500 tracking-widest mb-1">Active Session</p>
-             <h4 className="text-xl font-black italic uppercase tracking-tighter text-slate-900 leading-tight">
+             <h4 className="text-lg lg:text-xl font-black italic uppercase tracking-tighter text-slate-900 leading-tight">
                {currentProgram.name}
              </h4>
              <button 
               onClick={() => onNavigate('setup')}
-              className="mt-4 text-[9px] font-black text-slate-400 hover:text-indigo-600 transition-colors uppercase tracking-widest flex items-center gap-1"
+              className="mt-3 lg:mt-4 text-[9px] font-black text-slate-400 hover:text-indigo-600 transition-colors uppercase tracking-widest flex items-center gap-1"
              >
                Switch Session <ChevronRight size={10} />
              </button>
           </div>
         </div>
 
-        <h3 className="text-sm font-bold text-gray-400 uppercase tracking-widest pl-1">{t('draw.program_info')}</h3>
-        <div className="space-y-3">
-          {currentProgram.prizes.map((p) => (
-            <button
-              key={p.id}
-              onClick={() => setSelectedPrizeId(p.id)}
-              disabled={isDrawing || p.remaining === 0}
-              className={cn(
-                "w-full p-4 rounded-2xl border text-left flex items-center gap-3 transition-all relative overflow-hidden",
-                selectedPrize?.id === p.id 
-                  ? "bg-slate-900 border-slate-900 text-white shadow-lg" 
-                  : p.remaining === 0 ? "bg-slate-50 border-slate-100 opacity-60 grayscale" : "bg-white border-gray-100 hover:border-gray-300"
-              )}
-            >
-              <div className="w-10 h-10 rounded-lg overflow-hidden flex-shrink-0 bg-gray-100">
-                {p.image ? <img src={p.image} alt={p.name} className="w-full h-full object-cover" /> : <Trophy size={20} className="m-auto text-slate-300" />}
-              </div>
-              <div className="flex-1 min-w-0">
-                <p className="font-bold text-sm truncate uppercase tracking-tight">{p.name}</p>
-                <div className="flex items-center gap-2 mt-1">
-                   <p className="text-[9px] font-black opacity-50 uppercase">{p.quantity - p.remaining} / {p.quantity} {t('draw.won')}</p>
-                   <div className="flex-1 h-1 bg-slate-200 rounded-full overflow-hidden">
-                      <div className="h-full bg-energy-yellow" style={{ width: `${((p.quantity - p.remaining) / p.quantity) * 100}%` }} />
-                   </div>
+        <div className="order-2 overflow-x-auto lg:overflow-x-visible pb-2 lg:pb-0 scrollbar-hide">
+          <h3 className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-3 lg:mb-4 px-1">{t('draw.program_info')}</h3>
+          <div className="flex lg:flex-col gap-3 min-w-max lg:min-w-0 pr-4 lg:pr-0">
+            {currentProgram.prizes.map((p) => (
+              <button
+                key={p.id}
+                onClick={() => setSelectedPrizeId(p.id)}
+                disabled={isDrawing || p.remaining === 0}
+                className={cn(
+                  "w-48 lg:w-full p-4 rounded-[1.5rem] lg:rounded-2xl border text-left flex items-center gap-3 transition-all relative overflow-hidden flex-shrink-0 lg:flex-shrink-1",
+                  selectedPrize?.id === p.id 
+                    ? "bg-slate-900 border-slate-900 text-white shadow-lg" 
+                    : p.remaining === 0 ? "bg-slate-50 border-slate-100 opacity-60 grayscale" : "bg-white border-gray-100 hover:border-gray-300"
+                )}
+              >
+                <div className="w-10 h-10 rounded-lg overflow-hidden flex-shrink-0 bg-gray-100">
+                  {p.image ? <img src={p.image} alt={p.name} className="w-full h-full object-cover" /> : <Trophy size={20} className="m-auto text-slate-300" />}
                 </div>
-              </div>
-              {selectedPrize?.id === p.id && <Play size={14} className="fill-current animate-pulse text-energy-yellow" />}
-            </button>
-          ))}
-        </div>
-
-        <div className="bg-slate-900/5 p-6 rounded-[2rem] border border-slate-100 space-y-4">
-           <div className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-white rounded-xl flex items-center justify-center shadow-sm text-blue-600">
-                 <Info size={20} />
-              </div>
-              <div>
-                 <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest leading-none">{t('draw.program_info')}</p>
-                 <p className="text-xs font-black text-slate-800 mt-1">{currentProgram.name}</p>
-              </div>
-           </div>
-           <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-1">
-                 <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">{t('draw.total_prizes')}</p>
-                 <p className="text-sm font-black text-slate-900">{currentProgram.prizes.reduce((a, b) => a + b.quantity, 0)}</p>
-              </div>
-              <div className="space-y-1">
-                 <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">{t('common.winners_caps')}</p>
-                 <p className="text-sm font-black text-energy-vibrant">{programWinners.length}</p>
-              </div>
-              <div className="space-y-1">
-                 <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">{t('common.tickets')}</p>
-                 <p className="text-sm font-black text-slate-900">{currentProgram.ticketPool.length}</p>
-              </div>
-              <div className="space-y-1">
-                 <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Eligible</p>
-                 <p className="text-sm font-black text-blue-600">{getEligibleTickets(currentProgram, state.winners, selectedPrize).length}</p>
-              </div>
-           </div>
+                <div className="flex-1 min-w-0">
+                  <p className="font-bold text-xs lg:text-sm truncate uppercase tracking-tight">{p.name}</p>
+                  <div className="flex items-center gap-2 mt-1">
+                    <p className="text-[8px] lg:text-[9px] font-black opacity-50 uppercase">{p.quantity - p.remaining}/{p.quantity}</p>
+                    <div className="flex-1 h-1 bg-slate-200 rounded-full overflow-hidden">
+                        <div className="h-full bg-energy-yellow" style={{ width: `${((p.quantity - p.remaining) / p.quantity) * 100}%` }} />
+                    </div>
+                  </div>
+                </div>
+              </button>
+            ))}
+          </div>
         </div>
       </div>
 
       {/* Drawing Stage */}
-      <div className="flex-1">
+      <div className="flex-1 order-3 lg:order-none">
         <div className={cn(
-          "text-white rounded-[3rem] overflow-hidden shadow-[0_40px_100px_rgba(30,41,59,0.2)] min-h-[700px] flex flex-col relative transition-colors duration-700",
+          "text-white rounded-[2rem] lg:rounded-[3rem] overflow-hidden shadow-[0_40px_100px_rgba(30,41,59,0.2)] min-h-[500px] lg:min-h-[700px] flex flex-col relative transition-all duration-700",
           isDrawing ? "bg-slate-900" : currentWinner ? "bg-indigo-900" : "bg-energy-vibrant"
         )}>
           
@@ -337,21 +316,43 @@ export default function DrawScreen({ state, updateState, onNavigate }: { state: 
             )}
           </div>
 
-          <div className="p-12 border-t border-white/5 bg-white/5 flex items-center justify-center relative z-10 backdrop-blur-3xl">
+          <div className="p-8 lg:p-12 border-t border-white/5 bg-white/5 flex items-center justify-center relative z-10 backdrop-blur-3xl">
             <button
                onClick={handleDraw}
                disabled={isDrawing || !selectedPrize}
                className={cn(
-                 "group relative flex items-center gap-6 px-20 py-7 rounded-full transition-all font-black text-3xl tracking-tighter scale-110",
+                 "group relative flex items-center gap-4 lg:gap-6 px-12 py-5 lg:px-20 lg:py-7 rounded-full transition-all font-black text-2xl lg:text-3xl tracking-tighter scale-100 lg:scale-110",
                  isDrawing || !selectedPrize
                   ? "bg-white/10 text-white/20 cursor-not-allowed" 
-                  : "bg-energy-yellow text-slate-900 hover:bg-white hover:scale-115 active:scale-95 shadow-[0_20px_50px_rgba(250,204,21,0.3)]"
+                  : "bg-energy-yellow text-slate-900 hover:bg-white hover:scale-105 shadow-[0_20px_50px_rgba(250,204,21,0.3)]"
                )}
             >
               {isDrawing ? "CALCULATING..." : t('draw.start')}
-              {!isDrawing && <div className="absolute -top-3 -right-3 w-6 h-6 bg-energy-red rounded-full animate-ping shadow-xl" />}
+              {!isDrawing && <div className="absolute -top-2 -right-2 lg:-top-3 lg:-right-3 w-4 lg:w-6 h-4 lg:h-6 bg-energy-red rounded-full animate-ping shadow-xl" />}
             </button>
           </div>
+        </div>
+
+        {/* Mobile Stats Summary - Only Show on Mobile */}
+        <div className="lg:hidden grid grid-cols-2 gap-3 mt-6">
+           <div className="bg-white p-4 rounded-2xl border border-slate-100 flex items-center gap-3">
+              <div className="w-8 h-8 bg-indigo-50 rounded-lg flex items-center justify-center text-indigo-600">
+                <Users size={16} />
+              </div>
+              <div>
+                <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest">Total Wins</p>
+                <p className="text-sm font-black text-slate-900">{programWinners.length}</p>
+              </div>
+           </div>
+           <div className="bg-white p-4 rounded-2xl border border-slate-100 flex items-center gap-3">
+              <div className="w-8 h-8 bg-blue-50 rounded-lg flex items-center justify-center text-blue-600">
+                <TicketIcon size={16} />
+              </div>
+              <div>
+                <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest">Pool Size</p>
+                <p className="text-sm font-black text-slate-900">{currentProgram.ticketPool.length}</p>
+              </div>
+           </div>
         </div>
       </div>
     </div>

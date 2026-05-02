@@ -17,7 +17,7 @@
   body {
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
-    @apply bg-slate-50 text-slate-900;
+    @apply bg-[#FFFDF0] text-slate-900;
   }
 }
 

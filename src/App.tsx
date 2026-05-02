@@ -23,6 +23,7 @@ export default function App() {
   const { t, i18n } = useTranslation();
   const [state, setState] = useState<AppState>(loadState());
   const [activeTab, setActiveTab] = useState<'dashboard' | 'setup' | 'prizes' | 'upload' | 'draw' | 'history'>('dashboard');
+  const [showSidebar, setShowSidebar] = useState(true);
 
   useEffect(() => {
     saveState(state);
@@ -49,9 +50,15 @@ export default function App() {
   const currentProgram = state.programs.find(p => p.id === state.activeProgramId) || state.programs[0];
 
   return (
-    <div className="flex h-screen bg-slate-50 text-slate-900 font-sans selection:bg-energy-yellow selection:text-black">
+    <div className={cn(
+      "flex h-screen text-slate-900 font-sans selection:bg-energy-yellow selection:text-black transition-colors duration-1000",
+      activeTab === 'draw' && !showSidebar ? "bg-slate-900" : "bg-[#FFFDF0]"
+    )}>
       {/* Sidebar */}
-      <aside className="w-72 bg-white border-r border-slate-100 flex flex-col shadow-[10px_0_40px_rgba(0,0,0,0.02)]">
+      <aside className={cn(
+        "bg-white border-r border-slate-100 flex flex-col shadow-[10px_0_40px_rgba(0,0,0,0.02)] transition-all duration-500 overflow-hidden relative z-50",
+        showSidebar ? "w-72 opacity-100 translate-x-0" : "w-0 opacity-0 -translate-x-full pointer-events-none"
+      )}>
         <div className="p-8 pb-4">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 bg-energy-vibrant rounded-xl flex items-center justify-center shadow-lg shadow-indigo-500/20 rotate-3">
@@ -104,10 +111,17 @@ export default function App() {
       </aside>
 
       {/* Main Content */}
-      <main className="flex-1 overflow-y-auto relative bg-[#fcfcfc]">
-        <header className="sticky top-0 z-10 bg-white/70 backdrop-blur-xl px-12 py-6 flex justify-between items-center border-b border-gray-100">
-          <div>
-            <h2 className="text-2xl font-black tracking-tighter text-slate-900 uppercase italic">
+      <main className="flex-1 overflow-y-auto relative bg-transparent">
+        <header className="sticky top-0 z-10 bg-white/70 backdrop-blur-xl px-4 lg:px-12 py-4 lg:py-6 flex justify-between items-center border-b border-gray-100/50">
+          <div className="flex items-center gap-4">
+            <button 
+              onClick={() => setShowSidebar(!showSidebar)}
+              className="w-10 h-10 flex items-center justify-center bg-slate-100 hover:bg-slate-200 rounded-xl text-slate-500 transition-all"
+              title="Toggle Menu"
+            >
+              {showSidebar ? <PlusCircle className="rotate-45" size={20} /> : <LayoutGrid size={20} />}
+            </button>
+            <h2 className="text-xl lg:text-2xl font-black tracking-tighter text-slate-900 uppercase italic truncate">
               {navItems.find(i => i.id === activeTab)?.label}
             </h2>
           </div>
