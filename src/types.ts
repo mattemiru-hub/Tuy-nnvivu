@@ -42,6 +42,8 @@ export interface DrawProgram {
   rules: RuleConfig;
   ticketPool: Ticket[];
   isActive: boolean;
+  month?: number;
+  year?: number;
 }
 
 export interface Winner {
@@ -54,12 +56,14 @@ export interface Winner {
   prizeImage?: string;
   ticketId: string;
   ticketName?: string;
+  email?: string;
   employeeId?: string;
   department?: string;
   position?: string;
   channel?: string;
   lineManager?: string;
   region?: string;
+  prizeRemainingAtDraw?: number;
 }
 
 export interface AppState {

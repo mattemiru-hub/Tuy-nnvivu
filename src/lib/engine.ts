@@ -26,7 +26,7 @@ export function getEligibleTickets(
       const personWins = winners.filter(w => 
         w.programId === program.id && 
         ((empId && w.employeeId === empId) || 
-         (email && w.ticketName === name) || 
+         (email && w.email === email) || 
          (name && w.ticketName === name))
       );
       if (personWins.length >= rules.maxWinsPerPerson) return false;

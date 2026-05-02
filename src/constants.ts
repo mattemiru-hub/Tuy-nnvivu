@@ -73,7 +73,26 @@ export function loadState(): AppState {
   const stored = localStorage.getItem(STORAGE_KEY);
   if (stored) {
     try {
-      return JSON.parse(stored);
+      const parsed = JSON.parse(stored);
+      const programs = (parsed.programs || INITIAL_STATE.programs).map((p: any) => ({
+        ...DEFAULT_RULES,
+        ...p,
+        prizes: p.prizes || [],
+        ticketPool: p.ticketPool || [],
+      }));
+
+      let activeProgramId = parsed.activeProgramId;
+      if (programs.length > 0 && (!activeProgramId || !programs.find((p: any) => p.id === activeProgramId))) {
+        activeProgramId = programs[0].id;
+      }
+
+      return {
+        ...INITIAL_STATE,
+        ...parsed,
+        programs,
+        activeProgramId,
+        winners: parsed.winners || [],
+      };
     } catch (e) {
       console.error("Failed to parse stored state", e);
     }

@@ -6,14 +6,35 @@
 import React, { useCallback, useState } from 'react';
 import { useDropzone } from 'react-dropzone';
 import * as XLSX from 'xlsx';
-import { Upload, FileText, CheckCircle2, AlertCircle, RefreshCcw } from 'lucide-react';
-import { AppState, Ticket } from '../types';
-import { cn } from '../lib/utils';
+import { Upload, FileText, CheckCircle2, AlertCircle, RefreshCcw, Table as TableIcon, Split } from 'lucide-react';
+import { AppState, Ticket, DrawProgram } from '../types';
+import { generateId, cn } from '../lib/utils';
+import { INITIAL_PRIZES } from '../constants';
+import { useTranslation } from 'react-i18next';
+
+interface ColumnMapping {
+  id: string;
+  name: string;
+  employeeId: string;
+  department: string;
+  programNameCol?: string;
+  [key: string]: string | undefined;
+}
 
 export default function DataUpload({ state, updateState }: { state: AppState, updateState: (updater: (prev: AppState) => AppState) => void }) {
+  const { t } = useTranslation();
   const [isProcessing, setIsProcessing] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [preview, setPreview] = useState<Ticket[]>([]);
+  const [rawData, setRawData] = useState<any[]>([]);
+  const [columns, setColumns] = useState<string[]>([]);
+  const [mapping, setMapping] = useState<ColumnMapping>({
+    id: '',
+    name: '',
+    employeeId: '',
+    department: '',
+    programNameCol: ''
+  });
+  const [isSplitMode, setIsSplitMode] = useState(false);
 
   const onDrop = useCallback((acceptedFiles: File[]) => {
     const file = acceptedFiles[0];
@@ -35,34 +56,22 @@ export default function DataUpload({ state, updateState }: { state: AppState, up
           throw new Error("File Excel không có dữ liệu hoặc sai định dạng.");
         }
 
-        // Map data to Ticket format
-        // Required column: "Phiếu" or "id" or "code"
-        const mappedData: Ticket[] = jsonData.map((row, index) => {
-          const findVal = (keys: string[]) => {
-            const found = Object.keys(row).find(k => keys.some(key => k.toLowerCase().includes(key.toLowerCase())));
-            return found ? row[found] : null;
-          };
-
-          const findValString = (keys: string[]) => {
-            const val = findVal(keys);
-            return val !== null && val !== undefined ? String(val) : "";
-          };
-
-          return {
-            id: findValString(["phiếu", "ticket", "code", "id", "mã"]) || `T-${1000 + index}`,
-            name: findValString(["tên", "name", "họ tên", "full name"]) || "-",
-            employeeId: findValString(["mã nv", "id", "employee", "manv"]) || "-",
-            department: findValString(["phòng", "department", "bộ phận", "team"]) || "-",
-            position: findValString(["vị trí", "chức danh", "position", "title"]) || "-",
-            channel: findValString(["kênh", "channel"]) || "-",
-            lineManager: findValString(["manager", "người quản lý", "line manager"]) || "-",
-            region: findValString(["khu vực", "region", "miền"]) || "-",
-            email: findValString(["email", "thư"]),
-            ...row
-          };
+        const cols = Object.keys(jsonData[0]);
+        setColumns(cols);
+        setRawData(jsonData);
+        
+        // Auto-detect mappings
+        const autoMap: ColumnMapping = { id: '', name: '', employeeId: '', department: '', programNameCol: '' };
+        cols.forEach(col => {
+          const l = col.toLowerCase();
+          if (l.includes('phiếu') || l.includes('ticket') || l.includes('id')) autoMap.id = col;
+          if (l.includes('tên') || l.includes('name')) autoMap.name = col;
+          if (l.includes('mã') || l.includes('staff')) autoMap.employeeId = col;
+          if (l.includes('phòng') || l.includes('dept')) autoMap.department = col;
+          if (l.includes('ct') || l.includes('program')) autoMap.programNameCol = col;
         });
+        setMapping(autoMap);
 
-        setPreview(mappedData);
       } catch (err: any) {
         setError(err.message || "Lỗi xử lý file Excel");
       } finally {
@@ -84,39 +93,110 @@ export default function DataUpload({ state, updateState }: { state: AppState, up
   } as any);
 
   const handleApply = () => {
-    if (preview.length === 0) return;
-    
+    if (rawData.length === 0) return;
+
+    const processedData = rawData.map((row, index) => ({
+      id: String(row[mapping.id] || `T-${1000 + index}`),
+      name: String(row[mapping.name] || "-"),
+      employeeId: String(row[mapping.employeeId] || "-"),
+      department: String(row[mapping.department] || "-"),
+      programName: isSplitMode && mapping.programNameCol ? String(row[mapping.programNameCol] || "General") : "",
+      ...row
+    }));
+
     updateState(prev => {
-      const activeProgramId = prev.activeProgramId;
-      if (!activeProgramId) return prev;
+      let newPrograms = [...prev.programs];
+
+      if (isSplitMode && mapping.programNameCol) {
+        const programGroups: Record<string, Ticket[]> = {};
+        processedData.forEach(item => {
+          const pName = item.programName;
+          if (!programGroups[pName]) programGroups[pName] = [];
+          programGroups[pName].push(item);
+        });
+
+        Object.entries(programGroups).forEach(([name, tickets]) => {
+          const existing = newPrograms.find(p => p.name === name);
+          if (existing) {
+            existing.ticketPool = tickets;
+          } else {
+            const newProgram: DrawProgram = {
+              id: `prog-${generateId()}`,
+              name: name,
+              createdAt: Date.now(),
+              prizes: INITIAL_PRIZES.map(p => ({ ...p, id: generateId(), remaining: p.quantity })),
+              rules: {
+                maxWinsPerTicket: 1,
+                maxWinsPerPerson: 1,
+                preventDuplicatePrizeType: true,
+                fairnessRandom: true
+              },
+              ticketPool: tickets,
+              isActive: true,
+              month: new Date().getMonth() + 1,
+              year: new Date().getFullYear()
+            };
+            newPrograms.push(newProgram);
+          }
+        });
+      } else {
+        const activeId = prev.activeProgramId;
+        if (activeId) {
+          newPrograms = newPrograms.map(p => 
+            p.id === activeId ? { ...p, ticketPool: processedData } : p
+          );
+        }
+      }
 
       return {
         ...prev,
-        programs: prev.programs.map(p => 
-          p.id === activeProgramId ? { ...p, ticketPool: preview } : p
-        )
+        programs: newPrograms,
+        activeProgramId: (isSplitMode && newPrograms.length > prev.programs.length) ? newPrograms[newPrograms.length - 1].id : prev.activeProgramId
       };
     });
-    
-    setPreview([]);
-    alert(`Đã nạp ${preview.length} phiếu vào chương trình hiện tại!`);
+
+    setRawData([]);
+    alert("Đã xử lý dữ liệu và nạp vào hệ thống!");
   };
 
   return (
     <div className="space-y-8 pb-20">
+      {/* Context Header */}
+      {!rawData.length && state.activeProgramId && (
+        <div className="bg-slate-50 border border-slate-100 p-6 rounded-[2rem] flex items-center justify-between">
+           <div className="flex items-center gap-4">
+              <div className="w-12 h-12 bg-white rounded-2xl flex items-center justify-center text-indigo-600 shadow-sm border border-slate-100">
+                <CheckCircle2 size={24} />
+              </div>
+              <div>
+                <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest">Active Target Session</p>
+                <p className="font-black text-slate-900 italic uppercase tracking-tighter">
+                  {state.programs.find(p => p.id === state.activeProgramId)?.name}
+                </p>
+              </div>
+           </div>
+           <div className="text-right">
+              <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest">Pool Status</p>
+              <p className="font-black text-indigo-600">
+                {state.programs.find(p => p.id === state.activeProgramId)?.ticketPool.length || 0} Tickets Loaded
+              </p>
+           </div>
+        </div>
+      )}
+
       <div className="bg-white p-10 rounded-[2.5rem] border border-slate-100 shadow-xl shadow-slate-200/40">
         <div className="flex flex-col md:flex-row justify-between items-start mb-8 gap-6">
           <div>
             <h3 className="text-2xl font-black italic tracking-tighter uppercase text-slate-800">Import Master Data</h3>
             <p className="text-sm text-slate-400 mt-1 font-medium">
-              Populate your draw pool with candidates using an Excel (.xlsx) file.
+              {t('upload.supports')}
             </p>
           </div>
           <button 
             onClick={() => {
               const ws = XLSX.utils.json_to_sheet([
-                { "Phiếu": "LUCKY001", "Tên": "John Doe", "Mã NV": "NV001", "Phòng ban": "Technology", "Email": "john@example.com", "Vị trí": "Developer", "Kênh": "Fireside", "Người quản lý": "Jane Smith", "Khu vực": "Headquarters" },
-                { "Phiếu": "LUCKY002", "Tên": "Mary Jane", "Mã NV": "NV002", "Phòng ban": "Sales", "Email": "mary@example.com", "Vị trí": "Account Exec", "Kênh": "Field", "Người quản lý": "Richard Roe", "Khu vực": "Satellite Office" }
+                { "Phiếu": "LUCKY001", "Tên": "John Doe", "Mã NV": "NV001", "Phòng ban": "Technology", "Program": "New Year 2024" },
+                { "Phiếu": "LUCKY002", "Tên": "Mary Jane", "Mã NV": "NV002", "Phòng ban": "Sales", "Program": "Summer 2024" }
               ]);
               const wb = XLSX.utils.book_new();
               XLSX.utils.book_append_sheet(wb, ws, "Candidates");
@@ -128,28 +208,124 @@ export default function DataUpload({ state, updateState }: { state: AppState, up
           </button>
         </div>
 
-        <div 
-          {...getRootProps()} 
-          className={cn(
-            "border-4 border-dashed rounded-[2rem] p-16 transition-all cursor-pointer flex flex-col items-center justify-center text-center gap-6 group relative overflow-hidden",
-            isDragActive ? "border-blue-500 bg-blue-50/50" : "border-slate-100 hover:border-blue-400 hover:bg-slate-50"
-          )}
-        >
-          <input {...getInputProps()} />
-          <div className="w-24 h-24 bg-white rounded-full flex items-center justify-center text-slate-400 shadow-2xl group-hover:scale-110 group-hover:rotate-6 transition-transform">
-            <Upload size={40} className="text-blue-600" />
-          </div>
-          <div>
-            <p className="font-black text-xl text-slate-900 tracking-tight">Drop your Excel file here</p>
-            <p className="text-sm text-slate-400 mt-2 font-medium">Supports .xlsx, .xls, .csv (Max 10MB)</p>
-          </div>
-          {isProcessing && (
-            <div className="absolute inset-0 bg-white/80 backdrop-blur-sm flex items-center justify-center flex-col gap-4">
-              <RefreshCcw className="animate-spin text-blue-600" size={40} />
-              <p className="font-black uppercase tracking-widest text-sm">Processing Data...</p>
+        {!rawData.length ? (
+          <div 
+            {...getRootProps()} 
+            className={cn(
+              "border-4 border-dashed rounded-[2rem] p-16 transition-all cursor-pointer flex flex-col items-center justify-center text-center gap-6 group relative overflow-hidden",
+              isDragActive ? "border-blue-500 bg-blue-50/50" : "border-slate-100 hover:border-blue-400 hover:bg-slate-50"
+            )}
+          >
+            <input {...getInputProps()} />
+            <div className="w-24 h-24 bg-white rounded-full flex items-center justify-center text-slate-400 shadow-2xl group-hover:scale-110 group-hover:rotate-6 transition-transform">
+              <Upload size={40} className="text-blue-600" />
             </div>
-          )}
-        </div>
+            <div>
+              <p className="font-black text-xl text-slate-900 tracking-tight">{t('upload.drop_files')}</p>
+              <p className="text-sm text-slate-400 mt-2 font-medium">Supports .xlsx, .xls, .csv</p>
+            </div>
+            {isProcessing && (
+              <div className="absolute inset-0 bg-white/80 backdrop-blur-sm flex items-center justify-center flex-col gap-4">
+                <RefreshCcw className="animate-spin text-blue-600" size={40} />
+                <p className="font-black uppercase tracking-widest text-sm">Processing Data...</p>
+              </div>
+            )}
+          </div>
+        ) : (
+          <div className="space-y-8 animate-in fade-in slide-in-from-top-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+              <div className="space-y-6">
+                <h4 className="flex items-center gap-2 font-black uppercase tracking-widest text-xs text-slate-400">
+                  <TableIcon size={16} /> {t('upload.mapping')}
+                </h4>
+                <div className="grid grid-cols-2 gap-4">
+                  {['id', 'name', 'employeeId', 'department'].map(field => (
+                    <div key={field} className="space-y-1.5">
+                      <label className="text-[10px] font-black uppercase text-slate-400 px-1">{field}</label>
+                      <select 
+                        value={mapping[field]} 
+                        onChange={(e) => setMapping(prev => ({ ...prev, [field]: e.target.value }))}
+                        className="w-full px-4 py-3 bg-slate-50 border border-slate-100 rounded-xl text-sm font-bold appearance-none hover:border-blue-300 transition-colors cursor-pointer"
+                      >
+                        <option value="">Select Column</option>
+                        {columns.map(c => <option key={c} value={c}>{c}</option>)}
+                      </select>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div className="space-y-6">
+                <h4 className="flex items-center gap-2 font-black uppercase tracking-widest text-xs text-slate-400">
+                  <Split size={16} /> Mode Selection
+                </h4>
+                <div className="flex flex-col gap-4">
+                   <button 
+                    onClick={() => setIsSplitMode(false)}
+                    className={cn(
+                      "flex items-center gap-4 p-4 rounded-2xl border-2 text-left transition-all",
+                      !isSplitMode ? "bg-blue-50 border-blue-600 text-blue-600 shadow-lg" : "bg-white border-slate-100 text-slate-400 hover:border-slate-200"
+                    )}
+                   >
+                     <div className="w-10 h-10 rounded-xl bg-white flex items-center justify-center shadow-sm">
+                        <CheckCircle2 size={20} />
+                     </div>
+                     <div>
+                        <p className="font-black text-sm uppercase">{t('upload.one_file_per')}</p>
+                        <p className="text-[10px] font-bold opacity-70">Import all data into the current active program.</p>
+                     </div>
+                   </button>
+
+                   <button 
+                    onClick={() => setIsSplitMode(true)}
+                    className={cn(
+                      "flex items-center gap-4 p-4 rounded-2xl border-2 text-left transition-all",
+                      isSplitMode ? "bg-blue-50 border-blue-600 text-blue-600 shadow-lg" : "bg-white border-slate-100 text-slate-400 hover:border-slate-200"
+                    )}
+                   >
+                     <div className="w-10 h-10 rounded-xl bg-white flex items-center justify-center shadow-sm">
+                        <Split size={20} />
+                     </div>
+                     <div>
+                        <p className="font-black text-sm uppercase">{t('upload.one_file_multi')}</p>
+                        <p className="text-[10px] font-bold opacity-70">Automatically split entries into multiple programs based on a column.</p>
+                     </div>
+                   </button>
+
+                   {isSplitMode && (
+                     <div className="animate-in zoom-in-95 mt-2 bg-slate-50 p-4 rounded-2xl border border-slate-100">
+                        <label className="text-[10px] font-black uppercase text-slate-400 mb-2 block">Program Name Column</label>
+                        <select 
+                          value={mapping.programNameCol} 
+                          onChange={(e) => setMapping(prev => ({ ...prev, programNameCol: e.target.value }))}
+                          className="w-full px-4 py-3 bg-white border border-slate-200 rounded-xl text-sm font-bold"
+                        >
+                          <option value="">Select Split Column</option>
+                          {columns.map(c => <option key={c} value={c}>{c}</option>)}
+                        </select>
+                     </div>
+                   )}
+                </div>
+              </div>
+            </div>
+
+            <div className="flex gap-4">
+              <button 
+                onClick={() => setRawData([])}
+                className="flex-1 px-8 py-4 bg-slate-100 text-slate-500 font-black uppercase tracking-widest text-xs rounded-2xl hover:bg-slate-200 transition-colors"
+              >
+                Cancel
+              </button>
+              <button 
+                onClick={handleApply}
+                disabled={!mapping.id || !mapping.name || (isSplitMode && !mapping.programNameCol)}
+                className="flex-[2] px-8 py-4 bg-blue-600 text-white font-black uppercase tracking-widest text-xs rounded-2xl shadow-xl shadow-blue-600/20 hover:bg-blue-700 disabled:opacity-50 disabled:grayscale transition-all"
+              >
+                {t('upload.process')}
+              </button>
+            </div>
+          </div>
+        )}
 
         {error && (
           <div className="mt-4 p-4 bg-red-50 text-red-600 rounded-xl flex items-center gap-3">
@@ -158,66 +334,6 @@ export default function DataUpload({ state, updateState }: { state: AppState, up
           </div>
         )}
       </div>
-
-      {preview.length > 0 && (
-        <div className="bg-white p-10 rounded-[2.5rem] border border-slate-100 shadow-2xl shadow-slate-200/50 animate-in fade-in slide-in-from-bottom-8">
-          <div className="flex flex-col md:flex-row items-center justify-between mb-8 gap-6">
-            <div className="flex items-center gap-4">
-              <div className="w-12 h-12 bg-green-50 rounded-2xl flex items-center justify-center text-green-500">
-                <CheckCircle2 size={28} />
-              </div>
-              <div>
-                <h3 className="text-xl font-black uppercase tracking-tight italic">Scan Finished</h3>
-                <p className="text-sm text-slate-400 font-medium">Found {preview.length} valid tickets in your file.</p>
-              </div>
-            </div>
-            <div className="flex gap-4 w-full md:w-auto">
-              <button 
-                onClick={() => setPreview([])} 
-                className="flex-1 md:flex-none px-6 py-4 text-xs font-black uppercase tracking-widest text-slate-400 border-2 border-slate-100 rounded-2xl hover:bg-slate-50 active:scale-95 transition-all"
-              >
-                Abort
-              </button>
-              <button 
-                onClick={handleApply}
-                className="flex-1 md:flex-none px-10 py-4 text-xs font-black uppercase tracking-widest bg-blue-600 text-white rounded-2xl shadow-lg shadow-blue-600/30 hover:bg-blue-700 active:scale-95 transition-all"
-              >
-                Inject into Pool
-              </button>
-            </div>
-          </div>
-
-          <div className="overflow-hidden border border-slate-100 rounded-[2rem]">
-            <table className="w-full text-left text-sm border-collapse">
-              <thead className="bg-slate-50/50 border-b border-slate-100">
-                <tr>
-                  <th className="px-6 py-4 font-black text-slate-400 uppercase text-[10px] tracking-widest">Draft ID</th>
-                  <th className="px-6 py-4 font-black text-slate-400 uppercase text-[10px] tracking-widest">Candidate Name</th>
-                  <th className="px-6 py-4 font-black text-slate-400 uppercase text-[10px] tracking-widest">Staff Code</th>
-                  <th className="px-6 py-4 font-black text-slate-400 uppercase text-[10px] tracking-widest">Unit / Guild</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-50">
-                {preview.slice(0, 10).map((ticket, i) => (
-                  <tr key={i} className="hover:bg-slate-50/30 transition-colors">
-                    <td className="px-6 py-4 font-mono font-black text-blue-600">{ticket.id}</td>
-                    <td className="px-6 py-4 font-bold text-slate-800">{ticket.name || "-"}</td>
-                    <td className="px-6 py-4 font-medium text-slate-500">{ticket.employeeId || "-"}</td>
-                    <td className="px-6 py-4">
-                       <span className="px-2 py-1 bg-slate-100 text-slate-600 text-[10px] font-black rounded uppercase">{ticket.department || "-"}</span>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-            {preview.length > 10 && (
-              <div className="p-3 text-center bg-gray-50/50 border-t border-gray-100 italic text-xs text-gray-500">
-                Hiển thị 10 trong tổng số {preview.length} hàng
-              </div>
-            )}
-          </div>
-        </div>
-      )}
     </div>
   );
 }

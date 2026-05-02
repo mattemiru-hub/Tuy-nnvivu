@@ -4,8 +4,9 @@
  */
 
 import React, { useState, useEffect } from 'react';
-import { LayoutGrid, PlusCircle, Trophy, History, Upload, Settings, RotateCcw } from 'lucide-react';
+import { LayoutGrid, PlusCircle, Trophy, History, Upload, Settings, RotateCcw, Languages } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
+import { useTranslation } from 'react-i18next';
 import { AppState, DrawProgram, Prize, Winner, Ticket } from './types';
 import { loadState, saveState, INITIAL_STATE } from './constants';
 import { cn } from './lib/utils';
@@ -19,6 +20,7 @@ import DrawScreen from './components/DrawScreen';
 import HistoryView from './components/HistoryView';
 
 export default function App() {
+  const { t, i18n } = useTranslation();
   const [state, setState] = useState<AppState>(loadState());
   const [activeTab, setActiveTab] = useState<'dashboard' | 'setup' | 'prizes' | 'upload' | 'draw' | 'history'>('dashboard');
 
@@ -30,13 +32,18 @@ export default function App() {
     setState(prev => updater(prev));
   };
 
+  const toggleLanguage = () => {
+    const newLang = i18n.language === 'vi' ? 'en' : 'vi';
+    i18n.changeLanguage(newLang);
+  };
+
   const navItems = [
-    { id: 'dashboard', label: 'Tổng quan', icon: LayoutGrid },
-    { id: 'setup', label: 'Chương trình', icon: PlusCircle },
-    { id: 'prizes', label: 'Giải thưởng', icon: Trophy },
-    { id: 'upload', label: 'Dữ liệu', icon: Upload },
-    { id: 'draw', label: 'Quay số', icon: RotateCcw },
-    { id: 'history', label: 'Lịch sử', icon: History },
+    { id: 'dashboard', label: t('nav.dashboard'), icon: LayoutGrid },
+    { id: 'setup', label: t('nav.programs'), icon: PlusCircle },
+    { id: 'prizes', label: t('nav.prizes'), icon: Trophy },
+    { id: 'upload', label: t('nav.upload'), icon: Upload },
+    { id: 'draw', label: t('nav.draw'), icon: RotateCcw },
+    { id: 'history', label: t('nav.history'), icon: History },
   ];
 
   const currentProgram = state.programs.find(p => p.id === state.activeProgramId) || state.programs[0];
@@ -51,8 +58,8 @@ export default function App() {
                <RotateCcw className="text-white" size={24} />
             </div>
             <div>
-              <h1 className="font-black text-xl tracking-tighter uppercase italic leading-none text-slate-900 border-b-2 border-energy-yellow">LUCKYDRAW</h1>
-              <p className="text-[10px] text-slate-400 uppercase tracking-[0.3em] font-black mt-1">PRO ENGINE</p>
+              <h1 className="font-black text-xl tracking-tighter uppercase italic leading-none text-slate-900 border-b-2 border-energy-yellow">{t('app.title')}</h1>
+              <p className="text-[10px] text-slate-400 uppercase tracking-[0.3em] font-black mt-1">{t('app.subtitle')}</p>
             </div>
           </div>
         </div>
@@ -105,15 +112,34 @@ export default function App() {
             </h2>
           </div>
           <div className="flex items-center gap-6">
+             <div className="hidden md:flex items-center gap-3 bg-slate-100 p-1.5 rounded-2xl border border-slate-200">
+               <span className="text-[9px] font-black uppercase text-slate-400 pl-2 tracking-widest">{t('nav.programs')}</span>
+               <select 
+                value={state.activeProgramId || ''} 
+                onChange={(e) => setState(prev => ({ ...prev, activeProgramId: e.target.value }))}
+                className="bg-white border-none rounded-xl px-4 py-2 font-black text-xs shadow-sm outline-none cursor-pointer focus:ring-2 focus:ring-indigo-500/20"
+               >
+                 {state.programs.map(p => (
+                   <option key={p.id} value={p.id}>{p.name}</option>
+                 ))}
+               </select>
+             </div>
+             <button 
+              onClick={toggleLanguage}
+              className="flex items-center gap-2 px-3 py-1.5 bg-slate-100 hover:bg-slate-200 rounded-xl transition-colors text-[10px] font-black uppercase tracking-widest text-slate-600"
+             >
+               <Languages size={14} />
+               {i18n.language === 'vi' ? 'English' : 'Tiếng Việt'}
+             </button>
              <button 
               onClick={() => {
-                if(confirm("Bạn có chắc chắn muốn reset toàn bộ dữ liệu?")) {
+                if(confirm(t('app.confirm_purge'))) {
                   setState(INITIAL_STATE);
                 }
               }}
               className="text-[10px] font-black uppercase tracking-widest text-red-500 hover:text-red-600 transition-colors"
              >
-               Purge Database
+               {t('app.purge')}
              </button>
              <div className="w-10 h-10 rounded-2xl bg-slate-100 border border-slate-200 flex items-center justify-center font-black text-xs">AI</div>
           </div>
