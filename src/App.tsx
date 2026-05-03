@@ -15,14 +15,15 @@ import { cn } from './lib/utils';
 import Dashboard from './components/Dashboard';
 import ProgramManager from './components/ProgramManager';
 import PrizeManager from './components/PrizeManager';
-import DataUpload from './components/DataUpload';
+import ParticipantManager from './components/ParticipantManager';
 import DrawScreen from './components/DrawScreen';
 import HistoryView from './components/HistoryView';
+import SystemSettings from './components/SystemSettings';
 
 export default function App() {
   const { t, i18n } = useTranslation();
   const [state, setState] = useState<AppState>(loadState());
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'setup' | 'prizes' | 'upload' | 'draw' | 'history'>('dashboard');
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'setup' | 'prizes' | 'participants' | 'draw' | 'history' | 'settings'>('dashboard');
   const [showSidebar, setShowSidebar] = useState(true);
 
   useEffect(() => {
@@ -42,9 +43,10 @@ export default function App() {
     { id: 'dashboard', label: t('nav.dashboard'), icon: LayoutGrid },
     { id: 'setup', label: t('nav.programs'), icon: PlusCircle },
     { id: 'prizes', label: t('nav.prizes'), icon: Trophy },
-    { id: 'upload', label: t('nav.upload'), icon: Upload },
+    { id: 'participants', label: t('nav.participants'), icon: Upload },
     { id: 'draw', label: t('nav.draw'), icon: RotateCcw },
     { id: 'history', label: t('nav.history'), icon: History },
+    { id: 'settings', label: t('nav.settings'), icon: Settings },
   ];
 
   const currentProgram = state.programs.find(p => p.id === state.activeProgramId) || state.programs[0];
@@ -111,21 +113,24 @@ export default function App() {
       </aside>
 
       {/* Main Content */}
-      <main className="flex-1 overflow-y-auto relative bg-transparent">
-        <header className="sticky top-0 z-10 bg-white/70 backdrop-blur-xl px-4 lg:px-12 py-4 lg:py-6 flex justify-between items-center border-b border-gray-100/50">
-          <div className="flex items-center gap-4">
+      <main className={cn(
+        "flex-1 relative bg-transparent flex flex-col",
+        activeTab === 'draw' ? "overflow-hidden" : "overflow-y-auto"
+      )}>
+        <header className="sticky top-0 z-10 bg-white/70 backdrop-blur-xl px-4 md:px-8 lg:px-12 py-3 md:py-6 flex justify-between items-center border-b border-gray-100/50 flex-shrink-0">
+          <div className="flex items-center gap-3 md:gap-4 overflow-hidden">
             <button 
               onClick={() => setShowSidebar(!showSidebar)}
-              className="w-10 h-10 flex items-center justify-center bg-slate-100 hover:bg-slate-200 rounded-xl text-slate-500 transition-all"
+              className="w-9 h-9 md:w-10 md:h-10 flex-shrink-0 flex items-center justify-center bg-slate-100 hover:bg-slate-200 rounded-lg md:rounded-xl text-slate-500 transition-all"
               title="Toggle Menu"
             >
-              {showSidebar ? <PlusCircle className="rotate-45" size={20} /> : <LayoutGrid size={20} />}
+              {showSidebar ? <PlusCircle className="rotate-45" size={18} /> : <LayoutGrid size={18} />}
             </button>
-            <h2 className="text-xl lg:text-2xl font-black tracking-tighter text-slate-900 uppercase italic truncate">
+            <h2 className="text-lg md:text-2xl font-black tracking-tighter text-slate-900 uppercase italic truncate">
               {navItems.find(i => i.id === activeTab)?.label}
             </h2>
           </div>
-          <div className="flex items-center gap-6">
+          <div className="flex items-center gap-3 md:gap-6">
              <div className="hidden md:flex items-center gap-3 bg-slate-100 p-1.5 rounded-2xl border border-slate-200">
                <span className="text-[9px] font-black uppercase text-slate-400 pl-2 tracking-widest">{t('nav.programs')}</span>
                <select 
@@ -159,7 +164,10 @@ export default function App() {
           </div>
         </header>
 
-        <div className="p-8 max-w-6xl mx-auto">
+        <div className={cn(
+          "max-w-6xl mx-auto w-full flex-1 min-h-0",
+          activeTab === 'draw' ? "p-0 flex flex-col max-w-none" : "p-4 md:p-8"
+        )}>
           <AnimatePresence mode="wait">
             <motion.div
               key={activeTab}
@@ -167,13 +175,15 @@ export default function App() {
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -10 }}
               transition={{ duration: 0.2 }}
+              className={activeTab === 'draw' ? "h-full" : ""}
             >
               {activeTab === 'dashboard' && <Dashboard state={state} onSwitchProgram={(id) => updateState(s => ({ ...s, activeProgramId: id }))} />}
               {activeTab === 'setup' && <ProgramManager state={state} updateState={updateState} />}
               {activeTab === 'prizes' && <PrizeManager state={state} updateState={updateState} />}
-              {activeTab === 'upload' && <DataUpload state={state} updateState={updateState} />}
+              {activeTab === 'participants' && <ParticipantManager state={state} updateState={updateState} />}
               {activeTab === 'draw' && <DrawScreen state={state} updateState={updateState} onNavigate={setActiveTab} />}
               {activeTab === 'history' && <HistoryView state={state} updateState={updateState} />}
+              {activeTab === 'settings' && <SystemSettings state={state} updateState={updateState} />}
             </motion.div>
           </AnimatePresence>
         </div>

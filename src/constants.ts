@@ -16,6 +16,7 @@ export const INITIAL_PRIZES: Prize[] = [
     remaining: 1,
     priority: 1,
     isActive: true,
+    value: 35000000,
   },
   {
     id: "p2",
@@ -25,6 +26,7 @@ export const INITIAL_PRIZES: Prize[] = [
     remaining: 2,
     priority: 2,
     isActive: true,
+    value: 28000000,
   },
   {
     id: "p3",
@@ -34,6 +36,7 @@ export const INITIAL_PRIZES: Prize[] = [
     remaining: 5,
     priority: 3,
     isActive: true,
+    value: 12000000,
   },
 ];
 
@@ -67,6 +70,9 @@ export const INITIAL_STATE: AppState = {
   ],
   winners: [],
   activeProgramId: "prog-demo",
+  settings: {
+    currency: "VND"
+  }
 };
 
 export function loadState(): AppState {
@@ -77,7 +83,10 @@ export function loadState(): AppState {
       const programs = (parsed.programs || INITIAL_STATE.programs).map((p: any) => ({
         ...DEFAULT_RULES,
         ...p,
-        prizes: p.prizes || [],
+        prizes: (p.prizes || []).map((prize: any) => ({
+          value: 0,
+          ...prize
+        })),
         ticketPool: p.ticketPool || [],
       }));
 
@@ -92,6 +101,7 @@ export function loadState(): AppState {
         programs,
         activeProgramId,
         winners: parsed.winners || [],
+        settings: parsed.settings || INITIAL_STATE.settings,
       };
     } catch (e) {
       console.error("Failed to parse stored state", e);
@@ -101,5 +111,10 @@ export function loadState(): AppState {
 }
 
 export function saveState(state: AppState) {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+  } catch (e) {
+    console.error("Failed to save state to localStorage. Storage might be full.", e);
+    // Optionally notify the user or handle the error gracefully
+  }
 }

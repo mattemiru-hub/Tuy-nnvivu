@@ -14,9 +14,10 @@ const resources = {
         "dashboard": "Dashboard",
         "programs": "Programs",
         "prizes": "Prizes",
-        "upload": "Data Upload",
+        "participants": "Participants",
         "draw": "Draw",
-        "history": "History"
+        "history": "History",
+        "settings": "Settings"
       },
       "dashboard": {
         "active_programs": "Active Programs",
@@ -45,7 +46,9 @@ const resources = {
         "delete": "Delete",
         "edit": "Edit",
         "save": "Save",
-        "cancel": "Cancel"
+        "cancel": "Cancel",
+        "close": "Close",
+        "update": "Update"
       },
       "draw": {
         "start": "START ENGINE",
@@ -63,9 +66,11 @@ const resources = {
       },
       "setup": {
         "create_title": "Configure New Session",
+        "edit_title": "Modify Session",
         "program_name": "Session Identity",
         "program_desc": "Session Context",
         "create_button": "Launch Session",
+        "update_button": "Save Changes",
         "select_button": "Select to Draw",
         "confirm_delete": "Deleting this program will erase all its data. Are you sure?",
         "error_last_program": "Cannot delete the last remaining program."
@@ -84,7 +89,19 @@ const resources = {
         "confirm_delete": "Delete this prize tier?",
         "image_url": "Enter Image URL"
       },
+      "participants": {
+        "management_title": "Participant Roster",
+        "search_placeholder": "Search by Name, ID or Dept...",
+        "total_count": "Total Participants",
+        "no_data": "No participants found in this session.",
+        "add_manual": "Manual Entry",
+        "edit_member": "Edit Member",
+        "confirm_bulk_delete": "Are you sure you want to clear the entire participant list?",
+        "clear_all": "Purge Roster"
+      },
       "upload": {
+        "tab_upload": "Excel Import",
+        "tab_list": "Roster View",
         "drop_files": "Drop files here or click to upload",
         "supports": "Supports .xlsx and .csv",
         "mapping": "Column Mapping",
@@ -109,9 +126,10 @@ const resources = {
         "dashboard": "Tổng quan",
         "programs": "Chương trình",
         "prizes": "Giải thưởng",
-        "upload": "Dữ liệu",
+        "participants": "Danh sách vé",
         "draw": "Quay số",
-        "history": "Lịch sử"
+        "history": "Lịch sử",
+        "settings": "Cài đặt"
       },
       "dashboard": {
         "active_programs": "Chương trình đang chạy",
@@ -140,7 +158,9 @@ const resources = {
         "delete": "Xóa",
         "edit": "Sửa",
         "save": "Lưu",
-        "cancel": "Hủy"
+        "cancel": "Hủy",
+        "close": "Đóng",
+        "update": "Cập nhật"
       },
       "draw": {
         "start": "BẮT ĐẦU QUAY",
@@ -158,9 +178,11 @@ const resources = {
       },
       "setup": {
         "create_title": "Cấu hình chương trình mới",
+        "edit_title": "Chỉnh sửa chương trình",
         "program_name": "Tên chương trình",
         "program_desc": "Mô tả / Ghi chú",
         "create_button": "Khởi tạo chương trình",
+        "update_button": "Lưu thay đổi",
         "select_button": "Chọn để quay số",
         "confirm_delete": "Xóa chương trình sẽ làm mất toàn bộ dữ liệu liên quan. Bạn chắc chứ?",
         "error_last_program": "Không thể xóa chương trình cuối cùng."
@@ -179,7 +201,19 @@ const resources = {
         "confirm_delete": "Xóa hạng mục giải thưởng này?",
         "image_url": "Nhập URL hình ảnh"
       },
+      "participants": {
+        "management_title": "Quản lý danh sách tham gia",
+        "search_placeholder": "Tìm kiếm theo tên, ID, phòng ban...",
+        "total_count": "Tổng số người tham gia",
+        "no_data": "Chưa có danh sách người tham gia cho chương trình này.",
+        "add_manual": "Thêm thủ công",
+        "edit_member": "Sửa thông tin",
+        "confirm_bulk_delete": "Bạn có chắc chắn muốn xóa toàn bộ danh sách vé?",
+        "clear_all": "Xóa trắng danh sách"
+      },
       "upload": {
+        "tab_upload": "Nhập từ Excel",
+        "tab_list": "Xem danh sách",
         "drop_files": "Thả file vào đây hoặc click để tải lên",
         "supports": "Hỗ trợ định dạng .xlsx và .csv",
         "mapping": "Ánh xạ cột dữ liệu",

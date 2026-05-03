@@ -69,8 +69,8 @@ export default function HistoryView({ state, updateState }: { state: AppState, u
   };
 
   return (
-    <div className="space-y-8 pb-20">
-      <div className="bg-white p-8 rounded-[2rem] border border-slate-100 shadow-xl shadow-slate-200/40 flex flex-col md:flex-row justify-between items-center gap-6">
+    <div className="space-y-6 md:space-y-8 pb-20">
+      <div className="bg-white p-6 md:p-8 rounded-[1.5rem] md:rounded-[2rem] border border-slate-100 shadow-xl shadow-slate-200/40 flex flex-col md:flex-row justify-between items-center gap-6">
         <div className="relative flex-1 w-full max-w-lg">
           <Search className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-300" size={20} />
           <input 
@@ -92,7 +92,7 @@ export default function HistoryView({ state, updateState }: { state: AppState, u
         </div>
       </div>
 
-      <div className="bg-white rounded-[2.5rem] border border-slate-100 shadow-2xl shadow-slate-200/50 overflow-hidden">
+      <div className="bg-white rounded-[1.5rem] md:rounded-[2.5rem] border border-slate-100 shadow-2xl shadow-slate-200/50 overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-left text-sm whitespace-nowrap">
             <thead className="bg-slate-50/50 border-b border-slate-100">

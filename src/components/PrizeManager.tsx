@@ -42,6 +42,7 @@ export default function PrizeManager({ state, updateState }: { state: AppState, 
       remaining: 1,
       priority: currentProgram.prizes.length + 1,
       isActive: true,
+      value: 0,
       image: "https://images.unsplash.com/photo-1511512578047-dfb367046420?w=400&h=400&fit=crop"
     };
     
@@ -81,10 +82,10 @@ export default function PrizeManager({ state, updateState }: { state: AppState, 
   return (
     <div className="space-y-10 pb-20">
       {/* Context Header */}
-      <div className="bg-gradient-to-r from-indigo-600 to-violet-700 p-8 rounded-[2.5rem] text-white shadow-xl">
+      <div className="bg-gradient-to-r from-indigo-600 to-violet-700 p-6 md:p-8 rounded-[1.5rem] md:rounded-[2.5rem] text-white shadow-xl">
         <p className="text-[10px] font-black uppercase tracking-[0.3em] opacity-60 mb-2">Current Context</p>
-        <h2 className="text-3xl font-black tracking-tighter uppercase italic drop-shadow-sm">{currentProgram.name}</h2>
-        <div className="flex gap-4 mt-6">
+        <h2 className="text-xl md:text-3xl font-black tracking-tighter uppercase italic drop-shadow-sm truncate">{currentProgram.name}</h2>
+        <div className="flex flex-wrap gap-3 md:gap-4 mt-4 md:mt-6">
           <div className="px-4 py-2 bg-white/10 rounded-xl backdrop-blur-sm border border-white/10">
             <p className="text-[9px] font-black uppercase tracking-widest opacity-60">Total Pool</p>
             <p className="font-black text-sm">{currentProgram.ticketPool.length} Tickets</p>
@@ -97,10 +98,10 @@ export default function PrizeManager({ state, updateState }: { state: AppState, 
       </div>
 
       {/* Rule Engine Section */}
-      <section className="bg-white p-10 rounded-[2.5rem] border border-slate-100 shadow-xl shadow-slate-200/40">
-        <div className="flex items-center gap-3 mb-8 border-b-4 border-indigo-600 inline-flex pb-1">
+      <section className="bg-white p-6 md:p-10 rounded-[1.5rem] md:rounded-[2.5rem] border border-slate-100 shadow-xl shadow-slate-200/40">
+        <div className="flex items-center gap-3 mb-6 md:mb-8 border-b-4 border-indigo-600 inline-flex pb-1">
           <Settings2 size={24} className="text-indigo-600" />
-          <h3 className="text-2xl font-black tracking-tighter uppercase italic text-slate-800">{t('prizes.rules_title')}</h3>
+          <h3 className="text-lg md:text-2xl font-black tracking-tighter uppercase italic text-slate-800">{t('prizes.rules_title')}</h3>
         </div>
         
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
@@ -192,7 +193,7 @@ export default function PrizeManager({ state, updateState }: { state: AppState, 
                  </div>
                </div>
                
-               <div className="p-8 -mt-4 relative bg-white rounded-t-[2.5rem]">
+               <div className="p-6 md:p-8 -mt-4 relative bg-white rounded-t-[2.5rem]">
                  <div className="flex items-start justify-between gap-4 mb-2">
                    <input 
                     type="text" 
@@ -208,24 +209,37 @@ export default function PrizeManager({ state, updateState }: { state: AppState, 
                    </button>
                  </div>
 
-                 <div className="mt-6 flex items-center justify-between bg-slate-50 p-6 rounded-3xl border border-slate-100">
-                    <div className="space-y-3">
-                      <p className="text-[9px] uppercase font-black text-slate-400 tracking-widest">{t('draw.total_prizes')}</p>
-                      <div className="flex items-center gap-4">
-                        <button 
-                          onClick={() => updatePrize(prize.id, { quantity: Math.max(1, prize.quantity - 1), remaining: Math.max(0, prize.remaining - 1) })}
-                          className="w-8 h-8 flex items-center justify-center bg-white border-2 border-slate-200 rounded-xl hover:border-indigo-500 hover:text-indigo-600 transition-colors shadow-sm"
-                        >-</button>
-                        <span className="font-black text-xl text-slate-900 min-w-[1rem] text-center">{prize.quantity}</span>
-                        <button 
-                          onClick={() => updatePrize(prize.id, { quantity: prize.quantity + 1, remaining: prize.remaining + 1 })}
-                          className="w-8 h-8 flex items-center justify-center bg-white border-2 border-slate-200 rounded-xl hover:border-indigo-500 hover:text-indigo-600 transition-colors shadow-sm"
-                        >+</button>
+                 <div className="mt-6 flex flex-col gap-4 bg-slate-50 p-6 rounded-3xl border border-slate-100">
+                    <div className="flex items-center justify-between">
+                      <div className="space-y-3">
+                        <p className="text-[9px] uppercase font-black text-slate-400 tracking-widest">{t('draw.total_prizes')}</p>
+                        <div className="flex items-center gap-4">
+                          <button 
+                            onClick={() => updatePrize(prize.id, { quantity: Math.max(1, prize.quantity - 1), remaining: Math.max(0, prize.remaining - 1) })}
+                            className="w-8 h-8 flex items-center justify-center bg-white border-2 border-slate-200 rounded-xl hover:border-indigo-500 hover:text-indigo-600 transition-colors shadow-sm"
+                          >-</button>
+                          <span className="font-black text-xl text-slate-900 min-w-[1rem] text-center">{prize.quantity}</span>
+                          <button 
+                            onClick={() => updatePrize(prize.id, { quantity: prize.quantity + 1, remaining: prize.remaining + 1 })}
+                            className="w-8 h-8 flex items-center justify-center bg-white border-2 border-slate-200 rounded-xl hover:border-indigo-500 hover:text-indigo-600 transition-colors shadow-sm"
+                          >+</button>
+                        </div>
+                      </div>
+                      <div className="text-right space-y-1">
+                        <p className="text-[9px] uppercase font-black text-slate-400 tracking-widest">{t('prizes.remaining')}</p>
+                        <p className="font-black text-3xl text-indigo-600 tracking-tighter">{prize.remaining}</p>
                       </div>
                     </div>
-                    <div className="text-right space-y-1">
-                      <p className="text-[9px] uppercase font-black text-slate-400 tracking-widest">{t('prizes.remaining')}</p>
-                      <p className="font-black text-3xl text-indigo-600 tracking-tighter">{prize.remaining}</p>
+                    
+                    <div className="pt-4 border-t border-slate-200/50 space-y-2">
+                       <p className="text-[9px] uppercase font-black text-slate-400 tracking-widest pl-1">Monetary Value ({state.settings.currency})</p>
+                       <input 
+                        type="number"
+                        value={prize.value || 0}
+                        onChange={(e) => updatePrize(prize.id, { value: parseInt(e.target.value) || 0 })}
+                        className="w-full bg-white border-2 border-slate-100 rounded-xl px-4 py-3 font-bold text-slate-700 focus:outline-none focus:border-indigo-400"
+                        placeholder="0"
+                       />
                     </div>
                  </div>
 
