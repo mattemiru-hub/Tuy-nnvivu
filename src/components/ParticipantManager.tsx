@@ -11,6 +11,7 @@ import { AppState, Ticket, DrawProgram } from '../types';
 import { generateId, cn } from '../lib/utils';
 import { INITIAL_PRIZES } from '../constants';
 import { useTranslation } from 'react-i18next';
+import { motion, AnimatePresence } from 'motion/react';
 
 interface ColumnMapping {
   id: string;
@@ -37,6 +38,7 @@ export default function ParticipantManager({ state, updateState }: { state: AppS
   });
   const [isSplitMode, setIsSplitMode] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const [editingTicket, setEditingTicket] = useState<Ticket | null>(null);
 
   const currentProgram = state.programs.find(p => p.id === state.activeProgramId);
 
@@ -62,6 +64,24 @@ export default function ParticipantManager({ state, updateState }: { state: AppS
           : p
       )
     }));
+  };
+
+  const handleUpdateTicket = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingTicket || !currentProgram) return;
+
+    updateState(prev => ({
+      ...prev,
+      programs: prev.programs.map(p => 
+        p.id === currentProgram.id 
+          ? { 
+              ...p, 
+              ticketPool: p.ticketPool.map(t => t.id === editingTicket.id ? editingTicket : t) 
+            } 
+          : p
+      )
+    }));
+    setEditingTicket(null);
   };
 
   const clearAllTickets = () => {
@@ -454,12 +474,20 @@ export default function ParticipantManager({ state, updateState }: { state: AppS
                                 </span>
                              </td>
                              <td className="px-8 py-4 text-right">
-                               <button 
-                                onClick={() => deleteTicket(ticket.id)}
-                                className="w-8 h-8 rounded-lg flex items-center justify-center text-slate-300 hover:text-red-500 hover:bg-red-50 transition-all opacity-0 group-hover:opacity-100"
-                               >
-                                 <Trash2 size={16} />
-                               </button>
+                               <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-all">
+                                 <button 
+                                  onClick={() => setEditingTicket(ticket)}
+                                  className="w-8 h-8 rounded-lg flex items-center justify-center text-slate-300 hover:text-indigo-600 hover:bg-indigo-50 transition-all"
+                                 >
+                                   <Edit3 size={16} />
+                                 </button>
+                                 <button 
+                                  onClick={() => deleteTicket(ticket.id)}
+                                  className="w-8 h-8 rounded-lg flex items-center justify-center text-slate-300 hover:text-red-500 hover:bg-red-50 transition-all"
+                                 >
+                                   <Trash2 size={16} />
+                                 </button>
+                               </div>
                              </td>
                            </tr>
                          ))
@@ -488,6 +516,82 @@ export default function ParticipantManager({ state, updateState }: { state: AppS
            </div>
         </div>
       )}
+
+      {/* Edit Modal */}
+      <AnimatePresence>
+        {editingTicket && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-6">
+            <motion.div 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setEditingTicket(null)}
+              className="absolute inset-0 bg-slate-900/60 backdrop-blur-md"
+            />
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.9, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.9, y: 20 }}
+              className="bg-white w-full max-w-lg rounded-[2.5rem] p-10 shadow-2xl relative z-10 border border-slate-100"
+            >
+              <div className="flex items-center justify-between mb-8">
+                <div>
+                  <h3 className="text-2xl font-black italic uppercase tracking-tighter text-slate-800">Edit Profile</h3>
+                  <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest mt-1">ID: {editingTicket.id}</p>
+                </div>
+                <button 
+                  onClick={() => setEditingTicket(null)}
+                  className="w-10 h-10 bg-slate-50 text-slate-400 rounded-full flex items-center justify-center hover:bg-slate-100 transition-colors"
+                >
+                  <X size={20} />
+                </button>
+              </div>
+
+              <form onSubmit={handleUpdateTicket} className="space-y-6">
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black uppercase text-slate-400 px-1">Candidate Name</label>
+                  <input 
+                    type="text"
+                    value={editingTicket.name}
+                    onChange={e => setEditingTicket({ ...editingTicket, name: e.target.value })}
+                    className="w-full px-6 py-4 bg-slate-50 border-2 border-slate-100 rounded-2xl focus:border-indigo-500 font-bold outline-none"
+                    required
+                  />
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-black uppercase text-slate-400 px-1">Employee ID</label>
+                    <input 
+                      type="text"
+                      value={editingTicket.employeeId}
+                      onChange={e => setEditingTicket({ ...editingTicket, employeeId: e.target.value })}
+                      className="w-full px-4 py-3 bg-slate-50 border-2 border-slate-100 rounded-2xl focus:border-indigo-500 font-bold outline-none"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-black uppercase text-slate-400 px-1">Department</label>
+                    <input 
+                      type="text"
+                      value={editingTicket.department}
+                      onChange={e => setEditingTicket({ ...editingTicket, department: e.target.value })}
+                      className="w-full px-4 py-3 bg-slate-50 border-2 border-slate-100 rounded-2xl focus:border-indigo-500 font-bold outline-none"
+                    />
+                  </div>
+                </div>
+
+                <div className="pt-6">
+                  <button 
+                    type="submit"
+                    className="w-full py-5 bg-indigo-600 text-white rounded-2xl font-black uppercase tracking-widest shadow-xl shadow-indigo-600/20 hover:bg-indigo-700 active:scale-95 transition-all"
+                  >
+                    Save Changes
+                  </button>
+                </div>
+              </form>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

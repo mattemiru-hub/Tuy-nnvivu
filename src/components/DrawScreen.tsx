@@ -7,7 +7,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { AppState, Prize, Winner, Ticket } from '../types';
 import { motion, AnimatePresence } from 'motion/react';
 import confetti from 'canvas-confetti';
-import { Trophy, RefreshCcw, LayoutGrid, ChevronRight, AlertTriangle, Power, Users, Ticket as TicketIcon, Play, Check, Info, X, Zap, Clock, Star, Gift } from 'lucide-react';
+import { Trophy, RefreshCcw, LayoutGrid, ChevronRight, AlertTriangle, Power, Users, Ticket as TicketIcon, Play, Check, Info, X, Zap, Clock, Star, Gift, Music } from 'lucide-react';
 import { cn, generateId } from '../lib/utils';
 import { getEligibleTickets, pickWinner, shuffleArray } from '../lib/engine';
 import { sounds } from '../lib/sounds';
@@ -26,6 +26,36 @@ export default function DrawScreen({ state, updateState, onNavigate }: { state: 
   const [showMobileWinners, setShowMobileWinners] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const animationRef = useRef<NodeJS.Timeout | null>(null);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+
+  useEffect(() => {
+    if (currentProgram?.bgmEnabled && currentProgram?.bgmUrl) {
+      if (!audioRef.current) {
+        audioRef.current = new Audio(currentProgram.bgmUrl);
+        audioRef.current.loop = true;
+      } else if (audioRef.current.src !== currentProgram.bgmUrl) {
+        audioRef.current.src = currentProgram.bgmUrl;
+      }
+      
+      audioRef.current.volume = currentProgram.bgmVolume ?? 0.5;
+      
+      const playAudio = async () => {
+         try {
+            await audioRef.current?.play();
+         } catch (err) {
+            console.log("Audio autoplay blocked");
+         }
+      };
+      
+      playAudio();
+    } else {
+      audioRef.current?.pause();
+    }
+
+    return () => {
+      audioRef.current?.pause();
+    };
+  }, [currentProgram?.bgmEnabled, currentProgram?.bgmUrl, currentProgram?.bgmVolume]);
 
   useEffect(() => {
     if (activePrograms.length > 0 && (!state.activeProgramId || !activePrograms.find(p => p.id === state.activeProgramId))) {
@@ -210,9 +240,44 @@ export default function DrawScreen({ state, updateState, onNavigate }: { state: 
                 <div className="w-10 h-10 bg-indigo-600 rounded-xl flex items-center justify-center text-white shadow-[0_0_20px_rgba(79,70,229,0.4)]">
                    <Zap size={20} />
                 </div>
-                <div>
+                <div className="flex flex-col">
                    <h3 className="text-xs font-black text-white/40 uppercase tracking-widest leading-none mb-1">Station</h3>
                    <p className="text-sm font-black text-white uppercase italic tracking-tighter">Command Center</p>
+                </div>
+                
+                {/* Audio Quick Toggles */}
+                <div className="ml-auto flex items-center gap-2 group/audio">
+                   <button 
+                     onClick={() => {
+                        updateState(prev => ({
+                          ...prev,
+                          programs: prev.programs.map(p => p.id === currentProgram.id ? { ...p, bgmEnabled: !p.bgmEnabled } : p)
+                        }));
+                     }}
+                     className={cn(
+                       "w-8 h-8 rounded-full flex items-center justify-center transition-all",
+                       currentProgram?.bgmEnabled ? "bg-indigo-600 text-white" : "bg-white/5 text-white/40"
+                     )}
+                   >
+                     <Music size={14} />
+                   </button>
+                   <div className="w-0 group-hover/audio:w-16 overflow-hidden transition-all duration-300">
+                      <input 
+                        type="range"
+                        min="0"
+                        max="1"
+                        step="0.1"
+                        value={currentProgram?.bgmVolume ?? 0.5}
+                        onChange={(e) => {
+                          const val = parseFloat(e.target.value);
+                          updateState(prev => ({
+                            ...prev,
+                            programs: prev.programs.map(p => p.id === currentProgram.id ? { ...p, bgmVolume: val } : p)
+                          }));
+                        }}
+                        className="w-16 h-1 bg-white/10 rounded-lg appearance-none cursor-pointer accent-indigo-600"
+                      />
+                   </div>
                 </div>
               </div>
 
@@ -284,12 +349,12 @@ export default function DrawScreen({ state, updateState, onNavigate }: { state: 
         </aside>
 
         {/* Center Main: The Drawing Engine */}
-        <main className="flex-1 flex flex-col h-full bg-[#0a0a0f] relative overflow-hidden">
+        <main className="flex-1 flex flex-col min-h-0 bg-[#0a0a0f] relative overflow-hidden">
            {/* Program Banner */}
            {currentProgram.thumbnail && (
               <div 
                 className="w-full relative overflow-hidden flex-shrink-0 z-20 transition-all duration-700"
-                style={{ height: `${currentProgram.bannerHeight || 20}vh`, minHeight: '140px', maxHeight: '400px' }}
+                style={{ height: `${currentProgram.bannerHeight || 12}vh`, minHeight: '100px', maxHeight: '240px' }}
               >
                  <img 
                   src={currentProgram.thumbnail} 
@@ -305,11 +370,11 @@ export default function DrawScreen({ state, updateState, onNavigate }: { state: 
                  {/* Floating Badges on Banner */}
                  <div className="absolute bottom-4 left-8 z-30 flex items-center gap-3">
                     <div className="px-3 py-1 bg-indigo-600/80 backdrop-blur-md rounded-lg border border-white/10 text-[10px] font-black text-white uppercase tracking-widest">
-                       {currentProgram.type === 'lucky' ? 'LUCKY DRAW' : 'REWARD SYSTEM'}
+                       {currentProgram.theatreBadge || 'LUCKY DRAW'}
                     </div>
                     {currentProgram.isActive && (
                        <div className="px-3 py-1 bg-green-500/80 backdrop-blur-md rounded-lg border border-white/10 text-[10px] font-black text-white uppercase tracking-widest flex items-center gap-2">
-                          <div className="w-1.5 h-1.5 bg-white rounded-full animate-pulse" /> LIVE SESSION
+                          <div className="w-1.5 h-1.5 bg-white rounded-full animate-pulse" /> {currentProgram.theatreSubtitle || 'LIVE SESSION'}
                        </div>
                     )}
                  </div>
@@ -339,7 +404,7 @@ export default function DrawScreen({ state, updateState, onNavigate }: { state: 
               </div>
            </div>
 
-           <div className="flex-1 relative flex flex-col items-center justify-center p-8">
+           <div className="flex-1 relative flex flex-col items-center justify-center p-4 md:p-6 lg:p-8 min-h-0">
               {/* Error Toast */}
               <AnimatePresence>
                 {error && (
@@ -433,10 +498,10 @@ export default function DrawScreen({ state, updateState, onNavigate }: { state: 
                              <div className="inline-flex items-center gap-2 px-6 py-2 bg-indigo-600 text-white rounded-full text-[10px] font-black uppercase tracking-[0.3em] shadow-2xl mb-4">
                                 <Star size={12} fill="currentColor" /> {pendingWinner ? "VERIFYING RESULT" : "CELEBRATION TIME"}
                              </div>
-                             <h4 className="text-4xl md:text-6xl font-black italic uppercase tracking-tighter text-white mb-2 leading-none">
+                             <h4 className="text-3xl md:text-5xl lg:text-6xl font-black italic uppercase tracking-tighter text-white mb-2 leading-tight">
                                 {(pendingWinner || currentWinner)?.name}
                              </h4>
-                             <p className="text-xl md:text-2xl font-black font-mono text-indigo-400 opacity-80">
+                             <p className="text-lg md:text-2xl font-black font-mono text-indigo-400 opacity-80">
                                 #{(pendingWinner || currentWinner)?.id}
                              </p>
                           </motion.div>
@@ -452,40 +517,24 @@ export default function DrawScreen({ state, updateState, onNavigate }: { state: 
                               </div>
                           </div>
 
-                          {pendingWinner && (
-                             <div className="mt-12 flex flex-col md:flex-row gap-4">
-                                <button 
-                                   onClick={cancelWinner}
-                                   className="flex-1 py-5 bg-white/5 border border-white/10 hover:bg-red-500 hover:border-red-500 text-white rounded-3xl font-black text-xs uppercase tracking-widest transition-all flex items-center justify-center gap-3"
-                                >
-                                   <X size={18} /> DISCARD
-                                </button>
-                                <button 
-                                   onClick={confirmWinner}
-                                   className="flex-[2] py-5 bg-indigo-600 text-white rounded-3xl font-black text-xs uppercase tracking-widest hover:bg-indigo-500 shadow-2xl shadow-indigo-600/30 transition-all flex items-center justify-center gap-3"
-                                >
-                                   <Check size={18} /> CONFIRM WINNER
-                                </button>
-                             </div>
-                          )}
-                       </div>
-                    </div>
+                        </div>
+                     </div>
 
                     {/* Prize Visual Side */}
-                    <div className="w-full lg:w-72 order-1 lg:order-2">
-                       <div className="bg-white/5 border border-white/10 backdrop-blur-2xl p-8 rounded-[3rem] text-center">
-                          <p className="text-[10px] font-black text-indigo-400 uppercase tracking-widest mb-6">REWARDED PRIZE</p>
-                          <div className="w-32 h-32 mx-auto rounded-3xl overflow-hidden mb-6 bg-black/20 shadow-2xl">
+                    <div className="w-full lg:w-72 order-1 lg:order-2 shrink-0">
+                       <div className="bg-white/5 border border-white/10 backdrop-blur-2xl p-6 md:p-8 rounded-[3rem] text-center">
+                          <p className="text-[10px] font-black text-indigo-400 uppercase tracking-widest mb-4">REWARDED PRIZE</p>
+                          <div className="w-24 h-24 md:w-32 md:h-32 mx-auto rounded-3xl overflow-hidden mb-4 bg-black/20 shadow-2xl">
                              {selectedPrize?.image ? (
                                 <img src={selectedPrize.image} className="w-full h-full object-cover" />
                              ) : (
-                                <Trophy size={48} className="m-auto text-white/10 h-full w-full p-8" />
+                                <Trophy size={48} className="m-auto text-white/10 h-full w-full p-6" />
                              )}
                           </div>
-                          <h5 className="text-xl font-black text-white uppercase italic tracking-tighter leading-tight mb-2">
+                          <h5 className="text-lg md:text-xl font-black text-white uppercase italic tracking-tighter leading-tight mb-1">
                              {selectedPrize?.name}
                           </h5>
-                          <p className="text-xs font-bold text-white/30">{selectedPrize?.remaining} Units Remaining</p>
+                          <p className="text-[10px] font-bold text-white/30">{selectedPrize?.remaining} Units Remaining</p>
                        </div>
                     </div>
                   </motion.div>
@@ -514,26 +563,52 @@ export default function DrawScreen({ state, updateState, onNavigate }: { state: 
               </AnimatePresence>
            </div>
 
-           {/* Floating Bottom Bar */}
-           <div className="h-24 md:h-32 border-t border-white/5 bg-black/60 backdrop-blur-3xl px-8 flex items-center justify-center relative z-30">
-              <button
-                 onClick={handleDraw}
-                 disabled={isDrawing || !!pendingWinner || !selectedPrize}
-                 className={cn(
-                    "group relative flex items-center gap-8 px-16 py-6 md:px-24 md:py-8 rounded-full transition-all duration-500 font-black text-2xl lg:text-4xl tracking-tighter uppercase italic overflow-hidden",
-                    (isDrawing || !!pendingWinner || !selectedPrize)
-                      ? "bg-white/5 text-white/10 cursor-not-allowed border border-white/5" 
-                      : "bg-indigo-600 text-white hover:bg-white hover:text-indigo-900 shadow-[0_0_80px_rgba(79,70,229,0.4)] hover:shadow-white/20 active:scale-95"
-                 )}
-              >
-                 <span className="relative z-10 flex items-center gap-4">
-                    {isDrawing ? "DRAWING..." : pendingWinner ? "WAITING FOR CONFIRM" : t('draw.start')}
-                    {!isDrawing && !pendingWinner && selectedPrize && <Play size={32} className="group-hover:translate-x-2 transition-transform" fill="currentColor" />}
-                 </span>
-                 
-                 {/* Shine effect */}
-                 <div className="absolute top-0 -left-[100%] w-full h-full bg-gradient-to-r from-transparent via-white/20 to-transparent group-hover:left-[100%] transition-all duration-1000 pointer-events-none" />
-              </button>
+           <div className="h-28 md:h-32 border-t border-white/5 bg-black/60 backdrop-blur-3xl px-8 flex items-center justify-center relative z-30 shrink-0">
+              <AnimatePresence mode="wait">
+                {pendingWinner ? (
+                  <motion.div 
+                    key="confirm-actions"
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -20 }}
+                    className="flex gap-4 w-full max-w-2xl px-4"
+                  >
+                    <button 
+                      onClick={cancelWinner}
+                      className="flex-1 py-4 md:py-5 lg:py-6 bg-white/5 border border-white/10 hover:bg-red-500/10 hover:border-red-500 text-red-500 rounded-2xl md:rounded-3xl font-black text-lg md:text-2xl uppercase tracking-widest transition-all flex items-center justify-center gap-3 italic"
+                    >
+                      <X size={24} /> {t('common.cancel') || 'DISCARD'}
+                    </button>
+                    <button 
+                      onClick={confirmWinner}
+                      className="flex-[2] py-4 md:py-5 lg:py-6 bg-indigo-600 text-white rounded-2xl md:rounded-3xl font-black text-lg md:text-2xl uppercase tracking-widest hover:bg-indigo-500 shadow-[0_0_50px_rgba(79,70,229,0.4)] transition-all flex items-center justify-center gap-3 italic"
+                    >
+                      <Check size={28} /> {t('common.confirm') || 'CONFIRM WINNER'}
+                    </button>
+                  </motion.div>
+                ) : (
+                  <motion.button
+                    key="draw-action"
+                    initial={{ opacity: 0, scale: 0.9 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    onClick={handleDraw}
+                    disabled={isDrawing || !selectedPrize}
+                    className={cn(
+                        "group relative flex items-center gap-8 px-16 py-6 md:px-24 md:py-8 rounded-full transition-all duration-500 font-black text-2xl lg:text-4xl tracking-tighter uppercase italic overflow-hidden",
+                        (isDrawing || !selectedPrize)
+                          ? "bg-white/5 text-white/10 cursor-not-allowed border border-white/5" 
+                          : "bg-indigo-600 text-white hover:bg-white hover:text-indigo-900 shadow-[0_0_80px_rgba(79,70,229,0.4)] hover:shadow-white/20 active:scale-95"
+                    )}
+                  >
+                    <span className="relative z-10 flex items-center gap-4">
+                        {isDrawing ? "DRAWING..." : t('draw.start')}
+                        {!isDrawing && selectedPrize && <Play size={32} className="group-hover:translate-x-2 transition-transform" fill="currentColor" />}
+                    </span>
+                    
+                    <div className="absolute top-0 -left-[100%] w-full h-full bg-gradient-to-r from-transparent via-white/20 to-transparent group-hover:left-[100%] transition-all duration-1000 pointer-events-none" />
+                  </motion.button>
+                )}
+              </AnimatePresence>
            </div>
         </main>
 

@@ -11,12 +11,22 @@ import { formatDate, cn } from '../lib/utils';
 
 export default function HistoryView({ state, updateState }: { state: AppState, updateState: (updater: (prev: AppState) => AppState) => void }) {
   const [searchTerm, setSearchTerm] = React.useState("");
+  const [filterProgramId, setFilterProgramId] = React.useState<string>("all");
+  const [filterPrizeName, setFilterPrizeName] = React.useState<string>("all");
 
-  const filteredWinners = state.winners.filter(winner => 
-    winner.ticketId.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    winner.prizeName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    winner.ticketName?.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const uniquePrizes = Array.from(new Set(state.winners.map(w => w.prizeName)));
+
+  const filteredWinners = state.winners.filter(winner => {
+    const matchesSearch = 
+      winner.ticketId.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      winner.prizeName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      winner.ticketName?.toLowerCase().includes(searchTerm.toLowerCase());
+    
+    const matchesProgram = filterProgramId === "all" || winner.programId === filterProgramId;
+    const matchesPrize = filterPrizeName === "all" || winner.prizeName === filterPrizeName;
+    
+    return matchesSearch && matchesProgram && matchesPrize;
+  });
 
   const exportToExcel = () => {
     if (state.winners.length === 0) return;
@@ -70,25 +80,69 @@ export default function HistoryView({ state, updateState }: { state: AppState, u
 
   return (
     <div className="space-y-6 md:space-y-8 pb-20">
-      <div className="bg-white p-6 md:p-8 rounded-[1.5rem] md:rounded-[2rem] border border-slate-100 shadow-xl shadow-slate-200/40 flex flex-col md:flex-row justify-between items-center gap-6">
-        <div className="relative flex-1 w-full max-w-lg">
-          <Search className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-300" size={20} />
-          <input 
-            type="text" 
-            placeholder="Search by ID, prize or name..."
-            className="w-full pl-14 pr-6 py-4 bg-slate-50 border-2 border-slate-50 rounded-2xl focus:border-blue-500 focus:bg-white outline-none font-bold text-sm transition-all"
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-          />
+      <div className="bg-white p-6 md:p-8 rounded-[1.5rem] md:rounded-[2rem] border border-slate-100 shadow-xl shadow-slate-200/40 flex flex-col gap-6">
+        <div className="flex flex-col lg:flex-row justify-between items-center gap-6">
+          <div className="relative flex-1 w-full max-w-lg">
+            <Search className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-300" size={20} />
+            <input 
+              type="text" 
+              placeholder="Search by ID, prize or name..."
+              className="w-full pl-14 pr-6 py-4 bg-slate-50 border-2 border-slate-50 rounded-2xl focus:border-blue-500 focus:bg-white outline-none font-bold text-sm transition-all"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+            />
+          </div>
+          <div className="flex gap-4 w-full md:w-auto">
+            <button 
+              onClick={exportToExcel}
+              className="flex-1 md:flex-none flex items-center justify-center gap-3 px-8 py-4 bg-blue-600 text-white rounded-2xl text-sm font-black uppercase tracking-widest hover:bg-blue-700 shadow-lg shadow-blue-600/20 active:scale-95 transition-all disabled:opacity-50"
+              disabled={state.winners.length === 0}
+            >
+              <Download size={20} /> Export Excel
+            </button>
+          </div>
         </div>
-        <div className="flex gap-4 w-full md:w-auto">
-          <button 
-            onClick={exportToExcel}
-            className="flex-1 md:flex-none flex items-center justify-center gap-3 px-8 py-4 bg-blue-600 text-white rounded-2xl text-sm font-black uppercase tracking-widest hover:bg-blue-700 shadow-lg shadow-blue-600/20 active:scale-95 transition-all disabled:opacity-50"
-            disabled={state.winners.length === 0}
-          >
-            <Download size={20} /> Export Excel
-          </button>
+
+        <div className="flex flex-wrap items-center gap-4 pt-4 border-t border-slate-50">
+           <div className="flex items-center gap-2 px-4 py-2 bg-slate-50 rounded-xl">
+              <Filter size={16} className="text-slate-400" />
+              <span className="text-[10px] font-black uppercase text-slate-400 tracking-widest">Filters:</span>
+           </div>
+           
+           <select 
+             value={filterProgramId}
+             onChange={(e) => setFilterProgramId(e.target.value)}
+             className="px-4 py-2 bg-white border-2 border-slate-100 rounded-xl text-xs font-bold outline-none focus:border-blue-500"
+           >
+              <option value="all">All Programs</option>
+              {state.programs.map(p => (
+                <option key={p.id} value={p.id}>{p.name}</option>
+              ))}
+           </select>
+
+           <select 
+             value={filterPrizeName}
+             onChange={(e) => setFilterPrizeName(e.target.value)}
+             className="px-4 py-2 bg-white border-2 border-slate-100 rounded-xl text-xs font-bold outline-none focus:border-blue-500"
+           >
+              <option value="all">All Prize Categories</option>
+              {uniquePrizes.map(p => (
+                <option key={p} value={p}>{p}</option>
+              ))}
+           </select>
+
+           {(filterProgramId !== "all" || filterPrizeName !== "all" || searchTerm !== "") && (
+             <button 
+               onClick={() => {
+                 setFilterProgramId("all");
+                 setFilterPrizeName("all");
+                 setSearchTerm("");
+               }}
+               className="text-[10px] font-black uppercase text-blue-600 hover:text-blue-700 underline"
+             >
+               Clear Filters
+             </button>
+           )}
         </div>
       </div>
 
@@ -98,6 +152,7 @@ export default function HistoryView({ state, updateState }: { state: AppState, u
             <thead className="bg-slate-50/50 border-b border-slate-100">
               <tr>
                 <th className="px-8 py-5 font-black text-slate-400 uppercase text-[10px] tracking-[0.2em]">Timestamp</th>
+                <th className="px-8 py-5 font-black text-slate-400 uppercase text-[10px] tracking-[0.2em]">Program</th>
                 <th className="px-8 py-5 font-black text-slate-400 uppercase text-[10px] tracking-[0.2em]">Prize / Reward</th>
                 <th className="px-8 py-5 font-black text-slate-400 uppercase text-[10px] tracking-[0.2em]">The Winner</th>
                 <th className="px-8 py-5 font-black text-slate-400 uppercase text-[10px] tracking-[0.2em]">Lucky ID</th>
@@ -114,6 +169,11 @@ export default function HistoryView({ state, updateState }: { state: AppState, u
                       </div>
                       <span className="text-slate-500 font-bold text-xs">{formatDate(winner.drawTime)}</span>
                     </div>
+                  </td>
+                  <td className="px-8 py-6">
+                    <span className="text-[10px] font-black uppercase tracking-widest text-slate-400 bg-slate-100 px-3 py-1 rounded-full">
+                      {winner.programName}
+                    </span>
                   </td>
                   <td className="px-8 py-6">
                     <div className="flex items-center gap-4">

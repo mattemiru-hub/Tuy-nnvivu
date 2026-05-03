@@ -5,9 +5,10 @@
 
 import React, { useState } from 'react';
 import { AppState, Prize, RuleConfig } from '../types';
-import { Plus, Trash2, Edit3, Image as ImageIcon, Settings2, ShieldCheck, UserCheck, Shuffle, Info } from 'lucide-react';
+import { Plus, Trash2, Edit3, Image as ImageIcon, Settings2, ShieldCheck, UserCheck, Shuffle, Info, X } from 'lucide-react';
 import { generateId, cn } from '../lib/utils';
 import { useTranslation } from 'react-i18next';
+import { motion, AnimatePresence } from 'motion/react';
 
 export default function PrizeManager({ state, updateState }: { state: AppState, updateState: (updater: (prev: AppState) => AppState) => void }) {
   const { t } = useTranslation();
@@ -201,12 +202,20 @@ export default function PrizeManager({ state, updateState }: { state: AppState, 
                     onChange={(e) => updatePrize(prize.id, { name: e.target.value })}
                     className="flex-1 font-black text-xl italic uppercase tracking-tighter text-slate-900 focus:outline-none focus:text-indigo-600 bg-transparent"
                    />
-                   <button 
-                    onClick={() => handleDeletePrize(prize.id)}
-                    className="w-10 h-10 flex items-center justify-center text-slate-300 hover:text-red-500 hover:bg-red-50 rounded-xl transition-all"
-                   >
-                     <Trash2 size={20} />
-                   </button>
+                   <div className="flex items-center gap-2">
+                     <button 
+                       onClick={() => setIsEditingPrize(prize)}
+                       className="w-10 h-10 flex items-center justify-center text-slate-300 hover:text-indigo-600 hover:bg-indigo-50 rounded-xl transition-all"
+                     >
+                       <Edit3 size={20} />
+                     </button>
+                     <button 
+                      onClick={() => handleDeletePrize(prize.id)}
+                      className="w-10 h-10 flex items-center justify-center text-slate-300 hover:text-red-500 hover:bg-red-50 rounded-xl transition-all"
+                     >
+                       <Trash2 size={20} />
+                     </button>
+                   </div>
                  </div>
 
                  <div className="mt-6 flex flex-col gap-4 bg-slate-50 p-6 rounded-3xl border border-slate-100">
@@ -270,6 +279,98 @@ export default function PrizeManager({ state, updateState }: { state: AppState, 
           ))}
         </div>
       </section>
+
+      {/* Edit Prize Modal */}
+      <AnimatePresence>
+        {isEditingPrize && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-6">
+            <motion.div 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setIsEditingPrize(null)}
+              className="absolute inset-0 bg-slate-900/60 backdrop-blur-md"
+            />
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.9, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.9, y: 20 }}
+              className="bg-white w-full max-w-lg rounded-[2.5rem] p-10 shadow-2xl relative z-10 border border-slate-100 max-h-[90vh] overflow-y-auto"
+            >
+              <div className="flex items-center justify-between mb-8">
+                <div>
+                  <h3 className="text-2xl font-black italic uppercase tracking-tighter text-slate-800">Edit Prize</h3>
+                  <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest mt-1">ID: {isEditingPrize.id}</p>
+                </div>
+                <button 
+                  onClick={() => setIsEditingPrize(null)}
+                  className="w-10 h-10 bg-slate-50 text-slate-400 rounded-full flex items-center justify-center hover:bg-slate-100 transition-colors"
+                >
+                  <X size={20} />
+                </button>
+              </div>
+
+              <div className="space-y-6">
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black uppercase text-slate-400 px-1">Prize Name</label>
+                  <input 
+                    type="text"
+                    value={isEditingPrize.name}
+                    onChange={e => setIsEditingPrize({ ...isEditingPrize, name: e.target.value })}
+                    className="w-full px-6 py-4 bg-slate-50 border-2 border-slate-100 rounded-2xl focus:border-indigo-500 font-bold outline-none"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black uppercase text-slate-400 px-1">Image URL</label>
+                  <div className="flex gap-4">
+                    <img src={isEditingPrize.image} className="w-16 h-16 rounded-xl object-cover border-2 border-slate-100" />
+                    <input 
+                      type="text"
+                      value={isEditingPrize.image}
+                      onChange={e => setIsEditingPrize({ ...isEditingPrize, image: e.target.value })}
+                      className="flex-1 px-4 py-3 bg-slate-50 border-2 border-slate-100 rounded-2xl focus:border-indigo-500 font-bold outline-none text-xs"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-6">
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-black uppercase text-slate-400 px-1">Monetary Value</label>
+                    <input 
+                      type="number"
+                      value={isEditingPrize.value}
+                      onChange={e => setIsEditingPrize({ ...isEditingPrize, value: parseInt(e.target.value) || 0 })}
+                      className="w-full px-4 py-3 bg-slate-50 border-2 border-slate-100 rounded-2xl focus:border-indigo-500 font-bold outline-none"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-black uppercase text-slate-400 px-1">Priority (Order)</label>
+                    <input 
+                      type="number"
+                      value={isEditingPrize.priority}
+                      onChange={e => setIsEditingPrize({ ...isEditingPrize, priority: parseInt(e.target.value) || 0 })}
+                      className="w-full px-4 py-3 bg-slate-50 border-2 border-slate-100 rounded-2xl focus:border-indigo-500 font-bold outline-none"
+                    />
+                  </div>
+                </div>
+
+                <div className="pt-6">
+                  <button 
+                    onClick={() => {
+                      updatePrize(isEditingPrize.id, isEditingPrize);
+                      setIsEditingPrize(null);
+                    }}
+                    className="w-full py-5 bg-indigo-600 text-white rounded-2xl font-black uppercase tracking-widest shadow-xl shadow-indigo-600/20 hover:bg-indigo-700 active:scale-95 transition-all"
+                  >
+                    Update Prize Details
+                  </button>
+                </div>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

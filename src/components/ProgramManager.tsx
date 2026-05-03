@@ -5,7 +5,7 @@
 
 import React, { useState } from 'react';
 import { AppState, DrawProgram, Prize } from '../types';
-import { Plus, Trash2, Calendar, LayoutGrid, FileText, CheckCircle2, Copy, History, Image as ImageIcon, Trophy, Save } from 'lucide-react';
+import { Plus, Trash2, Calendar, LayoutGrid, FileText, CheckCircle2, Copy, History, Image as ImageIcon, Trophy, Save, Music, Info } from 'lucide-react';
 import { generateId, cn, formatDate, compressImage } from '../lib/utils';
 import { DEFAULT_RULES, INITIAL_PRIZES } from '../constants';
 import { useTranslation } from 'react-i18next';
@@ -18,6 +18,11 @@ export default function ProgramManager({ state, updateState }: { state: AppState
   const [bannerFit, setBannerFit] = useState<'cover' | 'contain'>('cover');
   const [bannerHeight, setBannerHeight] = useState<number>(20);
   const [bannerPosition, setBannerPosition] = useState<number>(50);
+  const [theatreBadge, setTheatreBadge] = useState<string>('LUCKY DRAW');
+  const [theatreSubtitle, setTheatreSubtitle] = useState<string>('');
+  const [bgmUrl, setBgmUrl] = useState<string>('https://assets.mixkit.co/music/preview/mixkit-celebration-160.mp3');
+  const [bgmVolume, setBgmVolume] = useState<number>(0.5);
+  const [bgmEnabled, setBgmEnabled] = useState<boolean>(true);
   const [month, setMonth] = useState<number>(new Date().getMonth() + 1);
   const [year, setYear] = useState<number>(new Date().getFullYear());
   const [editingProgramId, setEditingProgramId] = useState<string | null>(null);
@@ -51,6 +56,11 @@ export default function ProgramManager({ state, updateState }: { state: AppState
       bannerFit: template ? template.bannerFit : bannerFit,
       bannerHeight: template ? template.bannerHeight : bannerHeight,
       bannerPosition: template ? template.bannerPosition : bannerPosition,
+      theatreBadge: template ? template.theatreBadge : theatreBadge,
+      theatreSubtitle: template ? template.theatreSubtitle : theatreSubtitle,
+      bgmUrl: template ? template.bgmUrl : bgmUrl,
+      bgmVolume: template ? template.bgmVolume : bgmVolume,
+      bgmEnabled: template ? template.bgmEnabled : bgmEnabled,
       createdAt: Date.now(),
       prizes: finalPrizes,
       rules: template ? { ...template.rules } : { ...DEFAULT_RULES },
@@ -85,6 +95,11 @@ export default function ProgramManager({ state, updateState }: { state: AppState
         bannerFit,
         bannerHeight,
         bannerPosition,
+        theatreBadge,
+        theatreSubtitle,
+        bgmUrl,
+        bgmVolume,
+        bgmEnabled,
         prizes: prizes.length > 0 ? prizes : p.prizes,
         month,
         year
@@ -106,6 +121,11 @@ export default function ProgramManager({ state, updateState }: { state: AppState
     setBannerFit(p.bannerFit || 'cover');
     setBannerHeight(p.bannerHeight || 20);
     setBannerPosition(p.bannerPosition || 50);
+    setTheatreBadge(p.theatreBadge || 'LUCKY DRAW');
+    setTheatreSubtitle(p.theatreSubtitle || '');
+    setBgmUrl(p.bgmUrl || 'https://assets.mixkit.co/music/preview/mixkit-celebration-160.mp3');
+    setBgmVolume(p.bgmVolume ?? 0.5);
+    setBgmEnabled(p.bgmEnabled ?? true);
     setPrizes(p.prizes);
     setMonth(p.month || new Date().getMonth() + 1);
     setYear(p.year || new Date().getFullYear());
@@ -158,32 +178,44 @@ export default function ProgramManager({ state, updateState }: { state: AppState
           {editingProgramId ? t('setup.edit_title') : t('setup.create_title')}
         </h3>
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 md:gap-10">
-          {/* Thumbnail Upload */}
-          <div className="lg:col-span-1 border-4 border-dashed border-slate-100 rounded-[2rem] flex flex-col items-center justify-center p-6 bg-slate-50 relative group overflow-hidden transition-all hover:bg-slate-100">
-             {thumbnail ? (
-               <div className="relative w-full h-full rounded-2xl overflow-hidden shadow-lg">
-                 <img src={thumbnail} alt="Preview" className="w-full h-full object-cover" />
-                 <button 
-                   onClick={() => setThumbnail(undefined)}
-                   className="absolute top-2 right-2 w-8 h-8 bg-red-500 text-white rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity shadow-lg"
-                 >
-                   <Trash2 size={16} />
-                 </button>
-               </div>
-             ) : (
-               <label className="cursor-pointer flex flex-col items-center gap-3">
-                 <div className="w-16 h-16 bg-white rounded-2xl flex items-center justify-center text-slate-300 shadow-sm border border-slate-100">
-                   <ImageIcon size={32} />
+          <div className="lg:col-span-1 space-y-6">
+            <div className="border-4 border-dashed border-slate-100 rounded-[2rem] flex flex-col items-center justify-center p-6 bg-slate-50 relative group overflow-hidden transition-all hover:bg-slate-100 min-h-[240px]">
+               {thumbnail ? (
+                 <div className="relative w-full h-full rounded-2xl overflow-hidden shadow-lg">
+                   <img src={thumbnail} alt="Preview" className="w-full h-full object-cover" />
+                   <button 
+                     onClick={() => setThumbnail(undefined)}
+                     className="absolute top-2 right-2 w-8 h-8 bg-red-500 text-white rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity shadow-lg"
+                   >
+                     <Trash2 size={16} />
+                   </button>
                  </div>
-                 <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest leading-tight text-center">
-                   Click to upload<br/>Thumbnail
-                 </p>
-                 <input type="file" className="hidden" accept="image/*" onChange={handleFileUpload} />
-               </label>
-             )}
+               ) : (
+                 <label className="cursor-pointer flex flex-col items-center gap-3">
+                   <div className="w-16 h-16 bg-white rounded-2xl flex items-center justify-center text-slate-300 shadow-sm border border-slate-100">
+                     <ImageIcon size={32} />
+                   </div>
+                   <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest leading-tight text-center">
+                     Click to upload<br/>Thumbnail/Banner
+                   </p>
+                   <input type="file" className="hidden" accept="image/*" onChange={handleFileUpload} />
+                 </label>
+               )}
+            </div>
+
+            <div className="space-y-3">
+               <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] pl-1">Or Image URL</label>
+               <input 
+                type="text"
+                placeholder="https://images.unsplash.com/..."
+                value={thumbnail || ''}
+                onChange={(e) => setThumbnail(e.target.value)}
+                className="w-full px-4 py-3 bg-slate-50 border-2 border-slate-100 rounded-xl focus:border-indigo-500 font-bold text-xs"
+               />
+            </div>
           </div>
 
-          <div className="lg:col-span-2 space-y-4 md:space-y-6">
+          <div className="lg:col-span-2 space-y-8">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
               <div className="space-y-3">
                 <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] pl-1">{t('setup.program_name')}</label>
@@ -222,74 +254,169 @@ export default function ProgramManager({ state, updateState }: { state: AppState
                  </div>
               </div>
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div className="space-y-3">
-                <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] pl-1">{t('setup.program_desc')}</label>
-                <textarea 
-                  placeholder="Details about this recurring draw cycle..."
-                  value={description}
-                  onChange={(e) => setDescription(e.target.value)}
-                  className="w-full px-6 py-4 bg-slate-50 border-2 border-slate-100 rounded-2xl focus:border-indigo-500 focus:bg-white outline-none font-bold h-24 resize-none transition-all"
-                />
-              </div>
-              <div className="space-y-3">
-                <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] pl-1">Banner Fine-tuning</label>
-                <div className="space-y-4 bg-slate-50 p-4 rounded-2xl border border-slate-100">
-                  <div className="space-y-1">
-                    <div className="flex justify-between text-[10px] font-black uppercase text-slate-400 px-1">
-                      <span>Height</span>
-                      <span>{bannerHeight}vh</span>
+
+            <div className="space-y-3">
+              <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] pl-1">{t('setup.program_desc')}</label>
+              <textarea 
+                placeholder="Details about this recurring draw cycle..."
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                className="w-full px-6 py-4 bg-slate-50 border-2 border-slate-100 rounded-2xl focus:border-indigo-500 focus:bg-white outline-none font-bold h-20 resize-none transition-all"
+              />
+            </div>
+
+            {/* Banner Customization Section */}
+            <div className="pt-6 border-t border-slate-100">
+               <h4 className="text-xs font-black uppercase tracking-widest text-slate-500 mb-6 flex items-center gap-2">
+                 <LayoutGrid size={16} className="text-indigo-600" /> Banner Customization (Only shows in Draw Theatre)
+               </h4>
+               <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                  <div className="space-y-4 bg-slate-50 p-6 rounded-3xl border border-slate-100">
+                    <div className="space-y-4">
+                      <div className="space-y-1">
+                        <div className="flex justify-between text-[10px] font-black uppercase text-slate-400 px-1">
+                          <span>Banner Height</span>
+                          <span className="text-indigo-600">{bannerHeight}vh</span>
+                        </div>
+                        <input 
+                          type="range" 
+                          min="10" 
+                          max="50" 
+                          value={bannerHeight} 
+                          onChange={(e) => setBannerHeight(parseInt(e.target.value))}
+                          className="w-full h-1.5 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-indigo-600"
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <div className="flex justify-between text-[10px] font-black uppercase text-slate-400 px-1">
+                          <span>Vertical Position</span>
+                          <span className="text-indigo-600">{bannerPosition}%</span>
+                        </div>
+                        <input 
+                          type="range" 
+                          min="0" 
+                          max="100" 
+                          value={bannerPosition} 
+                          onChange={(e) => setBannerPosition(parseInt(e.target.value))}
+                          className="w-full h-1.5 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-indigo-600"
+                        />
+                      </div>
                     </div>
+                  </div>
+
+                  <div className="space-y-3">
+                    <div className="grid grid-cols-2 gap-3 h-full">
+                      <button 
+                        onClick={() => setBannerFit('cover')}
+                        className={cn(
+                          "flex flex-col items-center justify-center gap-2 rounded-2xl border-2 transition-all p-4",
+                          bannerFit === 'cover' ? "border-indigo-600 bg-indigo-50 text-indigo-600" : "border-slate-100 text-slate-400 hover:border-slate-200"
+                        )}
+                      >
+                        <span className="font-black text-[10px] uppercase tracking-widest">FILL (Cover)</span>
+                        <span className="text-[8px] font-bold leading-tight text-center">Image fills the banner area</span>
+                      </button>
+                      <button 
+                        onClick={() => setBannerFit('contain')}
+                        className={cn(
+                          "flex flex-col items-center justify-center gap-2 rounded-2xl border-2 transition-all p-4",
+                          bannerFit === 'contain' ? "border-indigo-600 bg-indigo-50 text-indigo-600" : "border-slate-100 text-slate-400 hover:border-slate-200"
+                        )}
+                      >
+                        <span className="font-black text-[10px] uppercase tracking-widest">FIT (Contain)</span>
+                        <span className="text-[8px] font-bold leading-tight text-center">Show full image with letterbox</span>
+                      </button>
+                    </div>
+                  </div>
+               </div>
+
+               <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-black uppercase text-slate-400 px-1">Display Badge (e.g., Year End Party)</label>
                     <input 
-                      type="range" 
-                      min="10" 
-                      max="50" 
-                      value={bannerHeight} 
-                      onChange={(e) => setBannerHeight(parseInt(e.target.value))}
-                      className="w-full h-1.5 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-indigo-600"
+                      type="text"
+                      value={theatreBadge}
+                      onChange={(e) => setTheatreBadge(e.target.value)}
+                      placeholder="LUCKY DRAW"
+                      className="w-full px-4 py-3 bg-white border-2 border-slate-100 rounded-xl focus:border-indigo-500 font-bold outline-none"
                     />
                   </div>
-                  <div className="space-y-1">
-                    <div className="flex justify-between text-[10px] font-black uppercase text-slate-400 px-1">
-                      <span>Vertical Position</span>
-                      <span>{bannerPosition}%</span>
-                    </div>
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-black uppercase text-slate-400 px-1">Theatre Subtitle</label>
                     <input 
-                      type="range" 
-                      min="0" 
-                      max="100" 
-                      value={bannerPosition} 
-                      onChange={(e) => setBannerPosition(parseInt(e.target.value))}
-                      className="w-full h-1.5 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-indigo-600"
+                      type="text"
+                      value={theatreSubtitle}
+                      onChange={(e) => setTheatreSubtitle(e.target.value)}
+                      placeholder="Welcome to our live event"
+                      className="w-full px-4 py-3 bg-white border-2 border-slate-100 rounded-xl focus:border-indigo-500 font-bold outline-none"
                     />
                   </div>
-                </div>
-              </div>
-              <div className="space-y-3">
-                <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] pl-1">Banner Display Mode</label>
-                <div className="grid grid-cols-2 gap-3 h-24">
-                  <button 
-                    onClick={() => setBannerFit('cover')}
-                    className={cn(
-                      "flex flex-col items-center justify-center gap-1 rounded-2xl border-2 transition-all p-2",
-                      bannerFit === 'cover' ? "border-indigo-600 bg-indigo-50 text-indigo-600" : "border-slate-100 text-slate-400"
-                    )}
-                  >
-                    <span className="font-black text-[10px] uppercase tracking-widest">FILL (Cover)</span>
-                    <span className="text-[8px] font-medium leading-tight">Image fills the banner area (Some cropping)</span>
-                  </button>
-                  <button 
-                    onClick={() => setBannerFit('contain')}
-                    className={cn(
-                      "flex flex-col items-center justify-center gap-1 rounded-2xl border-2 transition-all p-2",
-                      bannerFit === 'contain' ? "border-indigo-600 bg-indigo-50 text-indigo-600" : "border-slate-100 text-slate-400"
-                    )}
-                  >
-                    <span className="font-black text-[10px] uppercase tracking-widest">FIT (Contain)</span>
-                    <span className="text-[8px] font-medium leading-tight">Show full image (No cropping)</span>
-                  </button>
-                </div>
-              </div>
+               </div>
+
+               <div className="mt-8 pt-8 border-t border-slate-100">
+                  <div className="flex items-center gap-3 mb-6">
+                    <div className="w-8 h-8 bg-indigo-50 text-indigo-600 rounded-lg flex items-center justify-center">
+                      <Music size={16} />
+                    </div>
+                    <h4 className="font-black italic uppercase tracking-tight text-slate-800">Background Music (BGM)</h4>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                    <div className="space-y-4">
+                      <div className="flex items-center justify-between">
+                        <label className="text-[10px] font-black uppercase text-slate-400">Enable Background Audio</label>
+                        <button 
+                          onClick={() => setBgmEnabled(!bgmEnabled)}
+                          className={cn(
+                            "w-12 h-6 rounded-full transition-all relative",
+                            bgmEnabled ? "bg-indigo-600" : "bg-slate-200"
+                          )}
+                        >
+                          <div className={cn(
+                            "absolute top-1 w-4 h-4 bg-white rounded-full transition-all",
+                            bgmEnabled ? "right-1" : "left-1"
+                          )} />
+                        </button>
+                      </div>
+
+                      <div className="space-y-2">
+                        <label className="text-[10px] font-black uppercase text-slate-400">Audio URL (MP3/Link)</label>
+                        <input 
+                          type="text"
+                          value={bgmUrl}
+                          onChange={(e) => setBgmUrl(e.target.value)}
+                          placeholder="https://example.com/music.mp3"
+                          className="w-full px-4 py-3 bg-white border-2 border-slate-100 rounded-xl focus:border-indigo-500 font-bold outline-none text-xs"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="space-y-4">
+                      <div className="space-y-2">
+                        <div className="flex items-center justify-between">
+                          <label className="text-[10px] font-black uppercase text-slate-400">Playback Volume</label>
+                          <span className="text-[10px] font-black text-indigo-600">{Math.round(bgmVolume * 100)}%</span>
+                        </div>
+                        <input 
+                          type="range"
+                          min="0"
+                          max="1"
+                          step="0.01"
+                          value={bgmVolume}
+                          onChange={(e) => setBgmVolume(parseFloat(e.target.value))}
+                          className="w-full h-2 bg-slate-100 rounded-lg appearance-none cursor-pointer accent-indigo-600"
+                        />
+                      </div>
+
+                      <div className="p-4 bg-amber-50 rounded-2xl border border-amber-100 flex gap-3">
+                        <Info size={16} className="text-amber-500 shrink-0 mt-0.5" />
+                        <p className="text-[10px] leading-relaxed text-amber-900 font-medium italic">
+                          Choose an inspiring sound to build anticipation during the draw session.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+               </div>
             </div>
           </div>
           <div className="flex flex-col justify-end gap-3">

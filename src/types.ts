@@ -47,6 +47,11 @@ export interface DrawProgram {
   bannerFit?: 'cover' | 'contain';
   bannerHeight?: number;
   bannerPosition?: number;
+  theatreBadge?: string;
+  theatreSubtitle?: string;
+  bgmUrl?: string;
+  bgmVolume?: number;
+  bgmEnabled?: boolean;
   month?: number;
   year?: number;
 }
@@ -73,6 +78,7 @@ export interface Winner {
 
 export interface AppSettings {
   currency: string;
+  maxWinnersPerDraw?: number;
 }
 
 export interface AppState {
