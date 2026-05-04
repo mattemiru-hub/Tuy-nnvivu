@@ -110,16 +110,25 @@
 }
 
 .winner-name {
-  font-size: 48px;
+  font-size: 56px;
   font-weight: 800;
-  margin-bottom: 10px;
+  margin-bottom: 20px;
   word-break: break-word;
+  line-height: 1.1;
+  color: #0f172a;
+  text-align: center;
 }
 
 .winner-id {
-  font-size: 18px;
-  margin-bottom: 20px;
-  color: #555;
+  font-size: 20px;
+  font-weight: 700;
+  margin-bottom: 32px;
+  color: #6366f1;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+  background: #f5f3ff;
+  display: inline-block;
+  padding: 8px 16px;
+  border-radius: 12px;
 }
 
 .winner-detail {
@@ -145,12 +154,17 @@
 }
 
 .winner-empty {
-  height: 200px;
+  height: 300px;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 24px;
-  color: #888;
+  font-size: 32px;
+  font-weight: 800;
+  color: #cbd5e1;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  text-align: center;
+  opacity: 0.6;
 }
 
 @media (max-width: 768px) {

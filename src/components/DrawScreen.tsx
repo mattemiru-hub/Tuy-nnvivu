@@ -526,6 +526,7 @@ export default function DrawScreen({ state, updateState, onNavigate }: { state: 
   const startActualDraw = () => {
     setIsDrawing(true);
     setCurrentWinner(null);
+    setPendingWinner(null); // Clear pending winner so "Drawing..." shows
     setError(null);
 
     const winner = drawRandom(availablePool);
@@ -537,12 +538,10 @@ export default function DrawScreen({ state, updateState, onNavigate }: { state: 
       return;
     }
 
-    console.log("Winner Drawn:", winner);
-
     const poolTickets = currentProgram.ticketPool.length > 0 ? currentProgram.ticketPool : [];
     let count = 0;
-    const maxTicks = 45;
-    const baseInterval = 40;
+    const maxTicks = 55; // Slightly more ticks for more dramatic effect
+    const baseInterval = 35; // Slightly faster starting speed
 
     const tick = () => {
       try {
