@@ -304,6 +304,60 @@ const WinnerDisplay = ({
   );
 };
 
+const PrizeSelector = ({ 
+  prizes, 
+  selectedPrizeId, 
+  onSelect 
+}: { 
+  prizes: Prize[], 
+  selectedPrizeId: string | null, 
+  onSelect: (id: string) => void 
+}) => {
+  return (
+    <div className="mb-6">
+      <div className="flex items-center gap-2 mb-3">
+        <LayoutGrid size={14} className="text-slate-400" />
+        <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Select Prize Category</h4>
+      </div>
+      <div className="flex flex-wrap gap-2">
+        {prizes.map((prize) => (
+          <button
+            key={prize.id}
+            onClick={() => onSelect(prize.id)}
+            className={cn(
+              "flex items-center gap-3 p-2 pr-4 rounded-xl border transition-all cursor-pointer text-left h-12",
+              selectedPrizeId === prize.id 
+                ? "bg-indigo-600 border-indigo-600 shadow-lg shadow-indigo-100 ring-2 ring-indigo-600 ring-offset-2" 
+                : "bg-white border-slate-100 hover:border-indigo-200 hover:bg-slate-50"
+            )}
+          >
+            <div className={cn(
+              "w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0",
+              selectedPrizeId === prize.id ? "bg-white/20 text-white" : "bg-slate-100 text-slate-400"
+            )}>
+              {prize.image ? <img src={prize.image} className="w-full h-full object-cover rounded-lg" /> : <Gift size={14} />}
+            </div>
+            <div>
+              <p className={cn(
+                "text-[10px] font-black leading-tight truncate max-w-[120px]",
+                selectedPrizeId === prize.id ? "text-white" : "text-slate-700"
+              )}>
+                {prize.name}
+              </p>
+              <p className={cn(
+                "text-[9px] font-bold",
+                selectedPrizeId === prize.id ? "text-indigo-100" : "text-slate-400 whitespace-nowrap"
+              )}>
+                {prize.remaining} / {prize.quantity} LEFT
+              </p>
+            </div>
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+};
+
 const DrawMainPanel = ({ 
   currentWinner,
   onDraw,
@@ -311,7 +365,10 @@ const DrawMainPanel = ({
   onConfirm,
   isDrawing,
   remaining,
-  activePrizeName
+  activePrizeName,
+  allPrizes,
+  selectedPrizeId,
+  onSelectPrize
 }: { 
   currentWinner: Ticket | null,
   onDraw: () => void,
@@ -319,22 +376,21 @@ const DrawMainPanel = ({
   onConfirm: () => void,
   isDrawing: boolean,
   remaining: number,
-  activePrizeName?: string
+  activePrizeName?: string,
+  allPrizes: Prize[],
+  selectedPrizeId: string | null,
+  onSelectPrize: (id: string) => void
 }) => (
-  <main className="draw-main-panel h-full overflow-y-auto custom-scrollbar">
-    <div className="active-prize-bar px-4 py-2 bg-indigo-50/50 rounded-xl border border-indigo-100 flex justify-between items-center mb-6">
-      <div className="flex items-center gap-2">
-        <span className="text-xl">🎁</span>
-        <span className="uppercase tracking-widest text-xs font-black text-indigo-900">Active Prize: {activePrizeName}</span>
-      </div>
-      <div className="bg-indigo-600 text-white px-3 py-1 rounded-lg text-xs font-black">
-        REMAINING: {remaining}
-      </div>
-    </div>
+  <main className="draw-main-panel h-full overflow-y-auto custom-scrollbar flex flex-col p-6 lg:p-8">
+    <PrizeSelector 
+      prizes={allPrizes} 
+      selectedPrizeId={selectedPrizeId} 
+      onSelect={onSelectPrize} 
+    />
 
     <WinnerDisplay winner={currentWinner} isDrawing={isDrawing} />
 
-    <div className="draw-controls bg-white p-6 rounded-2xl border border-slate-100 shadow-sm mt-auto">
+    <div className="draw-controls bg-white p-4 lg:p-6 rounded-2xl border border-slate-100 shadow-sm mt-auto">
       <button 
         onClick={onReroll} 
         disabled={!currentWinner || isDrawing}
@@ -493,11 +549,17 @@ export default function DrawScreen({ state, updateState, onNavigate }: { state: 
     };
   }, [state.activeProgramId]);
 
-  const activePrizes = currentProgram?.prizes.filter(p => p.isActive && p.remaining > 0).sort((a, b) => b.priority - a.priority) || [];
-  const selectedPrize = activePrizes.find(p => p.id === selectedPrizeId) || activePrizes[0];
+  const allPrizes = currentProgram?.prizes.filter(p => p.isActive).sort((a, b) => b.priority - a.priority) || [];
+  const selectedPrize = allPrizes.find(p => p.id === selectedPrizeId) || allPrizes[0];
   
   const programWinners = state.winners.filter(w => w.programId === currentProgram?.id);
   const availablePool = currentProgram ? getAvailableParticipants(currentProgram.ticketPool, state.winners, currentProgram.id) : [];
+
+  const handleSelectPrize = (id: string) => {
+    if (isDrawing) return;
+    setSelectedPrizeId(id);
+    setCurrentWinner(null);
+  };
 
   const toggleFullscreen = () => {
     if (!document.fullscreenElement) {
@@ -726,6 +788,9 @@ export default function DrawScreen({ state, updateState, onNavigate }: { state: 
           isDrawing={isDrawing}
           remaining={selectedPrize?.remaining || 0}
           activePrizeName={selectedPrize?.name}
+          allPrizes={allPrizes}
+          selectedPrizeId={selectedPrizeId || (allPrizes.length > 0 ? allPrizes[0].id : null)}
+          onSelectPrize={handleSelectPrize}
         />
 
         <AnimatePresence>

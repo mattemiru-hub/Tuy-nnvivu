@@ -101,12 +101,13 @@
 
 .winner-display {
   width: 100%;
-  padding: 40px 20px;
+  padding: 24px 20px;
   text-align: center;
   background: #ffffff;
-  border-radius: 16px;
-  margin-bottom: 20px;
+  border-radius: 20px;
+  margin-bottom: 24px;
   overflow: visible;
+  border: 1px solid #f1f5f9;
 }
 
 .winner-name {
@@ -144,6 +145,11 @@
   display: flex;
   justify-content: center;
   gap: 12px;
+  padding-top: 20px;
+  background: white;
+  position: sticky;
+  bottom: 0;
+  z-index: 10;
 }
 
 .draw-controls button {
@@ -154,11 +160,12 @@
 }
 
 .winner-empty {
-  height: 300px;
+  min-height: 200px;
   display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
-  font-size: 32px;
+  font-size: 28px;
   font-weight: 800;
   color: #cbd5e1;
   text-transform: uppercase;
