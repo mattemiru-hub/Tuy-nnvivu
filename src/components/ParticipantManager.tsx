@@ -42,7 +42,6 @@ export default function ParticipantManager({ state, updateState }: { state: AppS
     upi: '',
     location: '',
     region: '',
-    lineManager: ''
   });
   const [isSplitMode, setIsSplitMode] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
@@ -85,7 +84,6 @@ export default function ParticipantManager({ state, updateState }: { state: AppS
         upi: editingTicket.upi,
         location: editingTicket.location,
         region: editingTicket.region,
-        line_manager: editingTicket.lineManager
       }).eq('id', editingTicket.id);
       
       if (error) throw error;
@@ -141,7 +139,7 @@ export default function ParticipantManager({ state, updateState }: { state: AppS
         // Auto-detect mappings
         const autoMap: ColumnMapping = { 
           id: '', name: '', employeeId: '', department: '', programNameCol: '',
-          upi: '', location: '', region: '', lineManager: '' 
+          upi: '', location: '', region: '' 
         };
         cols.forEach(col => {
           const l = col.toLowerCase();
@@ -153,7 +151,6 @@ export default function ParticipantManager({ state, updateState }: { state: AppS
           if (l.includes('upi')) autoMap.upi = col;
           if (l.includes('vị trí') || l.includes('location')) autoMap.location = col;
           if (l.includes('vùng') || l.includes('region')) autoMap.region = col;
-          if (l.includes('manager') || l.includes('quản lý')) autoMap.lineManager = col;
         });
         setMapping(autoMap);
 
@@ -196,7 +193,6 @@ export default function ParticipantManager({ state, updateState }: { state: AppS
       upi: String(row[mapping.upi] || "-"),
       location: String(row[mapping.location] || "-"),
       region: String(row[mapping.region] || "-"),
-      lineManager: String(row[mapping.lineManager] || "-"),
       position: String(row['Position'] || row['Chức vụ'] || "-"),
       programName: isSplitMode && mapping.programNameCol ? String(row[mapping.programNameCol] || "General") : "",
     })));

@@ -10,7 +10,6 @@ export interface Ticket {
   email?: string;
   employeeId?: string;
   position?: string;
-  lineManager?: string;
   region?: string;
   upi?: string;
   location?: string;
@@ -71,7 +70,6 @@ export interface Winner {
   employeeId?: string;
   department?: string;
   position?: string;
-  lineManager?: string;
   region?: string;
   upi?: string;
   location?: string;

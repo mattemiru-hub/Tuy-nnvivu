@@ -33,7 +33,6 @@ const mapParticipant = (p: any): Ticket => ({
   ...p,
   id: p.id,
   employeeId: p.employee_id,
-  lineManager: p.line_manager,
 });
 
 const mapWinner = (w: any): Winner => ({
@@ -49,7 +48,6 @@ const mapWinner = (w: any): Winner => ({
   upi: w.participants?.upi,
   location: w.participants?.location,
   region: w.participants?.region,
-  lineManager: w.participants?.line_manager,
   department: w.participants?.department,
   position: w.participants?.position,
   employeeId: w.participants?.employee_id
@@ -142,7 +140,6 @@ export const supabaseService = {
       upi: p.upi,
       location: p.location,
       region: p.region,
-      line_manager: p.lineManager,
       department: p.department,
       position: p.position,
       employee_id: p.employeeId

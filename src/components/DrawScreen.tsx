@@ -204,7 +204,6 @@ const WinnerDetail = ({
                 { label: 'UPI/Employee ID', value: winner.employeeId || winner.upi },
                 { label: 'Location', value: winner.location },
                 { label: 'Region', value: winner.region },
-                { label: 'Line Manager', value: winner.lineManager },
               ].map(field => field.value && (
                 <div key={field.label}>
                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">{field.label}</p>
@@ -341,7 +340,6 @@ const WinnerDisplay = ({
                 { label: 'Dept/Channel', value: winner.department, icon: <LayoutGrid size={16} /> },
                 { label: 'Region', value: winner.region, icon: <Star size={16} /> },
                 { label: 'Location', value: winner.location, icon: <Info size={16} /> },
-                { label: 'Line Manager', value: winner.lineManager, icon: <Users size={16} /> },
                 { label: 'Role/Position', value: winner.position, icon: <LayoutGrid size={16} /> },
               ].map((field, i) => field.value && (
                 <motion.div 
