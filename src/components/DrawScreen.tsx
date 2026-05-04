@@ -50,36 +50,32 @@ const DrawHeader = ({
     <header className="bg-white border-b border-slate-200 sticky top-0 z-30 shadow-sm">
       <div className="max-w-[1600px] mx-auto">
         {/* Banner Area */}
-        <div className="relative group h-[120px] lg:h-[180px] bg-slate-100 overflow-hidden">
+        <div className="relative group bg-slate-900 shadow-inner flex items-center justify-center min-h-[120px]">
           {currentProgram.thumbnail ? (
-            <>
+            <div className="w-full relative max-h-[320px] flex items-center justify-center bg-slate-900 overflow-hidden">
               <img 
                 src={currentProgram.thumbnail} 
                 alt={currentProgram.name} 
-                className={cn(
-                  "w-full h-full",
-                  currentProgram.bannerFit === 'contain' ? "object-contain bg-slate-900" : "object-cover"
-                )}
-                style={{ objectPosition: `center ${currentProgram.bannerPosition ?? 50}%` }}
+                className="w-full h-auto max-h-[320px] object-contain block"
               />
-              <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-4">
-                <label className="cursor-pointer bg-white/90 backdrop-blur text-slate-800 p-3 rounded-xl shadow-lg hover:scale-110 transition-transform flex items-center gap-2 font-bold text-xs uppercase tracking-widest">
+              <div className="absolute inset-0 bg-black/10 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-4">
+                <label className="cursor-pointer bg-white/90 backdrop-blur text-slate-800 p-2 lg:p-3 rounded-xl shadow-lg hover:scale-110 transition-transform flex items-center gap-2 font-black text-[10px] uppercase tracking-widest">
                   <ImageIcon size={16} /> Replace
                   <input type="file" className="hidden" accept="image/*" onChange={handleBannerUpload} />
                 </label>
                 <button 
                   onClick={removeBanner}
-                  className="bg-white/90 backdrop-blur text-red-600 p-3 rounded-xl shadow-lg hover:scale-110 transition-transform flex items-center gap-2 font-bold text-xs uppercase tracking-widest"
+                  className="bg-white/90 backdrop-blur text-red-600 p-2 lg:p-3 rounded-xl shadow-lg hover:scale-110 transition-transform flex items-center gap-2 font-black text-[10px] uppercase tracking-widest"
                 >
                   <Trash2 size={16} /> Remove
                 </button>
               </div>
-            </>
+            </div>
           ) : (
-            <div className="absolute inset-0 flex flex-col items-center justify-center border-b-2 border-dashed border-slate-200">
+            <div className="h-[120px] lg:h-[160px] w-full flex flex-col items-center justify-center border-b-2 border-dashed border-white/10 bg-slate-100">
                <label className="cursor-pointer flex flex-col items-center gap-2 text-slate-400 hover:text-indigo-500 transition-colors">
                   <ImageIcon size={32} strokeWidth={1.5} />
-                  <span className="text-[10px] font-black uppercase tracking-widest">Click to Upload Banner</span>
+                  <span className="text-[10px] font-black uppercase tracking-widest">Upload Banner</span>
                   <input type="file" className="hidden" accept="image/*" onChange={handleBannerUpload} />
                </label>
             </div>
@@ -551,7 +547,10 @@ export default function DrawScreen({ state, updateState, onNavigate }: { state: 
             </div>
 
             {/* Drawing Theatre */}
-            <div className="flex-1 bg-white rounded-[3rem] shadow-sm border border-slate-100 flex flex-col items-center justify-center relative overflow-hidden overflow-y-auto">
+            <div className={cn(
+              "flex-1 bg-white rounded-[3rem] shadow-sm border border-slate-100 flex flex-col items-center relative overflow-y-auto custom-scrollbar",
+              (pendingWinner || currentWinner) ? "justify-start py-12" : "justify-center"
+            )}>
                <AnimatePresence>
                   {countdown !== null && (
                     <motion.div 
@@ -560,7 +559,7 @@ export default function DrawScreen({ state, updateState, onNavigate }: { state: 
                       exit={{ scale: 0.5, opacity: 0 }}
                       className="absolute inset-0 z-50 flex items-center justify-center bg-white/80 backdrop-blur-sm"
                     >
-                      <span className="text-[240px] font-black text-indigo-600 italic tracking-tighter drop-shadow-2xl">{countdown}</span>
+                      <span className="text-[140px] lg:text-[200px] font-black text-indigo-600 italic tracking-tighter drop-shadow-2xl">{countdown}</span>
                     </motion.div>
                   )}
                </AnimatePresence>
@@ -571,7 +570,7 @@ export default function DrawScreen({ state, updateState, onNavigate }: { state: 
                       key="it-drawing"
                       initial={{ opacity: 0 }}
                       animate={{ opacity: 1 }}
-                      className="flex flex-col items-center gap-12 w-full p-8"
+                      className="flex flex-col items-center justify-center gap-12 w-full p-8 h-full"
                     >
                        <div className="relative w-full h-40 flex items-center justify-center gap-4">
                           {[0, 1, 2, 3].map(i => (
@@ -586,39 +585,43 @@ export default function DrawScreen({ state, updateState, onNavigate }: { state: 
                           ))}
                        </div>
                        <div className="text-center">
-                          <p className="text-[10px] font-black font-mono text-indigo-400 uppercase tracking-[0.8em] mb-4">Filtering Candidates...</p>
-                          <h2 className="text-2xl font-black text-slate-800 uppercase tracking-tighter truncate max-w-md">
-                            {visualPool[0]?.name || "Searching List"}
+                          <p className="text-[10px] font-black font-mono text-indigo-400 uppercase tracking-[0.8em] mb-4">SEARCHING...</p>
+                          <h2 className="text-2xl font-black text-slate-800 uppercase tracking-tighter truncate max-w-md px-6">
+                            {visualPool[0]?.name || "Candidates..."}
                           </h2>
                        </div>
                     </motion.div>
                   ) : (pendingWinner || currentWinner) ? (
                     <motion.div 
                       key="it-result"
-                      initial={{ opacity: 0, scale: 0.95 }}
-                      animate={{ opacity: 1, scale: 1 }}
-                      className="flex flex-col items-center gap-8 w-full p-8"
+                      initial={{ opacity: 0, y: 40 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      className="flex flex-col items-center gap-6 w-full p-8 lg:p-12 text-center"
                     >
-                       <div className="flex flex-col items-center text-center max-w-2xl">
-                          <div className="px-6 py-2 bg-indigo-600 text-white rounded-full text-[10px] font-black uppercase tracking-[0.3em] mb-8 shadow-xl">Winner Revealed</div>
-                          <h1 className="text-6xl lg:text-8xl font-black text-slate-900 tracking-tighter mb-4 leading-tight">
+                       <div className="flex flex-col items-center w-full max-w-4xl">
+                          <div className="px-6 py-2 bg-indigo-600 text-white rounded-full text-[10px] font-black uppercase tracking-[0.3em] mb-6 shadow-xl">WINNER REVEALED</div>
+                          
+                          <h1 className="text-4xl md:text-6xl lg:text-7xl font-black text-slate-900 tracking-tighter leading-tight mb-4 break-words w-full">
                             {(pendingWinner || currentWinner)?.name}
                           </h1>
-                          <p className="text-sm md:text-base font-bold text-indigo-600 font-mono tracking-tight bg-indigo-50/80 px-6 py-2 rounded-xl mb-8 border border-indigo-100 max-w-full">
-                            ID: {(pendingWinner || currentWinner)?.id}
-                          </p>
                           
-                          <div className="grid grid-cols-2 sm:grid-cols-3 gap-6 w-full pt-8 border-t border-slate-100">
+                          <div className="inline-block px-4 py-1.5 bg-indigo-50/80 border border-indigo-100 rounded-xl mb-10">
+                            <p className="text-xs md:text-sm font-bold text-indigo-600 font-mono tracking-tight">
+                              ID: {(pendingWinner || currentWinner)?.id}
+                            </p>
+                          </div>
+                          
+                          <div className="grid grid-cols-2 lg:grid-cols-3 gap-4 lg:gap-6 w-full max-w-3xl py-8 border-t border-slate-100">
                              {[
                                { label: 'Channel', value: (pendingWinner || currentWinner)?.channel },
                                { label: 'UPI', value: (pendingWinner || currentWinner)?.upi || (pendingWinner || currentWinner)?.employeeId },
-                               { label: 'Location', value: (pendingWinner || currentWinner)?.location || (pendingWinner || currentWinner)?.city },
+                               { label: 'Location', value: (pendingWinner || currentWinner)?.location },
                                { label: 'Region', value: (pendingWinner || currentWinner)?.region },
                                { label: 'Line Manager', value: (pendingWinner || currentWinner)?.lineManager },
                              ].map(f => f.value && (
-                               <div key={f.label} className="text-left">
-                                  <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">{f.label}</p>
-                                  <p className="text-xs font-bold text-slate-700 truncate">{f.value}</p>
+                               <div key={f.label} className="text-center md:text-left p-4 bg-slate-50 rounded-2xl border border-slate-100/50">
+                                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">{f.label}</p>
+                                  <p className="text-sm font-bold text-slate-800 break-words">{f.value}</p>
                                </div>
                              ))}
                           </div>
@@ -629,12 +632,12 @@ export default function DrawScreen({ state, updateState, onNavigate }: { state: 
                       key="it-idle"
                       className="flex flex-col items-center gap-8 text-center p-8"
                     >
-                       <div className="w-32 h-32 bg-slate-50 rounded-[2.5rem] flex items-center justify-center border-2 border-dashed border-slate-200">
+                       <div className="w-24 h-24 lg:w-32 lg:h-32 bg-slate-50 rounded-3xl lg:rounded-[2.5rem] flex items-center justify-center border-2 border-dashed border-slate-200">
                           <Trophy size={48} strokeWidth={1} className="text-slate-200" />
                        </div>
                        <div className="space-y-4">
-                        <h2 className="text-4xl font-black text-slate-900 tracking-tighter">Ready to Draw</h2>
-                        <p className="text-slate-400 font-medium">Select a prize and press the button to start the animation.</p>
+                        <h2 className="text-3xl lg:text-4xl font-black text-slate-900 tracking-tighter">Ready to Draw</h2>
+                        <p className="text-sm text-slate-400 font-medium">Select a prize category and start the countdown.</p>
                        </div>
                     </motion.div>
                   )}

@@ -13,6 +13,8 @@ export interface Ticket {
   channel?: string;
   lineManager?: string;
   region?: string;
+  upi?: string;
+  location?: string;
   [key: string]: any;
 }
 
