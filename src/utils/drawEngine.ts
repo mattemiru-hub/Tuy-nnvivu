@@ -11,7 +11,7 @@ export const getAvailableParticipants = (
   const winnerIds = new Set(
     winners
       .filter(w => w.programId === programId)
-      .map(w => w.participantId)
+      .map(w => w.ticketId)
   );
   
   return participants.filter(p => !winnerIds.has(p.id));

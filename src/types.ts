@@ -73,6 +73,8 @@ export interface Winner {
   channel?: string;
   lineManager?: string;
   region?: string;
+  upi?: string;
+  location?: string;
   prizeRemainingAtDraw?: number;
 }
 
