@@ -258,10 +258,10 @@ const WinnerDisplay = ({
       ) : !winner ? (
         <div className="winner-empty">Ready to draw...</div>
       ) : (
-        <>
+        <div className="flex flex-col items-center">
           <div className="winner-name">{winner.name}</div>
           <div className="winner-id">ID: {winner.id}</div>
-          <div className="winner-detail">
+          <div className="winner-detail w-full mt-8">
             {winner.channel && (
               <div className="p-4 bg-slate-50 rounded-xl border border-slate-100">
                 <p className="text-sm font-bold text-slate-700"><strong>CHANNEL:</strong> {winner.channel}</p>
@@ -287,8 +287,18 @@ const WinnerDisplay = ({
                 <p className="text-sm font-bold text-slate-700"><strong>LINE MANAGER:</strong> {winner.lineManager}</p>
               </div>
             )}
+            {winner.department && (
+              <div className="p-4 bg-slate-50 rounded-xl border border-slate-100">
+                <p className="text-sm font-bold text-slate-700"><strong>BỘ PHẬN:</strong> {winner.department}</p>
+              </div>
+            )}
+            {winner.position && (
+              <div className="p-4 bg-slate-50 rounded-xl border border-slate-100">
+                <p className="text-sm font-bold text-slate-700"><strong>CHỨC VỤ:</strong> {winner.position}</p>
+              </div>
+            )}
           </div>
-        </>
+        </div>
       )}
     </div>
   );
@@ -430,7 +440,6 @@ export default function DrawScreen({ state, updateState, onNavigate }: { state: 
   const [selectedPrizeId, setSelectedPrizeId] = useState<string | null>(null);
   const [isDrawing, setIsDrawing] = useState(false);
   const [currentWinner, setCurrentWinner] = useState<Ticket | null>(null);
-  const [pendingWinner, setPendingWinner] = useState<Ticket | null>(null);
   const [visualPool, setVisualPool] = useState<Ticket[]>([]); 
   const [countdown, setCountdown] = useState<number | null>(null);
   const [isFullscreen, setIsFullscreen] = useState(false);
@@ -477,7 +486,6 @@ export default function DrawScreen({ state, updateState, onNavigate }: { state: 
 
   useEffect(() => {
     setCurrentWinner(null);
-    setPendingWinner(null);
     setError(null);
     setSelectedPrizeId(null);
     return () => {
@@ -504,7 +512,10 @@ export default function DrawScreen({ state, updateState, onNavigate }: { state: 
   };
 
   const handleDraw = () => {
-    if (isDrawing || pendingWinner || !selectedPrize || availablePool.length === 0) return;
+    if (isDrawing || currentWinner || !selectedPrize || availablePool.length === 0) return;
+    
+    setIsDrawing(true);
+    setError(null);
     
     // Countdown 3-2-1
     let cd = 3;
@@ -524,9 +535,7 @@ export default function DrawScreen({ state, updateState, onNavigate }: { state: 
   };
 
   const startActualDraw = () => {
-    setIsDrawing(true);
     setCurrentWinner(null);
-    setPendingWinner(null); // Clear pending winner so "Drawing..." shows
     setError(null);
 
     const winner = drawRandom(availablePool);
@@ -540,8 +549,8 @@ export default function DrawScreen({ state, updateState, onNavigate }: { state: 
 
     const poolTickets = currentProgram.ticketPool.length > 0 ? currentProgram.ticketPool : [];
     let count = 0;
-    const maxTicks = 55; // Slightly more ticks for more dramatic effect
-    const baseInterval = 35; // Slightly faster starting speed
+    const maxTicks = 55;
+    const baseInterval = 35;
 
     const tick = () => {
       try {
@@ -556,7 +565,7 @@ export default function DrawScreen({ state, updateState, onNavigate }: { state: 
         } else {
           sounds.playDrumroll();
           setTimeout(() => {
-            setPendingWinner(winner);
+            setCurrentWinner(winner);
             setIsDrawing(false);
             sounds.playSuccess();
             fireConfetti();
@@ -570,25 +579,25 @@ export default function DrawScreen({ state, updateState, onNavigate }: { state: 
   };
 
   const confirmWinner = () => {
-    if (!pendingWinner || !selectedPrize) return;
-    recordWinner(pendingWinner, selectedPrize);
-    setCurrentWinner(pendingWinner);
-    setPendingWinner(null);
+    if (!currentWinner || !selectedPrize) return;
+    
+    // Check if this winner is already recorded
+    const alreadyRecorded = state.winners.some(w => w.ticketId === currentWinner.id && w.programId === currentProgram.id);
+    if (alreadyRecorded) return;
+
+    recordWinner(currentWinner, selectedPrize);
+    // Keep currentWinner in view
   };
 
   const handleReRoll = () => {
     if (failingValidation()) return;
     
-    if (pendingWinner) {
-      setPendingWinner(null);
-      handleDraw();
-    } else if (currentWinner) {
+    if (currentWinner) {
       const winnerToRevoke = currentWinner;
-      updateState(prev => {
-        const winnerRecord = prev.winners.find(w => w.ticketId === winnerToRevoke.id && w.programId === currentProgram.id);
-        if (!winnerRecord) return prev;
-        
-        return {
+      const winnerRecord = state.winners.find(w => w.ticketId === winnerToRevoke.id && w.programId === currentProgram.id);
+      
+      if (winnerRecord) {
+        updateState(prev => ({
           ...prev,
           winners: prev.winners.filter(w => w.id !== winnerRecord.id),
           programs: prev.programs.map(p => 
@@ -601,8 +610,9 @@ export default function DrawScreen({ state, updateState, onNavigate }: { state: 
                 } 
               : p
           )
-        };
-      });
+        }));
+      }
+      
       setCurrentWinner(null);
       handleDraw();
     }
@@ -675,7 +685,6 @@ export default function DrawScreen({ state, updateState, onNavigate }: { state: 
       )
     }));
     setCurrentWinner(null);
-    setPendingWinner(null);
   };
 
   if (!currentProgram || currentProgram.ticketPool.length === 0 || currentProgram.prizes.length === 0) {
@@ -710,7 +719,7 @@ export default function DrawScreen({ state, updateState, onNavigate }: { state: 
 
       <DrawContent>
         <DrawMainPanel 
-          currentWinner={pendingWinner || currentWinner}
+          currentWinner={currentWinner}
           onDraw={handleDraw}
           onConfirm={confirmWinner}
           onReroll={handleReRoll}
