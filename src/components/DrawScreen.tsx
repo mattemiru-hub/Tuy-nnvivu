@@ -197,14 +197,12 @@ const WinnerDetail = ({
               </div>
            </div>
            
-           <div className="grid grid-cols-2 gap-x-8 gap-y-6 bg-slate-50 p-6 rounded-3xl border border-slate-100">
-              {[
-                { label: 'Prize', value: winner.prizeName },
-                { label: 'Dept/Channel', value: winner.department },
-                { label: 'UPI/Employee ID', value: winner.employeeId || winner.upi },
-                { label: 'Location', value: winner.location },
-                { label: 'Region', value: winner.region },
-              ].map(field => field.value && (
+            <div className="grid grid-cols-2 gap-x-8 gap-y-6 bg-slate-50 p-6 rounded-3xl border border-slate-100">
+               {[
+                 { label: 'Prize', value: winner.prizeName },
+                 { label: 'Dept/Channel', value: winner.department },
+                 { label: 'Employee ID', value: winner.employeeId },
+               ].map(field => field.value && (
                 <div key={field.label}>
                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">{field.label}</p>
                    <p className="text-sm font-bold text-slate-700">{field.value}</p>
@@ -336,17 +334,11 @@ const WinnerDisplay = ({
             
             <div className="winner-detail grid grid-cols-2 md:grid-cols-3 gap-4 w-full">
               {[
-                { label: 'UPI/ID', value: winner.upi || winner.employeeId, icon: <TicketIcon size={16} /> },
+                { label: 'ID/Staff ID', value: winner.employeeId, icon: <TicketIcon size={16} /> },
                 { label: 'Dept/Channel', value: winner.department, icon: <LayoutGrid size={16} /> },
-                { label: 'Region', value: winner.region, icon: <Star size={16} /> },
-                { label: 'Location', value: winner.location, icon: <Info size={16} /> },
-                { label: 'Role/Position', value: winner.position, icon: <LayoutGrid size={16} /> },
               ].map((field, i) => field.value && (
-                <motion.div 
+                <div 
                   key={`detail-${field.label}-${i}`}
-                  initial={{ opacity: 0, x: i % 2 === 0 ? -20 : 20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ delay: 0.2 + i * 0.1 }}
                   className="p-5 bg-white rounded-3xl border border-slate-100 flex flex-col items-start text-left shadow-sm hover:shadow-md transition-shadow"
                 >
                   <div className="flex items-center gap-2 mb-2 text-indigo-400">
@@ -354,7 +346,7 @@ const WinnerDisplay = ({
                     <span className="text-[10px] font-black uppercase tracking-[0.1em]">{field.label}</span>
                   </div>
                   <p className="text-base font-black text-slate-800 truncate w-full">{field.value}</p>
-                </motion.div>
+                </div>
               ))}
             </div>
           </motion.div>

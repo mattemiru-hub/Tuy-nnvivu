@@ -7,12 +7,7 @@ export interface Ticket {
   id: string; // "Phiếu"
   name?: string;
   department?: string;
-  email?: string;
   employeeId?: string;
-  position?: string;
-  region?: string;
-  upi?: string;
-  location?: string;
   [key: string]: any;
 }
 
@@ -66,13 +61,8 @@ export interface Winner {
   prizeImage?: string;
   ticketId: string;
   ticketName?: string;
-  email?: string;
   employeeId?: string;
   department?: string;
-  position?: string;
-  region?: string;
-  upi?: string;
-  location?: string;
   prizeRemainingAtDraw?: number;
 }
 
