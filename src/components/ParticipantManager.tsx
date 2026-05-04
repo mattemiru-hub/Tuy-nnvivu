@@ -230,9 +230,11 @@ export default function ParticipantManager({ state, updateState }: { state: AppS
       }
       setRawData([]);
       alert("Đã xử lý dữ liệu và nạp vào hệ thống!");
-    } catch (err) {
+    } catch (err: any) {
       console.error('Error uploading participants:', err);
-      alert('Lỗi khi tải dữ liệu lên Supabase. Vui lòng kiểm tra kết nối.');
+      // Hiển thị chi tiết lỗi để dễ chẩn đoán trên Vercel
+      const errorMsg = err.message || err.details || "Unknown error";
+      alert(`Lỗi khi tải dữ liệu lên Supabase: ${errorMsg}\nVui lòng kiểm tra RLS Policies và kết nối mạng.`);
     } finally {
       setIsProcessing(false);
     }
@@ -432,23 +434,27 @@ export default function ParticipantManager({ state, updateState }: { state: AppS
                 </div>
 
                 {/* Data Preview */}
-                {rawData.length > 0 && (
+                {rawData.length > 0 && columns.length > 0 && (
                   <div className="mt-8 space-y-4">
                     <h4 className="font-black uppercase tracking-widest text-xs text-slate-400">Data Preview (First 5 rows)</h4>
-                    <div className="overflow-x-auto border border-slate-100 rounded-2xl">
-                      <table className="w-full text-left border-collapse text-xs">
+                    <div className="overflow-x-auto border border-slate-100 rounded-2xl bg-white">
+                      <table className="w-full text-left border-collapse text-xs table-fixed">
                         <thead className="bg-slate-50">
                           <tr>
-                            {columns.slice(0, 5).map(col => (
-                              <th key={col} className="px-4 py-2 font-black text-slate-500 uppercase tracking-tighter">{col}</th>
+                            {columns.slice(0, 6).map((col, idx) => (
+                              <th key={`head-${col}-${idx}`} className="px-4 py-3 font-black text-slate-500 uppercase tracking-tighter border-b border-slate-100">
+                                {col}
+                              </th>
                             ))}
                           </tr>
                         </thead>
                         <tbody>
                           {rawData.slice(0, 5).map((row, i) => (
-                            <tr key={i} className="border-t border-slate-50">
-                              {columns.slice(0, 5).map(col => (
-                                <td key={col} className="px-4 py-2 text-slate-600 truncate max-w-[150px]">{String(row[col] || "-")}</td>
+                            <tr key={`row-${i}`} className="border-t border-slate-50 hover:bg-slate-50 transition-colors">
+                              {columns.slice(0, 6).map((col, j) => (
+                                <td key={`cell-${i}-${j}`} className="px-4 py-3 text-slate-600 truncate border-b border-slate-50">
+                                  {String(row[col] || "-")}
+                                </td>
                               ))}
                             </tr>
                           ))}
