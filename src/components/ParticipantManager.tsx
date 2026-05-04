@@ -39,7 +39,6 @@ export default function ParticipantManager({ state, updateState }: { state: AppS
     employeeId: '',
     department: '',
     programNameCol: '',
-    channel: '',
     upi: '',
     location: '',
     region: '',
@@ -83,7 +82,6 @@ export default function ParticipantManager({ state, updateState }: { state: AppS
         name: editingTicket.name,
         employee_id: editingTicket.employeeId,
         department: editingTicket.department,
-        channel: editingTicket.channel,
         upi: editingTicket.upi,
         location: editingTicket.location,
         region: editingTicket.region,
@@ -143,16 +141,15 @@ export default function ParticipantManager({ state, updateState }: { state: AppS
         // Auto-detect mappings
         const autoMap: ColumnMapping = { 
           id: '', name: '', employeeId: '', department: '', programNameCol: '',
-          channel: '', upi: '', location: '', region: '', lineManager: '' 
+          upi: '', location: '', region: '', lineManager: '' 
         };
         cols.forEach(col => {
           const l = col.toLowerCase();
           if (l.includes('phiếu') || l.includes('ticket') || (l.includes('id') && !l.includes('staff') && !l.includes('emp'))) autoMap.id = col;
           if (l.includes('tên') || l.includes('name')) autoMap.name = col;
           if (l.includes('mã') || l.includes('staff') || l.includes('emp')) autoMap.employeeId = col;
-          if (l.includes('phòng') || l.includes('dept')) autoMap.department = col;
+          if (l.includes('phòng') || l.includes('dept') || l.includes('kênh') || l.includes('channel')) autoMap.department = col;
           if (l.includes('ct') || l.includes('program')) autoMap.programNameCol = col;
-          if (l.includes('kênh') || l.includes('channel')) autoMap.channel = col;
           if (l.includes('upi')) autoMap.upi = col;
           if (l.includes('vị trí') || l.includes('location')) autoMap.location = col;
           if (l.includes('vùng') || l.includes('region')) autoMap.region = col;
@@ -196,7 +193,6 @@ export default function ParticipantManager({ state, updateState }: { state: AppS
       name: String(row[mapping.name] || "-"),
       employeeId: String(row[mapping.employeeId] || "-"),
       department: String(row[mapping.department] || "-"),
-      channel: String(row[mapping.channel] || "-"),
       upi: String(row[mapping.upi] || "-"),
       location: String(row[mapping.location] || "-"),
       region: String(row[mapping.region] || "-"),

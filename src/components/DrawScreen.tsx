@@ -200,7 +200,7 @@ const WinnerDetail = ({
            <div className="grid grid-cols-2 gap-x-8 gap-y-6 bg-slate-50 p-6 rounded-3xl border border-slate-100">
               {[
                 { label: 'Prize', value: winner.prizeName },
-                { label: 'Channel', value: winner.channel },
+                { label: 'Dept/Channel', value: winner.department },
                 { label: 'UPI/Employee ID', value: winner.employeeId || winner.upi },
                 { label: 'Location', value: winner.location },
                 { label: 'Region', value: winner.region },
@@ -338,14 +338,14 @@ const WinnerDisplay = ({
             <div className="winner-detail grid grid-cols-2 md:grid-cols-3 gap-4 w-full">
               {[
                 { label: 'UPI/ID', value: winner.upi || winner.employeeId, icon: <TicketIcon size={16} /> },
-                { label: 'Channel', value: winner.channel, icon: <LayoutGrid size={16} /> },
+                { label: 'Dept/Channel', value: winner.department, icon: <LayoutGrid size={16} /> },
                 { label: 'Region', value: winner.region, icon: <Star size={16} /> },
                 { label: 'Location', value: winner.location, icon: <Info size={16} /> },
                 { label: 'Line Manager', value: winner.lineManager, icon: <Users size={16} /> },
-                { label: 'Department/Role', value: (winner.department && winner.position) ? `${winner.department} - ${winner.position}` : (winner.department || winner.position), icon: <LayoutGrid size={16} /> },
+                { label: 'Role/Position', value: winner.position, icon: <LayoutGrid size={16} /> },
               ].map((field, i) => field.value && (
                 <motion.div 
-                  key={field.label}
+                  key={`detail-${field.label}-${i}`}
                   initial={{ opacity: 0, x: i % 2 === 0 ? -20 : 20 }}
                   animate={{ opacity: 1, x: 0 }}
                   transition={{ delay: 0.2 + i * 0.1 }}

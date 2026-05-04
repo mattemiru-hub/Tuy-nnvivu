@@ -46,7 +46,6 @@ const mapWinner = (w: any): Winner => ({
   prizeImage: w.prizes?.image,
   ticketId: w.participant_id,
   ticketName: w.participants?.name,
-  channel: w.participants?.channel,
   upi: w.participants?.upi,
   location: w.participants?.location,
   region: w.participants?.region,
@@ -140,7 +139,6 @@ export const supabaseService = {
     const records = participants.map(p => ({
       program_id: programId,
       name: p.name || 'Unknown',
-      channel: p.channel,
       upi: p.upi,
       location: p.location,
       region: p.region,
