@@ -241,44 +241,55 @@ const DrawContent = ({ children }: { children: React.ReactNode }) => (
 
 const WinnerDisplay = ({ 
   winner, 
+  isDrawing
 }: { 
-  winner: Ticket | null 
+  winner: Ticket | null,
+  isDrawing?: boolean
 }) => {
-  if (!winner) {
-    return <div className="winner-empty">Ready to draw...</div>;
-  }
+  console.log("winner display:", winner);
 
   return (
     <div className="winner-display">
-      <div className="winner-name">{winner.name}</div>
-      <div className="winner-id">ID: {winner.id}</div>
-      <div className="winner-detail">
-        {winner.channel && (
-          <div className="p-4 bg-slate-50 rounded-xl border border-slate-100">
-            <p className="text-sm font-bold text-slate-700"><strong>CHANNEL:</strong> {winner.channel}</p>
+      {isDrawing ? (
+        <div className="winner-empty flex flex-col gap-4">
+          <div className="w-12 h-12 bg-indigo-600 rounded-full animate-ping mx-auto" />
+          <p className="animate-pulse">DRAWING WINNER...</p>
+        </div>
+      ) : !winner ? (
+        <div className="winner-empty">Ready to draw...</div>
+      ) : (
+        <>
+          <div className="winner-name">{winner.name}</div>
+          <div className="winner-id">ID: {winner.id}</div>
+          <div className="winner-detail">
+            {winner.channel && (
+              <div className="p-4 bg-slate-50 rounded-xl border border-slate-100">
+                <p className="text-sm font-bold text-slate-700"><strong>CHANNEL:</strong> {winner.channel}</p>
+              </div>
+            )}
+            {(winner.upi || winner.employeeId) && (
+              <div className="p-4 bg-slate-50 rounded-xl border border-slate-100">
+                <p className="text-sm font-bold text-slate-700"><strong>UPI:</strong> {winner.upi || winner.employeeId}</p>
+              </div>
+            )}
+            {winner.location && (
+              <div className="p-4 bg-slate-50 rounded-xl border border-slate-100">
+                <p className="text-sm font-bold text-slate-700"><strong>VỊ TRÍ:</strong> {winner.location}</p>
+              </div>
+            )}
+            {winner.region && (
+              <div className="p-4 bg-slate-50 rounded-xl border border-slate-100">
+                <p className="text-sm font-bold text-slate-700"><strong>KHU VỰC:</strong> {winner.region}</p>
+              </div>
+            )}
+            {winner.lineManager && (
+              <div className="p-4 bg-slate-50 rounded-xl border border-slate-100">
+                <p className="text-sm font-bold text-slate-700"><strong>LINE MANAGER:</strong> {winner.lineManager}</p>
+              </div>
+            )}
           </div>
-        )}
-        {(winner.upi || winner.employeeId) && (
-          <div className="p-4 bg-slate-50 rounded-xl border border-slate-100">
-            <p className="text-sm font-bold text-slate-700"><strong>UPI:</strong> {winner.upi || winner.employeeId}</p>
-          </div>
-        )}
-        {winner.location && (
-          <div className="p-4 bg-slate-50 rounded-xl border border-slate-100">
-            <p className="text-sm font-bold text-slate-700"><strong>VỊ TRÍ:</strong> {winner.location}</p>
-          </div>
-        )}
-        {winner.region && (
-          <div className="p-4 bg-slate-50 rounded-xl border border-slate-100">
-            <p className="text-sm font-bold text-slate-700"><strong>KHU VỰC:</strong> {winner.region}</p>
-          </div>
-        )}
-        {winner.lineManager && (
-          <div className="p-4 bg-slate-50 rounded-xl border border-slate-100">
-            <p className="text-sm font-bold text-slate-700"><strong>LINE MANAGER:</strong> {winner.lineManager}</p>
-          </div>
-        )}
-      </div>
+        </>
+      )}
     </div>
   );
 };
@@ -311,7 +322,7 @@ const DrawMainPanel = ({
       </div>
     </div>
 
-    <WinnerDisplay winner={currentWinner} />
+    <WinnerDisplay winner={currentWinner} isDrawing={isDrawing} />
 
     <div className="draw-controls bg-white p-6 rounded-2xl border border-slate-100 shadow-sm mt-auto">
       <button 
@@ -518,6 +529,7 @@ export default function DrawScreen({ state, updateState, onNavigate }: { state: 
     setError(null);
 
     const winner = drawRandom(availablePool);
+    console.log("winner:", winner);
 
     if (!winner) {
       setError("No valid participants left.");
