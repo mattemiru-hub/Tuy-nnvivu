@@ -3,10 +3,17 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
+export enum DrawStatus {
+  READY = 'READY',
+  DRAWING = 'DRAWING',
+  RESULT = 'RESULT'
+}
+
 export interface Ticket {
   id: string; // "Phiếu"
   name?: string;
   department?: string;
+  email?: string;
   employeeId?: string;
   position?: string;
   channel?: string;
@@ -26,6 +33,7 @@ export interface Prize {
   priority: number;
   isActive: boolean;
   value: number;
+  config?: Record<string, any>;
 }
 
 export interface RuleConfig {
@@ -33,6 +41,19 @@ export interface RuleConfig {
   maxWinsPerPerson: number;
   preventDuplicatePrizeType: boolean;
   fairnessRandom: boolean;
+  isActive?: boolean;
+  bannerFit?: 'cover' | 'contain';
+  bannerHeight?: number;
+  bannerPosition?: number;
+  theatreBadge?: string;
+  theatreSubtitle?: string;
+  bgmUrl?: string;
+  bgmVolume?: number;
+  bgmEnabled?: boolean;
+  month?: number;
+  year?: number;
+  description?: string;
+  thumbnail?: string;
 }
 
 export interface DrawProgram {
@@ -67,6 +88,7 @@ export interface Winner {
   prizeImage?: string;
   ticketId: string;
   ticketName?: string;
+  email?: string;
   employeeId?: string;
   department?: string;
   position?: string;

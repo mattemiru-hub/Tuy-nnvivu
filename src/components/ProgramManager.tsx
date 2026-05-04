@@ -4,14 +4,14 @@
  */
 
 import React, { useState } from 'react';
+import { motion } from 'motion/react';
 import { AppState, DrawProgram, Prize } from '../types';
-import { Plus, Trash2, Calendar, LayoutGrid, FileText, CheckCircle2, Copy, History, Image as ImageIcon, Trophy, Save, Music, Info } from 'lucide-react';
+import { Plus, Trash2, Calendar, LayoutGrid, FileText, CheckCircle2, Copy, History, Image as ImageIcon, Trophy, Save, Music, Info, AlertCircle, RefreshCcw } from 'lucide-react';
 import { generateId, cn, formatDate, compressImage } from '../lib/utils';
 import { DEFAULT_RULES, INITIAL_PRIZES } from '../constants';
 import { useTranslation } from 'react-i18next';
 
 import { supabaseService } from '../services/supabaseService';
-import { isSupabaseConfigured } from '../lib/supabase';
 
 export default function ProgramManager({ state, updateState }: { state: AppState, updateState: (updater: (prev: AppState) => AppState) => void }) {
   const { t } = useTranslation();
@@ -30,6 +30,7 @@ export default function ProgramManager({ state, updateState }: { state: AppState
   const [year, setYear] = useState<number>(new Date().getFullYear());
   const [editingProgramId, setEditingProgramId] = useState<string | null>(null);
   const [prizes, setPrizes] = useState<Prize[]>([]);
+  const [status, setStatus] = useState<{ type: 'success' | 'error' | null, message: string }>({ type: null, message: '' });
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -44,23 +45,40 @@ export default function ProgramManager({ state, updateState }: { state: AppState
   };
 
   const handleCreateProgram = async (template?: DrawProgram) => {
-    if (!isSupabaseConfigured()) return;
     const name = template ? `${template.name} - ${month}/${year}` : newProgramName;
     if (!name.trim()) return;
 
     try {
+      setStatus({ type: null, message: 'Creating program...' });
+      const rules = template ? template.rules : {
+        ...DEFAULT_RULES,
+        bannerFit,
+        bannerHeight,
+        bannerPosition,
+        theatreBadge,
+        theatreSubtitle,
+        bgmUrl,
+        bgmVolume,
+        bgmEnabled
+      };
+
       const newProg = await supabaseService.createProgram(name, {
         description: template ? template.description : description,
         thumbnail: template ? template.thumbnail : thumbnail,
-        rules: template ? { ...template.rules } : { ...DEFAULT_RULES },
+        rules: rules,
         month: month,
         year: year
       });
 
+      if (!newProg) throw new Error("Failed to create program record");
+
       // If template, clone prizes
+      const clonedPrizes: Prize[] = [];
       if (template) {
         for (const p of template.prizes) {
+          // createPrize doesn't return the prize record usually but we can map it
           await supabaseService.createPrize(newProg.id, p);
+          clonedPrizes.push({ ...p, id: generateId() }); // Temporary ID until reload
         }
       }
 
@@ -68,28 +86,62 @@ export default function ProgramManager({ state, updateState }: { state: AppState
       setDescription('');
       setThumbnail(undefined);
       setPrizes([]);
-    } catch (err) {
+      
+      // Update UI state immediately to show feedback
+      updateState(prev => ({
+        ...prev,
+        programs: [{ ...newProg, prizes: clonedPrizes }, ...prev.programs],
+        activeProgramId: prev.activeProgramId || newProg.id
+      }));
+      
+      setStatus({ type: 'success', message: 'Program created successfully!' });
+      setTimeout(() => setStatus({ type: null, message: '' }), 5000);
+    } catch (err: any) {
       console.error('Error creating program:', err);
+      setStatus({ type: 'error', message: `Error creating program: ${err.message || 'Unknown error'}` });
     }
   };
 
   const handleUpdateProgram = async () => {
-    if (!editingProgramId || !newProgramName.trim() || !isSupabaseConfigured()) return;
+    if (!editingProgramId || !newProgramName.trim()) return;
 
     try {
-      await supabaseService.updateProgram(editingProgramId, {
+      setStatus({ type: null, message: 'Updating program...' });
+      const currentRules = state.programs.find(p => p.id === editingProgramId)?.rules || DEFAULT_RULES;
+      const updatedProg = await supabaseService.updateProgram(editingProgramId, {
         name: newProgramName,
         description,
         thumbnail,
-        month,
-        year
+        rules: {
+          ...currentRules,
+          bannerFit,
+          bannerHeight,
+          bannerPosition,
+          theatreBadge,
+          theatreSubtitle,
+          bgmUrl,
+          bgmVolume,
+          bgmEnabled,
+          month,
+          year
+        },
+        isActive: true // or keep current
       });
+
+      updateState(prev => ({
+        ...prev,
+        programs: prev.programs.map(p => p.id === editingProgramId ? updatedProg : p)
+      }));
+
       setEditingProgramId(null);
       setNewProgramName('');
       setDescription('');
       setThumbnail(undefined);
-    } catch (err) {
+      setStatus({ type: 'success', message: 'Program updated successfully!' });
+      setTimeout(() => setStatus({ type: null, message: '' }), 5000);
+    } catch (err: any) {
       console.error('Error updating program:', err);
+      setStatus({ type: 'error', message: `Error updating program: ${err.message || 'Unknown error'}` });
     }
   };
 
@@ -104,7 +156,6 @@ export default function ProgramManager({ state, updateState }: { state: AppState
   };
 
   const deleteProgram = async (id: string) => {
-    if (!isSupabaseConfigured()) return;
     if (state.programs.length === 1) {
       alert(t('setup.error_last_program'));
       return;
@@ -146,9 +197,25 @@ export default function ProgramManager({ state, updateState }: { state: AppState
     <div className="space-y-12 pb-20">
       {/* Create / Edit Section */}
       <section className="bg-white p-6 md:p-10 rounded-[2rem] md:rounded-[2.5rem] border border-slate-100 shadow-xl shadow-slate-200/40">
-        <h3 className="text-xl md:text-2xl font-black italic tracking-tighter uppercase text-slate-800 mb-6 md:mb-8 border-b-4 border-indigo-600 inline-block">
-          {editingProgramId ? t('setup.edit_title') : t('setup.create_title')}
-        </h3>
+        <div className="flex flex-col md:flex-row justify-between items-start mb-6 md:mb-8 gap-4">
+           <h3 className="text-xl md:text-2xl font-black italic tracking-tighter uppercase text-slate-800 border-b-4 border-indigo-600 inline-block">
+             {editingProgramId ? t('setup.edit_title') : t('setup.create_title')}
+           </h3>
+           
+           {status.message && (
+             <motion.div 
+               initial={{ opacity: 0, x: 20 }}
+               animate={{ opacity: 1, x: 0 }}
+               className={cn(
+                 "px-6 py-2 rounded-xl text-xs font-black uppercase tracking-widest flex items-center gap-2",
+                 status.type === 'success' ? "bg-green-100 text-green-600" : status.type === 'error' ? "bg-red-100 text-red-600" : "bg-slate-100 text-slate-600"
+               )}
+             >
+               {status.type === 'success' ? <CheckCircle2 size={16} /> : status.type === 'error' ? <AlertCircle size={16} /> : <RefreshCcw size={16} className="animate-spin" />}
+               {status.message}
+             </motion.div>
+           )}
+        </div>
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 md:gap-10">
           <div className="lg:col-span-1 space-y-6">
             <div className="border-4 border-dashed border-slate-100 rounded-[2rem] flex flex-col items-center justify-center p-6 bg-slate-50 relative group overflow-hidden transition-all hover:bg-slate-100 min-h-[240px]">

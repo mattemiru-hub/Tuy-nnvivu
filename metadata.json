@@ -1,6 +1,6 @@
 {
   "name": "Lucky Draw Pro",
-  "description": "A professional SaaS-style lucky draw system with Excel support, complex rule engine, prize management, and real-time drawing animations.",
+  "description": "Production-ready lucky draw engine powered by Supabase for real-time synchronization and high-stability event drawing.",
   "requestFramePermissions": [],
   "majorCapabilities": []
 }

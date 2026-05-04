@@ -10,7 +10,6 @@ import { generateId, cn } from '../lib/utils';
 import { useTranslation } from 'react-i18next';
 import { motion, AnimatePresence } from 'motion/react';
 import { supabaseService } from '../services/supabaseService';
-import { getSupabase, isSupabaseConfigured } from '../lib/supabase';
 
 export default function PrizeManager({ state, updateState }: { state: AppState, updateState: (updater: (prev: AppState) => AppState) => void }) {
   const { t } = useTranslation();
@@ -27,7 +26,6 @@ export default function PrizeManager({ state, updateState }: { state: AppState, 
   );
 
   const handleUpdateRule = async (key: keyof RuleConfig, value: any) => {
-    if (!isSupabaseConfigured()) return;
     const updatedRules = { ...currentProgram.rules, [key]: value };
     try {
       await supabaseService.updateProgramRules(currentProgram.id, updatedRules);
@@ -37,7 +35,6 @@ export default function PrizeManager({ state, updateState }: { state: AppState, 
   };
 
   const handleAddPrize = async () => {
-    if (!isSupabaseConfigured()) return;
     const newPrize: Partial<Prize> = {
       name: t('prizes.new_prize_name') || 'New Prize',
       quantity: 1,
@@ -56,7 +53,7 @@ export default function PrizeManager({ state, updateState }: { state: AppState, 
   };
 
   const handleDeletePrize = async (id: string) => {
-    if(!confirm(t('prizes.confirm_delete')) || !isSupabaseConfigured()) return;
+    if(!confirm(t('prizes.confirm_delete'))) return;
     try {
       await supabaseService.deletePrize(id);
     } catch (err) {

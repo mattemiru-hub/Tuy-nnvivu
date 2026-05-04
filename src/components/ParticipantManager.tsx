@@ -14,7 +14,7 @@ import { useTranslation } from 'react-i18next';
 import { motion, AnimatePresence } from 'motion/react';
 import { cleanParticipantData } from '../utils/drawEngine';
 import { supabaseService } from '../services/supabaseService';
-import { getSupabase, isSupabaseConfigured } from '../lib/supabase';
+import { supabase } from '../lib/supabase';
 
 interface ColumnMapping {
   id: string;
@@ -39,6 +39,11 @@ export default function ParticipantManager({ state, updateState }: { state: AppS
     employeeId: '',
     department: '',
     programNameCol: '',
+    channel: '',
+    upi: '',
+    location: '',
+    region: '',
+    lineManager: ''
   });
   const [isSplitMode, setIsSplitMode] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
@@ -59,9 +64,9 @@ export default function ParticipantManager({ state, updateState }: { state: AppS
   }, [currentProgram, searchQuery]);
 
   const deleteTicket = async (ticketId: string) => {
-    if (!currentProgram || !isSupabaseConfigured()) return;
+    if (!currentProgram) return;
     try {
-      const { error } = await getSupabase().from('participants').delete().eq('id', ticketId);
+      const { error } = await supabase.from('participants').delete().eq('id', ticketId);
       if (error) throw error;
       // Real-time will handle the state update
     } catch (err) {
@@ -71,19 +76,18 @@ export default function ParticipantManager({ state, updateState }: { state: AppS
 
   const handleUpdateTicket = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!editingTicket || !currentProgram || !isSupabaseConfigured()) return;
+    if (!editingTicket || !currentProgram) return;
 
     try {
-      const { error } = await getSupabase().from('participants').update({
+      const { error } = await supabase.from('participants').update({
         name: editingTicket.name,
         employee_id: editingTicket.employeeId,
         department: editingTicket.department,
+        channel: editingTicket.channel,
         upi: editingTicket.upi,
         location: editingTicket.location,
         region: editingTicket.region,
-        line_manager: editingTicket.lineManager,
-        channel: editingTicket.channel,
-        position: editingTicket.position
+        line_manager: editingTicket.lineManager
       }).eq('id', editingTicket.id);
       
       if (error) throw error;
@@ -94,10 +98,10 @@ export default function ParticipantManager({ state, updateState }: { state: AppS
   };
 
   const clearAllTickets = async () => {
-    if (!currentProgram || !isSupabaseConfigured()) return;
+    if (!currentProgram) return;
     if (!confirm(t('participants.confirm_bulk_delete'))) return;
     try {
-      const { error } = await getSupabase().from('participants').delete().eq('program_id', currentProgram.id);
+      const { error } = await supabase.from('participants').delete().eq('program_id', currentProgram.id);
       if (error) throw error;
     } catch (err) {
       console.error('Error clearing participants:', err);
@@ -139,21 +143,20 @@ export default function ParticipantManager({ state, updateState }: { state: AppS
         // Auto-detect mappings
         const autoMap: ColumnMapping = { 
           id: '', name: '', employeeId: '', department: '', programNameCol: '',
-          upi: '', location: '', region: '', lineManager: '', channel: '', position: ''
+          channel: '', upi: '', location: '', region: '', lineManager: '' 
         };
         cols.forEach(col => {
           const l = col.toLowerCase();
-          if (l.includes('phiếu') || l.includes('stt') || (l.includes('id') && !l.includes('staff') && !l.includes('emp'))) autoMap.id = col;
+          if (l.includes('phiếu') || l.includes('ticket') || (l.includes('id') && !l.includes('staff') && !l.includes('emp'))) autoMap.id = col;
           if (l.includes('tên') || l.includes('name')) autoMap.name = col;
-          if (l.includes('mã') || l.includes('staff') || l.includes('emp') || l === 'upi') autoMap.employeeId = col;
+          if (l.includes('mã') || l.includes('staff') || l.includes('emp')) autoMap.employeeId = col;
           if (l.includes('phòng') || l.includes('dept')) autoMap.department = col;
-          if (l.includes('kênh') || l.includes('channel')) autoMap.channel = col;
           if (l.includes('ct') || l.includes('program')) autoMap.programNameCol = col;
+          if (l.includes('kênh') || l.includes('channel')) autoMap.channel = col;
           if (l.includes('upi')) autoMap.upi = col;
           if (l.includes('vị trí') || l.includes('location')) autoMap.location = col;
           if (l.includes('vùng') || l.includes('region')) autoMap.region = col;
-          if (l.includes('quản lý') || l.includes('manager')) autoMap.lineManager = col;
-          if (l.includes('chức vụ') || l.includes('position') || l.includes('role')) autoMap.position = col;
+          if (l.includes('manager') || l.includes('quản lý')) autoMap.lineManager = col;
         });
         setMapping(autoMap);
 
@@ -198,7 +201,7 @@ export default function ParticipantManager({ state, updateState }: { state: AppS
       location: String(row[mapping.location] || "-"),
       region: String(row[mapping.region] || "-"),
       lineManager: String(row[mapping.lineManager] || "-"),
-      position: String(row[mapping.position] || "-"),
+      position: String(row['Position'] || row['Chức vụ'] || "-"),
       programName: isSplitMode && mapping.programNameCol ? String(row[mapping.programNameCol] || "General") : "",
     })));
 
@@ -227,11 +230,9 @@ export default function ParticipantManager({ state, updateState }: { state: AppS
       }
       setRawData([]);
       alert("Đã xử lý dữ liệu và nạp vào hệ thống!");
-    } catch (err: any) {
+    } catch (err) {
       console.error('Error uploading participants:', err);
-      // Hiển thị chi tiết lỗi để dễ chẩn đoán trên Vercel
-      const errorMsg = err.message || err.details || "Unknown error";
-      alert(`Lỗi khi tải dữ liệu lên Supabase: ${errorMsg}\nVui lòng kiểm tra RLS Policies và kết nối mạng.`);
+      alert('Lỗi khi tải dữ liệu lên Supabase. Vui lòng kiểm tra kết nối.');
     } finally {
       setIsProcessing(false);
     }
@@ -338,15 +339,20 @@ export default function ParticipantManager({ state, updateState }: { state: AppS
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                   <div className="space-y-6">
                     <h4 className="flex items-center gap-2 font-black uppercase tracking-widest text-xs text-slate-400">
-                      <TableIcon size={16} /> {t('upload.mapping')}
+                      <TableIcon size={16} /> Mapping Columns (Dữ liệu người tham gia)
                     </h4>
                     <div className="grid grid-cols-2 gap-4">
-                      {['id', 'name', 'employeeId', 'department'].map(field => (
-                        <div key={field} className="space-y-1.5">
-                          <label className="text-[10px] font-black uppercase text-slate-400 px-1">{field}</label>
+                      {[
+                        { key: 'id', label: 'Mã số / ID' },
+                        { key: 'name', label: 'Họ tên' },
+                        { key: 'employeeId', label: 'Mã nhân viên' },
+                        { key: 'department', label: 'Phòng ban' }
+                      ].map(field => (
+                        <div key={field.key} className="space-y-1.5">
+                          <label className="text-[10px] font-black uppercase text-slate-400 px-1">{field.label}</label>
                           <select 
-                            value={mapping[field]} 
-                            onChange={(e) => setMapping(prev => ({ ...prev, [field]: e.target.value }))}
+                            value={mapping[field.key]} 
+                            onChange={(e) => setMapping(prev => ({ ...prev, [field.key]: e.target.value }))}
                             className="w-full px-4 py-3 bg-slate-50 border border-slate-100 rounded-xl text-sm font-bold appearance-none hover:border-blue-300 transition-colors cursor-pointer"
                           >
                             <option value="">Select Column</option>
@@ -431,27 +437,23 @@ export default function ParticipantManager({ state, updateState }: { state: AppS
                 </div>
 
                 {/* Data Preview */}
-                {rawData.length > 0 && columns.length > 0 && (
+                {rawData.length > 0 && (
                   <div className="mt-8 space-y-4">
                     <h4 className="font-black uppercase tracking-widest text-xs text-slate-400">Data Preview (First 5 rows)</h4>
-                    <div className="overflow-x-auto border border-slate-100 rounded-2xl bg-white">
-                      <table className="w-full text-left border-collapse text-xs table-fixed">
+                    <div className="overflow-x-auto border border-slate-100 rounded-2xl">
+                      <table className="w-full text-left border-collapse text-xs">
                         <thead className="bg-slate-50">
                           <tr>
-                            {columns.slice(0, 6).map((col, idx) => (
-                              <th key={`head-${col}-${idx}`} className="px-4 py-3 font-black text-slate-500 uppercase tracking-tighter border-b border-slate-100">
-                                {col}
-                              </th>
+                            {columns.slice(0, 5).map(col => (
+                              <th key={col} className="px-4 py-2 font-black text-slate-500 uppercase tracking-tighter">{col}</th>
                             ))}
                           </tr>
                         </thead>
                         <tbody>
                           {rawData.slice(0, 5).map((row, i) => (
-                            <tr key={`row-${i}`} className="border-t border-slate-50 hover:bg-slate-50 transition-colors">
-                              {columns.slice(0, 6).map((col, j) => (
-                                <td key={`cell-${i}-${j}`} className="px-4 py-3 text-slate-600 truncate border-b border-slate-50">
-                                  {String(row[col] || "-")}
-                                </td>
+                            <tr key={i} className="border-t border-slate-50">
+                              {columns.slice(0, 5).map(col => (
+                                <td key={col} className="px-4 py-2 text-slate-600 truncate max-w-[150px]">{String(row[col] || "-")}</td>
                               ))}
                             </tr>
                           ))}
@@ -609,20 +611,20 @@ export default function ParticipantManager({ state, updateState }: { state: AppS
                   />
                 </div>
                 <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2 text-left">
+                  <div className="space-y-2">
                     <label className="text-[10px] font-black uppercase text-slate-400 px-1">Employee ID</label>
                     <input 
                       type="text"
-                      value={editingTicket.employeeId || ''}
+                      value={editingTicket.employeeId}
                       onChange={e => setEditingTicket({ ...editingTicket, employeeId: e.target.value })}
                       className="w-full px-4 py-3 bg-slate-50 border-2 border-slate-100 rounded-2xl focus:border-indigo-500 font-bold outline-none"
                     />
                   </div>
-                  <div className="space-y-2 text-left">
+                  <div className="space-y-2">
                     <label className="text-[10px] font-black uppercase text-slate-400 px-1">Department</label>
                     <input 
                       type="text"
-                      value={editingTicket.department || ''}
+                      value={editingTicket.department}
                       onChange={e => setEditingTicket({ ...editingTicket, department: e.target.value })}
                       className="w-full px-4 py-3 bg-slate-50 border-2 border-slate-100 rounded-2xl focus:border-indigo-500 font-bold outline-none"
                     />

@@ -22,6 +22,7 @@ CREATE TABLE IF NOT EXISTS prizes (
   priority INTEGER DEFAULT 0,
   is_active BOOLEAN DEFAULT true,
   value NUMERIC DEFAULT 0,
+  config JSONB DEFAULT '{}'::jsonb,
   created_at TIMESTAMPTZ DEFAULT now()
 );
 
@@ -45,6 +46,11 @@ CREATE TABLE IF NOT EXISTS winners (
   participant_id UUID REFERENCES participants(id) ON DELETE CASCADE,
   program_id UUID REFERENCES programs(id) ON DELETE CASCADE,
   prize_id UUID REFERENCES prizes(id) ON DELETE CASCADE,
+  prize_name TEXT,
+  prize_image TEXT,
+  participant_name TEXT,
+  employee_id TEXT,
+  department TEXT,
   created_at TIMESTAMPTZ DEFAULT now()
 );
 
@@ -63,3 +69,32 @@ CREATE POLICY "Allow anonymous read/write on programs" ON programs FOR ALL USING
 CREATE POLICY "Allow anonymous read/write on prizes" ON prizes FOR ALL USING (true) WITH CHECK (true);
 CREATE POLICY "Allow anonymous read/write on participants" ON participants FOR ALL USING (true) WITH CHECK (true);
 CREATE POLICY "Allow anonymous read/write on winners" ON winners FOR ALL USING (true) WITH CHECK (true);
+
+-- 4. RPC Functions
+CREATE OR REPLACE FUNCTION reset_prizes_remaining(prog_id UUID)
+RETURNS VOID AS $$
+BEGIN
+  UPDATE prizes
+  SET remaining = quantity
+  WHERE program_id = prog_id;
+END;
+$$ LANGUAGE plpgsql;
+
+-- 5. Views (Optional but helpful)
+CREATE OR REPLACE VIEW winner_details AS
+SELECT 
+  w.id,
+  w.created_at,
+  w.program_id,
+  pg.name as program_name,
+  w.prize_id,
+  pr.name as prize_name,
+  pr.image as prize_image,
+  w.participant_id,
+  pt.name as ticket_name,
+  pt.employee_id,
+  pt.department
+FROM winners w
+JOIN programs pg ON w.program_id = pg.id
+JOIN prizes pr ON w.prize_id = pr.id
+JOIN participants pt ON w.participant_id = pt.id;
