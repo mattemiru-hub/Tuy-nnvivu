@@ -1,9 +1,9 @@
-import { Ticket, Winner, Prize } from '../types';
+import { Ticket, Winner } from '../types';
 
 /**
  * Lọc danh sách những người chưa trúng giải trong chương trình hiện tại
  */
-export const getEligibleParticipants = (
+export const getAvailableParticipants = (
   participants: Ticket[],
   winners: Winner[],
   programId: string
@@ -20,10 +20,10 @@ export const getEligibleParticipants = (
 /**
  * Logic chọn người trúng ngẫu nhiên
  */
-export const pickRandomWinner = (eligiblePool: Ticket[]): Ticket | null => {
-  if (eligiblePool.length === 0) return null;
-  const randomIndex = Math.floor(Math.random() * eligiblePool.length);
-  return eligiblePool[randomIndex];
+export const drawRandom = (list: Ticket[]): Ticket | null => {
+  if (list.length === 0) return null;
+  const randomIndex = Math.floor(Math.random() * list.length);
+  return list[randomIndex];
 };
 
 /**

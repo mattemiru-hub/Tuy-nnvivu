@@ -181,14 +181,21 @@ export default function ProgramManager({ state, updateState }: { state: AppState
           <div className="lg:col-span-1 space-y-6">
             <div className="border-4 border-dashed border-slate-100 rounded-[2rem] flex flex-col items-center justify-center p-6 bg-slate-50 relative group overflow-hidden transition-all hover:bg-slate-100 min-h-[240px]">
                {thumbnail ? (
-                 <div className="relative w-full h-full rounded-2xl overflow-hidden shadow-lg">
+                 <div className="relative w-full h-full rounded-2xl overflow-hidden shadow-lg group">
                    <img src={thumbnail} alt="Preview" className="w-full h-full object-cover" />
-                   <button 
-                     onClick={() => setThumbnail(undefined)}
-                     className="absolute top-2 right-2 w-8 h-8 bg-red-500 text-white rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity shadow-lg"
-                   >
-                     <Trash2 size={16} />
-                   </button>
+                   <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-3">
+                      <label className="cursor-pointer w-10 h-10 bg-white text-indigo-600 rounded-xl flex items-center justify-center shadow-lg hover:scale-110 transition-transform">
+                         <ImageIcon size={20} />
+                         <input type="file" className="hidden" accept="image/*" onChange={handleFileUpload} />
+                      </label>
+                      <button 
+                        onClick={() => setThumbnail(undefined)}
+                        className="w-10 h-10 bg-white text-red-500 rounded-xl flex items-center justify-center shadow-lg hover:scale-110 transition-transform"
+                        title="Remove Banner"
+                      >
+                        <Trash2 size={20} />
+                      </button>
+                   </div>
                  </div>
                ) : (
                  <label className="cursor-pointer flex flex-col items-center gap-3">

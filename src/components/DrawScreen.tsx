@@ -10,20 +10,20 @@ import confetti from 'canvas-confetti';
 import { Trophy, RefreshCcw, LayoutGrid, ChevronRight, AlertTriangle, Power, Users, Ticket as TicketIcon, Play, Check, Info, X, Zap, Clock, Star, Gift, Music } from 'lucide-react';
 import { cn, generateId } from '../lib/utils';
 import { shuffleArray } from '../lib/engine';
-import { getEligibleParticipants, pickRandomWinner } from '../utils/drawEngine';
+import { getAvailableParticipants, drawRandom } from '../utils/drawEngine';
 import { sounds } from '../lib/sounds';
 import { useTranslation } from 'react-i18next';
 
 export default function DrawScreen({ state, updateState, onNavigate }: { state: AppState, updateState: (updater: (prev: AppState) => AppState) => void, onNavigate: (tab: any) => void }) {
   const { t } = useTranslation();
-  const activePrograms = state.programs.filter(p => p.isActive);
-  const currentProgram = activePrograms.find(p => p.id === state.activeProgramId) || activePrograms[0];
+  const currentProgram = state.programs.find(p => p.id === state.activeProgramId) || state.programs[0];
   const [selectedPrizeId, setSelectedPrizeId] = useState<string | null>(null);
   const [isDrawing, setIsDrawing] = useState(false);
   const [currentWinner, setCurrentWinner] = useState<Ticket | null>(null);
   const [pendingWinner, setPendingWinner] = useState<Ticket | null>(null);
   const [visualPool, setVisualPool] = useState<Ticket[]>([]); 
   const [countdown, setCountdown] = useState<number | null>(null);
+  const [isFullscreen, setIsFullscreen] = useState(false);
   const [showMobilePrizes, setShowMobilePrizes] = useState(false);
   const [showMobileWinners, setShowMobileWinners] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -60,16 +60,28 @@ export default function DrawScreen({ state, updateState, onNavigate }: { state: 
   }, [currentProgram?.bgmEnabled, currentProgram?.bgmUrl, currentProgram?.bgmVolume]);
 
   useEffect(() => {
-    if (activePrograms.length > 0 && (!state.activeProgramId || !activePrograms.find(p => p.id === state.activeProgramId))) {
-      updateState(prev => ({ ...prev, activeProgramId: activePrograms[0].id }));
+    if (state.programs.length > 0 && (!state.activeProgramId || !state.programs.find(p => p.id === state.activeProgramId))) {
+      updateState(prev => ({ ...prev, activeProgramId: state.programs[0].id }));
     }
-  }, [activePrograms.length, state.activeProgramId]);
+  }, [state.programs.length, state.activeProgramId]);
 
   const activePrizes = currentProgram?.prizes.filter(p => p.isActive && p.remaining > 0).sort((a, b) => b.priority - a.priority) || [];
   const selectedPrize = activePrizes.find(p => p.id === selectedPrizeId) || activePrizes[0];
   
   const programWinners = state.winners.filter(w => w.programId === currentProgram?.id);
-  const eligiblePool = currentProgram ? getEligibleParticipants(currentProgram.ticketPool, state.winners, currentProgram.id) : [];
+  const eligiblePool = currentProgram ? getAvailableParticipants(currentProgram.ticketPool, state.winners, currentProgram.id) : [];
+
+  const toggleFullscreen = () => {
+    if (!document.fullscreenElement) {
+      document.documentElement.requestFullscreen();
+      setIsFullscreen(true);
+    } else {
+      if (document.exitFullscreen) {
+        document.exitFullscreen();
+        setIsFullscreen(false);
+      }
+    }
+  };
 
   if (!currentProgram || currentProgram.ticketPool.length === 0 || currentProgram.prizes.length === 0) return (
     <div className="bg-white p-12 rounded-3xl border border-gray-100 text-center space-y-6 max-w-2xl mx-auto shadow-sm mt-20">
@@ -106,6 +118,16 @@ export default function DrawScreen({ state, updateState, onNavigate }: { state: 
 
   useEffect(() => {
     setCurrentWinner(null);
+    setPendingWinner(null);
+    setError(null);
+    setSelectedPrizeId(null);
+    return () => {
+      if (animationRef.current) clearTimeout(animationRef.current);
+    };
+  }, [state.activeProgramId]);
+
+  useEffect(() => {
+    setCurrentWinner(null);
     setError(null);
     return () => {
       if (animationRef.current) clearTimeout(animationRef.current);
@@ -137,7 +159,7 @@ export default function DrawScreen({ state, updateState, onNavigate }: { state: 
     setCurrentWinner(null);
     setError(null);
 
-    const winner = pickRandomWinner(eligiblePool);
+    const winner = drawRandom(eligiblePool);
 
     if (!winner) {
       setError(t('draw.error_no_tickets') || "Không tìm thấy người tham gia hợp lệ (có thể mọi người đã trúng giải).");
@@ -188,9 +210,38 @@ export default function DrawScreen({ state, updateState, onNavigate }: { state: 
     setPendingWinner(null);
   };
 
-  const cancelWinner = () => {
-    setPendingWinner(null);
-    setCurrentWinner(null);
+  const handleReRoll = () => {
+    if (pendingWinner) {
+      setPendingWinner(null);
+      handleDraw();
+      return;
+    }
+    
+    if (currentWinner) {
+      const winnerToRevoke = currentWinner;
+      updateState(prev => {
+        // Find the record to find which prize to increment
+        const winnerRecord = prev.winners.find(w => w.ticketId === winnerToRevoke.id && w.programId === currentProgram.id);
+        if (!winnerRecord) return prev;
+        
+        return {
+          ...prev,
+          winners: prev.winners.filter(w => w.id !== winnerRecord.id),
+          programs: prev.programs.map(p => 
+            p.id === currentProgram.id 
+              ? { 
+                  ...p, 
+                  prizes: p.prizes.map(pr => 
+                    pr.id === winnerRecord.prizeId ? { ...pr, remaining: pr.remaining + 1 } : pr
+                  ) 
+                } 
+              : p
+          )
+        };
+      });
+      setCurrentWinner(null);
+      handleDraw();
+    }
   };
 
   const recordWinner = (ticket: Ticket, prize: Prize) => {
@@ -453,19 +504,41 @@ export default function DrawScreen({ state, updateState, onNavigate }: { state: 
                  <div className="lg:hidden w-8 h-8 rounded-lg bg-indigo-600 flex items-center justify-center text-white cursor-pointer" onClick={() => setShowMobilePrizes(true)}>
                     <Gift size={16} />
                  </div>
-                 <h2 className="text-xs lg:text-sm font-black text-white/50 uppercase tracking-[0.2em] italic truncate max-w-[200px] lg:max-w-none">
-                    {currentProgram.name} <span className="mx-2 text-white/10">|</span> <span className="text-indigo-400 underline underline-offset-4">{selectedPrize?.name}</span>
-                 </h2>
+                 <div className="flex flex-col lg:flex-row lg:items-center gap-1 lg:gap-4">
+                     <div className="relative group/prog flex items-center">
+                        <select 
+                           value={state.activeProgramId || ''} 
+                           onChange={(e) => updateState(prev => ({ ...prev, activeProgramId: e.target.value }))}
+                           className="appearance-none bg-indigo-500/10 border border-indigo-500/20 rounded-lg px-3 py-1 pr-8 text-xs lg:text-sm font-black text-indigo-400 uppercase tracking-widest cursor-pointer hover:bg-indigo-500/20 transition-all outline-none"
+                        >
+                           {state.programs.map(p => (
+                              <option key={p.id} value={p.id} className="bg-slate-900 text-white font-sans">{p.name}</option>
+                           ))}
+                        </select>
+                        <ChevronRight size={14} className="absolute right-2 top-1/2 -translate-y-1/2 text-indigo-400 pointer-events-none rotate-90" />
+                     </div>
+                     <span className="hidden lg:block text-white/10">|</span> 
+                     <h2 className="text-xs lg:text-sm font-black text-white/50 uppercase tracking-[0.2em] italic truncate max-w-[200px] lg:max-w-none">
+                        <span className="text-indigo-400 underline underline-offset-4">{selectedPrize?.name}</span>
+                     </h2>
+                  </div>
               </div>
               <div className="flex items-center gap-6">
+                 <button 
+                  onClick={toggleFullscreen}
+                  className="w-10 h-10 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center text-white/40 hover:bg-white/10 hover:text-white transition-all"
+                  title="Toggle Fullscreen"
+                 >
+                   {isFullscreen ? <LayoutGrid size={18} /> : <Power size={18} />}
+                 </button>
                  <div className="hidden md:flex flex-col items-end gap-1">
                     <div className="flex items-center gap-2">
                        <Users size={12} className="text-white/20" />
-                       <span className="text-[9px] font-black text-white/40 uppercase tracking-widest">Pool: {currentProgram.ticketPool.length}</span>
+                       <span className="text-[9px] font-black text-white/40 uppercase tracking-widest">Total: {currentProgram.ticketPool.length}</span>
                     </div>
                     <div className="flex items-center gap-2">
                        <Trophy size={12} className="text-white/20" />
-                       <span className="text-[9px] font-black text-indigo-400 uppercase tracking-widest">Winners: {programWinners.length}</span>
+                       <span className="text-[9px] font-black text-indigo-400 uppercase tracking-widest">Drawn: {programWinners.length}</span>
                     </div>
                     <div className="flex items-center gap-2">
                        <Info size={12} className="text-white/20" />
@@ -660,16 +733,16 @@ export default function DrawScreen({ state, updateState, onNavigate }: { state: 
                     className="flex gap-4 w-full max-w-2xl px-4"
                   >
                     <button 
-                      onClick={cancelWinner}
+                      onClick={() => {
+                        setCurrentWinner(null);
+                        setPendingWinner(null);
+                      }}
                       className="flex-1 py-4 md:py-5 lg:py-6 bg-white/5 border border-white/10 hover:bg-red-500/10 hover:border-red-500 text-red-500 rounded-2xl md:rounded-3xl font-black text-lg md:text-2xl uppercase tracking-widest transition-all flex items-center justify-center gap-3 italic"
                     >
                       <X size={24} /> {t('common.cancel') || 'DISCARD'}
                     </button>
                     <button 
-                      onClick={() => {
-                        setPendingWinner(null);
-                        handleDraw();
-                      }}
+                      onClick={() => handleReRoll()}
                       className="flex-1 py-4 md:py-5 lg:py-6 bg-white/5 border border-white/10 hover:bg-indigo-500/10 hover:border-indigo-400 text-indigo-400 rounded-2xl md:rounded-3xl font-black text-lg md:text-2xl uppercase tracking-widest transition-all flex items-center justify-center gap-3 italic"
                     >
                       <RefreshCcw size={24} /> RE-ROLL
@@ -687,17 +760,17 @@ export default function DrawScreen({ state, updateState, onNavigate }: { state: 
                     initial={{ opacity: 0, scale: 0.9 }}
                     animate={{ opacity: 1, scale: 1 }}
                     onClick={handleDraw}
-                    disabled={isDrawing || !selectedPrize}
+                    disabled={isDrawing || !selectedPrize || eligiblePool.length === 0}
                     className={cn(
                         "group relative flex items-center gap-8 px-16 py-6 md:px-24 md:py-8 rounded-full transition-all duration-500 font-black text-2xl lg:text-4xl tracking-tighter uppercase italic overflow-hidden",
-                        (isDrawing || !selectedPrize)
+                        (isDrawing || !selectedPrize || eligiblePool.length === 0)
                           ? "bg-white/5 text-white/10 cursor-not-allowed border border-white/5" 
                           : "bg-indigo-600 text-white hover:bg-white hover:text-indigo-900 shadow-[0_0_80px_rgba(79,70,229,0.4)] hover:shadow-white/20 active:scale-95"
                     )}
                   >
                     <span className="relative z-10 flex items-center gap-4">
-                        {isDrawing ? "DRAWING..." : t('draw.start')}
-                        {!isDrawing && selectedPrize && <Play size={32} className="group-hover:translate-x-2 transition-transform" fill="currentColor" />}
+                        {isDrawing ? "DRAWING..." : eligiblePool.length === 0 ? "POOL EMPTY" : t('draw.start')}
+                        {!isDrawing && selectedPrize && eligiblePool.length > 0 && <Play size={32} className="group-hover:translate-x-2 transition-transform" fill="currentColor" />}
                     </span>
                     
                     <div className="absolute top-0 -left-[100%] w-full h-full bg-gradient-to-r from-transparent via-white/20 to-transparent group-hover:left-[100%] transition-all duration-1000 pointer-events-none" />
