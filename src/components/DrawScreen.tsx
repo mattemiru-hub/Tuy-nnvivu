@@ -47,8 +47,8 @@ const DrawHeader = ({
   };
 
   return (
-    <header className="bg-white border-b border-slate-200 sticky top-0 z-30 shadow-sm">
-      <div className="max-w-[1600px] mx-auto">
+    <header className="bg-white border-b border-slate-200 sticky top-0 z-30 shadow-sm w-full">
+      <div className="w-full">
         {/* Banner Area */}
         <div className="relative group bg-slate-900 shadow-inner flex items-center justify-center min-h-[120px]">
           {currentProgram.thumbnail ? (
@@ -226,7 +226,7 @@ const WinnerDetail = ({
 // --- Semantic Components for Refined Layout ---
 
 const DrawLayout = ({ children }: { children: React.ReactNode }) => (
-  <div className="flex flex-col h-screen bg-slate-50 overflow-hidden font-sans text-slate-900 w-full">
+  <div className="draw-layout flex flex-col h-screen bg-slate-50 overflow-hidden font-sans text-slate-900 w-full">
     {children}
   </div>
 );
@@ -345,7 +345,7 @@ const WinnerSidebar = ({
   onShowDetail: (w: Winner) => void 
 }) => {
   return (
-    <aside className="lg:col-span-1 border-l border-slate-200 bg-white flex flex-col min-h-0 overflow-hidden">
+    <aside className="lg:col-span-1 border-l border-slate-200 bg-white flex flex-col min-h-0 overflow-hidden lg:max-w-[300px] w-full">
        <div className="p-8 border-b border-slate-100 flex items-center justify-between">
           <div>
             <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Live Feed</h4>

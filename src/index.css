@@ -57,8 +57,17 @@
 
 .draw-content {
   display: grid;
-  grid-template-columns: 2fr 1fr;
+  grid-template-columns: 3fr 1fr;
   gap: 20px;
+}
+
+.draw-layout {
+  width: 100%;
+  padding: 20px;
+}
+
+@aside {
+  max-width: 300px;
 }
 
 .draw-main-panel {
@@ -99,9 +108,9 @@
 .winner-detail {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
-  gap: 10px;
+  gap: 15px;
   text-align: left;
-  max-width: 600px;
+  width: 100%;
   margin: 0 auto;
 }
 
