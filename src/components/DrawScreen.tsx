@@ -233,183 +233,107 @@ const DrawLayout = ({ children }: { children: React.ReactNode }) => (
 
 const DrawContent = ({ children }: { children: React.ReactNode }) => (
   <div className="flex-1 overflow-hidden w-full">
-    <div className="grid grid-cols-1 lg:grid-cols-[2fr_1fr] h-full w-full">
+    <div className="draw-content h-full w-full">
       {children}
     </div>
   </div>
 );
 
-const DrawMainPanel = ({ children }: { children: React.ReactNode }) => (
-  <main className="flex flex-col min-h-0 relative p-6 lg:p-8 space-y-6 overflow-hidden w-full h-full">
-    {children}
+const WinnerDisplay = ({ 
+  winner, 
+}: { 
+  winner: Ticket | null 
+}) => {
+  if (!winner) {
+    return <div className="winner-empty">Ready to draw...</div>;
+  }
+
+  return (
+    <div className="winner-display">
+      <div className="winner-name">{winner.name}</div>
+      <div className="winner-id">ID: {winner.id}</div>
+      <div className="winner-detail">
+        {winner.channel && <div><strong>CHANNEL:</strong> {winner.channel}</div>}
+        {winner.upi && <div><strong>UPI:</strong> {winner.upi}</div>}
+        {winner.location && <div><strong>VỊ TRÍ:</strong> {winner.location}</div>}
+        {winner.region && <div><strong>KHU VỰC:</strong> {winner.region}</div>}
+        {winner.lineManager && <div><strong>LINE MANAGER:</strong> {winner.lineManager}</div>}
+      </div>
+    </div>
+  );
+};
+
+const DrawMainPanel = ({ 
+  currentWinner,
+  onDraw,
+  onReroll,
+  onConfirm,
+  isDrawing,
+  remaining,
+  activePrizeName
+}: { 
+  currentWinner: Ticket | null,
+  onDraw: () => void,
+  onReroll: () => void,
+  onConfirm: () => void,
+  isDrawing: boolean,
+  remaining: number,
+  activePrizeName?: string
+}) => (
+  <main className="draw-main-panel h-full overflow-y-auto custom-scrollbar">
+    <div className="active-prize-bar px-4 py-2 bg-indigo-50/50 rounded-xl border border-indigo-100 flex justify-between items-center mb-6">
+      <div className="flex items-center gap-2">
+        <span className="text-xl">🎁</span>
+        <span className="uppercase tracking-widest text-xs font-black text-indigo-900">Active Prize: {activePrizeName}</span>
+      </div>
+      <div className="bg-indigo-600 text-white px-3 py-1 rounded-lg text-xs font-black">
+        REMAINING: {remaining}
+      </div>
+    </div>
+
+    <WinnerDisplay winner={currentWinner} />
+
+    <div className="draw-controls bg-white p-6 rounded-2xl border border-slate-100 shadow-sm mt-auto">
+      <button 
+        onClick={onReroll} 
+        disabled={!currentWinner || isDrawing}
+        className="flex-1 py-4 bg-slate-50 text-slate-500 rounded-xl font-black uppercase tracking-widest hover:bg-slate-100 hover:text-indigo-600 disabled:opacity-50 disabled:cursor-not-allowed transition-all border border-slate-100 flex items-center justify-center gap-2"
+      >
+        <RefreshCcw size={18} /> Re-roll
+      </button>
+
+      <button 
+        onClick={onDraw} 
+        disabled={isDrawing || remaining === 0}
+        className={cn(
+          "flex-[2] py-4 rounded-xl font-black text-xl uppercase tracking-[0.2em] transition-all shadow-xl flex items-center justify-center gap-3",
+          (isDrawing || remaining === 0)
+            ? "bg-slate-100 text-slate-300 cursor-not-allowed"
+            : "bg-indigo-600 text-white hover:bg-indigo-700 shadow-indigo-100"
+        )}
+      >
+        {isDrawing ? (
+          <>
+            <div className="w-2 h-2 bg-white rounded-full animate-ping" /> DRAWING...
+          </>
+        ) : (
+          <>
+            <Play size={24} fill="currentColor" /> DRAW
+          </>
+        )}
+      </button>
+
+      <button 
+        onClick={onConfirm} 
+        disabled={!currentWinner}
+        className="flex-1 py-4 bg-indigo-50 text-indigo-600 rounded-xl font-black uppercase tracking-widest hover:bg-indigo-100 disabled:opacity-50 disabled:cursor-not-allowed transition-all border border-indigo-100 flex items-center justify-center gap-2"
+      >
+        <Check size={20} /> Confirm
+      </button>
+    </div>
   </main>
 );
 
-const WinnerDisplay = ({ 
-  winner, 
-  isDrawing, 
-  visualPool 
-}: { 
-  winner: Ticket | null, 
-  isDrawing: boolean, 
-  visualPool: Ticket[] 
-}) => {
-  return (
-    <div className={cn(
-      "flex-1 bg-white rounded-[3rem] shadow-sm border border-slate-100 flex flex-col items-center relative overflow-y-auto custom-scrollbar w-full",
-      winner ? "justify-start py-8 lg:py-16" : "justify-center"
-    )}>
-       <AnimatePresence mode="wait">
-          {isDrawing ? (
-            <motion.div 
-              key="it-drawing"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              className="flex flex-col items-center justify-center gap-12 w-full p-8 h-full"
-            >
-               <div className="relative w-full h-40 flex items-center justify-center gap-4">
-                  {[0, 1, 2, 3].map(i => (
-                    <motion.div 
-                      key={i}
-                      animate={{ y: [-10, 10, -10], opacity: [0.5, 1, 0.5] }}
-                      transition={{ repeat: Infinity, duration: 0.2, delay: i * 0.05 }}
-                      className="w-16 h-24 bg-slate-50 border-2 border-slate-100 rounded-3xl flex items-center justify-center text-4xl font-black text-slate-300"
-                    >
-                      {visualPool[0]?.id?.charAt(i) || Math.floor(Math.random() * 10)}
-                    </motion.div>
-                  ))}
-               </div>
-               <div className="text-center">
-                  <p className="text-[10px] font-black font-mono text-indigo-400 uppercase tracking-[0.8em] mb-4">SEARCHING...</p>
-                  <h2 className="text-2xl font-black text-slate-800 uppercase tracking-tighter truncate px-6">
-                    {visualPool[0]?.name || "Candidates..."}
-                  </h2>
-               </div>
-            </motion.div>
-          ) : winner ? (
-            <motion.div 
-              key="it-result"
-              initial={{ opacity: 0, y: 40 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="flex flex-col items-center gap-8 w-full p-6 lg:p-12 text-center"
-            >
-               <div className="flex flex-col items-center w-full">
-                  <div className="px-6 py-2 bg-indigo-600 text-white rounded-full text-[10px] font-black uppercase tracking-[0.3em] mb-8 shadow-xl">WINNER REVEALED</div>
-                  
-                  <h1 className="text-5xl md:text-7xl lg:text-9xl font-black text-slate-900 tracking-tighter leading-tight mb-6 w-full max-w-full">
-                    {winner.name}
-                  </h1>
-                  
-                  <div className="inline-block px-6 py-2 bg-indigo-50/80 border border-indigo-100 rounded-2xl mb-12">
-                    <p className="text-sm md:text-lg font-bold text-indigo-600 font-mono tracking-widest">
-                      ID: {winner.id}
-                    </p>
-                  </div>
-                  
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 lg:gap-6 w-full max-w-5xl py-8 border-t border-slate-100">
-                     {[
-                       { label: 'Channel', value: winner.channel },
-                       { label: 'UPI', value: winner.upi || winner.employeeId },
-                       { label: 'Location', value: winner.location },
-                       { label: 'Region', value: winner.region },
-                       { label: 'Line Manager', value: winner.lineManager },
-                     ].map(f => f.value && (
-                       <div key={f.label} className="text-center md:text-left p-6 bg-slate-50 rounded-3xl border border-slate-100 transition-all hover:bg-white hover:shadow-md hover:scale-[1.02]">
-                          <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">{f.label}</p>
-                          <p className="text-base font-bold text-slate-800">{f.value}</p>
-                       </div>
-                     ))}
-                  </div>
-               </div>
-            </motion.div>
-          ) : (
-            <motion.div 
-              key="it-idle"
-              className="flex flex-col items-center gap-8 text-center p-8"
-            >
-               <div className="w-24 h-24 lg:w-36 lg:h-36 bg-slate-50 rounded-3xl lg:rounded-[3rem] flex items-center justify-center border-2 border-dashed border-slate-200">
-                  <Trophy size={64} strokeWidth={1} className="text-slate-200" />
-               </div>
-               <div className="space-y-4">
-                <h2 className="text-3xl lg:text-5xl font-black text-slate-900 tracking-tighter">Ready to Draw</h2>
-                <p className="text-sm lg:text-base text-slate-400 font-medium">Select a prize category and start the countdown.</p>
-               </div>
-            </motion.div>
-          )}
-       </AnimatePresence>
-    </div>
-  );
-};
-
-const DrawControls = ({ 
-  isDrawing, 
-  pendingWinner, 
-  availablePoolCount, 
-  onDraw, 
-  onConfirm, 
-  onReRoll, 
-  onDiscard,
-  t 
-}: { 
-  isDrawing: boolean, 
-  pendingWinner: Ticket | null, 
-  availablePoolCount: number, 
-  onDraw: () => void, 
-  onConfirm: () => void, 
-  onReRoll: () => void,
-  onDiscard: () => void,
-  t: (key: string) => string
-}) => {
-  return (
-    <div className="h-32 bg-white rounded-[2.5rem] shadow-sm border border-slate-100 p-6 flex items-center justify-center gap-4 w-full">
-       {pendingWinner ? (
-          <div className="flex gap-4 w-full">
-            <button 
-              onClick={onDiscard}
-              className="flex-1 py-5 bg-slate-50 text-slate-400 rounded-3xl font-black uppercase tracking-widest hover:bg-red-50 hover:text-red-500 border border-slate-100 transition-all flex items-center justify-center gap-2"
-            >
-              <X size={20} /> Discard
-            </button>
-            <button 
-              onClick={onReRoll}
-              className="flex-1 py-5 bg-slate-50 text-slate-400 rounded-3xl font-black uppercase tracking-widest hover:bg-slate-100 hover:text-indigo-600 border border-slate-100 transition-all flex items-center justify-center gap-2"
-            >
-              <RefreshCcw size={20} /> Re-roll
-            </button>
-            <button 
-              onClick={onConfirm}
-              className="flex-[2] py-5 bg-indigo-600 text-white rounded-3xl font-black uppercase tracking-widest hover:bg-indigo-700 shadow-xl shadow-indigo-100 transition-all flex items-center justify-center gap-3"
-            >
-              <Check size={24} /> Confirm Winner
-            </button>
-          </div>
-       ) : (
-          <button 
-            onClick={onDraw}
-            disabled={isDrawing || availablePoolCount === 0}
-            className={cn(
-              "group w-full max-w-2xl h-full rounded-[2rem] font-black text-2xl uppercase tracking-widest transition-all scale-100 active:scale-[0.98] flex items-center justify-center gap-4",
-              (isDrawing || availablePoolCount === 0)
-                ? "bg-slate-100 text-slate-300 cursor-not-allowed"
-                : "bg-indigo-600 text-white hover:bg-indigo-700 shadow-2xl shadow-indigo-100"
-            )}
-          >
-            {isDrawing ? (
-              <span className="flex items-center gap-4">
-                 <div className="w-2 h-2 bg-white rounded-full animate-ping" /> Drawing...
-              </span>
-            ) : availablePoolCount === 0 ? (
-              "No Tickets Remaining"
-            ) : (
-              <>
-                <Play size={28} fill="currentColor" /> {t('draw.start')}
-              </>
-            )}
-          </button>
-       )}
-    </div>
-  );
-};
 
 const WinnerSidebar = ({ 
   programWinners, 
@@ -752,72 +676,28 @@ export default function DrawScreen({ state, updateState, onNavigate }: { state: 
       />
 
       <DrawContent>
-        <DrawMainPanel>
-          {/* Action Bar / Status */}
-          <div className="flex flex-wrap items-center justify-between gap-4 bg-white p-6 rounded-[2.5rem] shadow-sm border border-slate-100 w-full">
-             <div className="flex items-center gap-4">
-                <div className="flex flex-col">
-                   <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Active Prize</span>
-                   <div className="flex items-center gap-2">
-                      <Gift size={16} className="text-indigo-500" />
-                      <span className="text-lg font-black text-slate-800">{selectedPrize?.name}</span>
-                   </div>
-                </div>
-                <div className="h-10 w-px bg-slate-100 mx-2" />
-                <div className="flex flex-col">
-                   <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Remaining</span>
-                   <span className="text-lg font-black text-slate-800">{selectedPrize?.remaining} / {selectedPrize?.quantity}</span>
-                </div>
-             </div>
+        <DrawMainPanel 
+          currentWinner={pendingWinner || currentWinner}
+          onDraw={handleDraw}
+          onConfirm={confirmWinner}
+          onReroll={handleReRoll}
+          isDrawing={isDrawing}
+          remaining={selectedPrize?.remaining || 0}
+          activePrizeName={selectedPrize?.name}
+        />
 
-             <div className="flex gap-2">
-                {activePrizes.map(p => (
-                  <button 
-                    key={p.id}
-                    onClick={() => setSelectedPrizeId(p.id)}
-                    className={cn(
-                      "px-4 py-2 rounded-xl text-xs font-black uppercase tracking-tighter transition-all border",
-                      selectedPrizeId === p.id 
-                        ? "bg-indigo-600 border-indigo-500 text-white shadow-lg shadow-indigo-100" 
-                        : "bg-slate-50 border-slate-100 text-slate-500 hover:bg-slate-100"
-                    )}
-                  >
-                    {p.name}
-                  </button>
-                ))}
-             </div>
-          </div>
-
-          <WinnerDisplay 
-            winner={pendingWinner || currentWinner}
-            isDrawing={isDrawing}
-            visualPool={visualPool}
-          />
-
-          <DrawControls 
-            isDrawing={isDrawing}
-            pendingWinner={pendingWinner}
-            availablePoolCount={availablePool.length}
-            onDraw={handleDraw}
-            onConfirm={confirmWinner}
-            onReRoll={handleReRoll}
-            onDiscard={() => { setPendingWinner(null); setCurrentWinner(null); }}
-            t={t}
-          />
-
-          <AnimatePresence>
-            {countdown !== null && (
-              <motion.div 
-                initial={{ scale: 2, opacity: 0 }}
-                animate={{ scale: 1, opacity: 1 }}
-                exit={{ scale: 0.5, opacity: 0 }}
-                className="fixed inset-0 z-[100] flex items-center justify-center bg-white/40 backdrop-blur-md"
-              >
-                <span className="text-[140px] lg:text-[240px] font-black text-indigo-600 italic tracking-tighter drop-shadow-2xl">{countdown}</span>
-              </motion.div>
-            )}
-          </AnimatePresence>
-        </DrawMainPanel>
+        <AnimatePresence>
+          {countdown !== null && (
+            <motion.div 
+              initial={{ scale: 2, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.5, opacity: 0 }}
+              className="fixed inset-0 z-[150] flex items-center justify-center bg-white/40 backdrop-blur-md pointer-events-none"
+            >
+              <span className="text-[140px] lg:text-[240px] font-black text-indigo-600 italic tracking-tighter drop-shadow-2xl">{countdown}</span>
+            </motion.div>
+          )}
+        </AnimatePresence>
 
         <WinnerSidebar 
           programWinners={programWinners}
