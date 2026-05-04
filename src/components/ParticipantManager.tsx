@@ -78,6 +78,12 @@ export default function ParticipantManager({ state, updateState }: { state: AppS
         name: editingTicket.name,
         employee_id: editingTicket.employeeId,
         department: editingTicket.department,
+        upi: editingTicket.upi,
+        location: editingTicket.location,
+        region: editingTicket.region,
+        line_manager: editingTicket.lineManager,
+        channel: editingTicket.channel,
+        position: editingTicket.position
       }).eq('id', editingTicket.id);
       
       if (error) throw error;
@@ -132,15 +138,22 @@ export default function ParticipantManager({ state, updateState }: { state: AppS
         
         // Auto-detect mappings
         const autoMap: ColumnMapping = { 
-          id: '', name: '', employeeId: '', department: '', programNameCol: ''
+          id: '', name: '', employeeId: '', department: '', programNameCol: '',
+          upi: '', location: '', region: '', lineManager: '', channel: '', position: ''
         };
         cols.forEach(col => {
           const l = col.toLowerCase();
           if (l.includes('phiếu') || l.includes('stt') || (l.includes('id') && !l.includes('staff') && !l.includes('emp'))) autoMap.id = col;
           if (l.includes('tên') || l.includes('name')) autoMap.name = col;
           if (l.includes('mã') || l.includes('staff') || l.includes('emp') || l === 'upi') autoMap.employeeId = col;
-          if (l.includes('phòng') || l.includes('dept') || l.includes('kênh') || l.includes('channel')) autoMap.department = col;
+          if (l.includes('phòng') || l.includes('dept')) autoMap.department = col;
+          if (l.includes('kênh') || l.includes('channel')) autoMap.channel = col;
           if (l.includes('ct') || l.includes('program')) autoMap.programNameCol = col;
+          if (l.includes('upi')) autoMap.upi = col;
+          if (l.includes('vị trí') || l.includes('location')) autoMap.location = col;
+          if (l.includes('vùng') || l.includes('region')) autoMap.region = col;
+          if (l.includes('quản lý') || l.includes('manager')) autoMap.lineManager = col;
+          if (l.includes('chức vụ') || l.includes('position') || l.includes('role')) autoMap.position = col;
         });
         setMapping(autoMap);
 
@@ -180,6 +193,12 @@ export default function ParticipantManager({ state, updateState }: { state: AppS
       name: String(row[mapping.name] || "-"),
       employeeId: String(row[mapping.employeeId] || "-"),
       department: String(row[mapping.department] || "-"),
+      channel: String(row[mapping.channel] || "-"),
+      upi: String(row[mapping.upi] || "-"),
+      location: String(row[mapping.location] || "-"),
+      region: String(row[mapping.region] || "-"),
+      lineManager: String(row[mapping.lineManager] || "-"),
+      position: String(row[mapping.position] || "-"),
       programName: isSplitMode && mapping.programNameCol ? String(row[mapping.programNameCol] || "General") : "",
     })));
 
@@ -594,7 +613,7 @@ export default function ParticipantManager({ state, updateState }: { state: AppS
                     <label className="text-[10px] font-black uppercase text-slate-400 px-1">Employee ID</label>
                     <input 
                       type="text"
-                      value={editingTicket.employeeId}
+                      value={editingTicket.employeeId || ''}
                       onChange={e => setEditingTicket({ ...editingTicket, employeeId: e.target.value })}
                       className="w-full px-4 py-3 bg-slate-50 border-2 border-slate-100 rounded-2xl focus:border-indigo-500 font-bold outline-none"
                     />
@@ -603,8 +622,50 @@ export default function ParticipantManager({ state, updateState }: { state: AppS
                     <label className="text-[10px] font-black uppercase text-slate-400 px-1">Department</label>
                     <input 
                       type="text"
-                      value={editingTicket.department}
+                      value={editingTicket.department || ''}
                       onChange={e => setEditingTicket({ ...editingTicket, department: e.target.value })}
+                      className="w-full px-4 py-3 bg-slate-50 border-2 border-slate-100 rounded-2xl focus:border-indigo-500 font-bold outline-none"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-black uppercase text-slate-400 px-1">UPI</label>
+                    <input 
+                      type="text"
+                      value={editingTicket.upi || ''}
+                      onChange={e => setEditingTicket({ ...editingTicket, upi: e.target.value })}
+                      className="w-full px-4 py-3 bg-slate-50 border-2 border-slate-100 rounded-2xl focus:border-indigo-500 font-bold outline-none"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-black uppercase text-slate-400 px-1">Channel</label>
+                    <input 
+                      type="text"
+                      value={editingTicket.channel || ''}
+                      onChange={e => setEditingTicket({ ...editingTicket, channel: e.target.value })}
+                      className="w-full px-4 py-3 bg-slate-50 border-2 border-slate-100 rounded-2xl focus:border-indigo-500 font-bold outline-none"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-black uppercase text-slate-400 px-1">Location</label>
+                    <input 
+                      type="text"
+                      value={editingTicket.location || ''}
+                      onChange={e => setEditingTicket({ ...editingTicket, location: e.target.value })}
+                      className="w-full px-4 py-3 bg-slate-50 border-2 border-slate-100 rounded-2xl focus:border-indigo-500 font-bold outline-none"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-black uppercase text-slate-400 px-1">Region</label>
+                    <input 
+                      type="text"
+                      value={editingTicket.region || ''}
+                      onChange={e => setEditingTicket({ ...editingTicket, region: e.target.value })}
                       className="w-full px-4 py-3 bg-slate-50 border-2 border-slate-100 rounded-2xl focus:border-indigo-500 font-bold outline-none"
                     />
                   </div>

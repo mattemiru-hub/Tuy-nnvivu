@@ -8,6 +8,12 @@ export interface Ticket {
   name?: string;
   department?: string;
   employeeId?: string;
+  position?: string;
+  channel?: string;
+  lineManager?: string;
+  region?: string;
+  upi?: string;
+  location?: string;
   [key: string]: any;
 }
 
@@ -63,6 +69,12 @@ export interface Winner {
   ticketName?: string;
   employeeId?: string;
   department?: string;
+  position?: string;
+  channel?: string;
+  lineManager?: string;
+  region?: string;
+  upi?: string;
+  location?: string;
   prizeRemainingAtDraw?: number;
 }
 

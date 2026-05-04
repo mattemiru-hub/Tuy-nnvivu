@@ -332,10 +332,15 @@ const WinnerDisplay = ({
                </div>
             </div>
             
+            {/* Winner Details Grid */}
             <div className="winner-detail grid grid-cols-2 md:grid-cols-3 gap-4 w-full">
               {[
-                { label: 'ID/Staff ID', value: winner.employeeId, icon: <TicketIcon size={16} /> },
+                { label: 'UPI/ID', value: winner.upi || winner.employeeId, icon: <TicketIcon size={16} /> },
                 { label: 'Dept/Channel', value: winner.department, icon: <LayoutGrid size={16} /> },
+                { label: 'Region', value: winner.region, icon: <Star size={16} /> },
+                { label: 'Location', value: winner.location, icon: <Info size={16} /> },
+                { label: 'Line Manager', value: winner.lineManager, icon: <Users size={16} /> },
+                { label: 'Position', value: winner.position, icon: <LayoutGrid size={16} /> },
               ].map((field, i) => field.value && (
                 <div 
                   key={`detail-${field.label}-${i}`}
