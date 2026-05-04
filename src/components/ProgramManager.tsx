@@ -10,6 +10,9 @@ import { generateId, cn, formatDate, compressImage } from '../lib/utils';
 import { DEFAULT_RULES, INITIAL_PRIZES } from '../constants';
 import { useTranslation } from 'react-i18next';
 
+import { supabaseService } from '../services/supabaseService';
+import { isSupabaseConfigured } from '../lib/supabase';
+
 export default function ProgramManager({ state, updateState }: { state: AppState, updateState: (updater: (prev: AppState) => AppState) => void }) {
   const { t } = useTranslation();
   const [newProgramName, setNewProgramName] = useState('');
@@ -40,77 +43,54 @@ export default function ProgramManager({ state, updateState }: { state: AppState
     }
   };
 
-  const handleCreateProgram = (template?: DrawProgram) => {
+  const handleCreateProgram = async (template?: DrawProgram) => {
+    if (!isSupabaseConfigured()) return;
     const name = template ? `${template.name} - ${month}/${year}` : newProgramName;
     if (!name.trim()) return;
 
-    const finalPrizes = template 
-      ? template.prizes.map(p => ({ ...p, id: generateId(), remaining: p.quantity }))
-      : prizes.length > 0 ? prizes : INITIAL_PRIZES.map(p => ({ ...p, id: generateId() }));
+    try {
+      const newProg = await supabaseService.createProgram(name, {
+        description: template ? template.description : description,
+        thumbnail: template ? template.thumbnail : thumbnail,
+        rules: template ? { ...template.rules } : { ...DEFAULT_RULES },
+        month: month,
+        year: year
+      });
 
-    const newProgram: DrawProgram = {
-      id: `prog-${generateId()}`,
-      name: name,
-      description: template ? template.description : description,
-      thumbnail: template ? template.thumbnail : thumbnail,
-      bannerFit: template ? template.bannerFit : bannerFit,
-      bannerHeight: template ? template.bannerHeight : bannerHeight,
-      bannerPosition: template ? template.bannerPosition : bannerPosition,
-      theatreBadge: template ? template.theatreBadge : theatreBadge,
-      theatreSubtitle: template ? template.theatreSubtitle : theatreSubtitle,
-      bgmUrl: template ? template.bgmUrl : bgmUrl,
-      bgmVolume: template ? template.bgmVolume : bgmVolume,
-      bgmEnabled: template ? template.bgmEnabled : bgmEnabled,
-      createdAt: Date.now(),
-      prizes: finalPrizes,
-      rules: template ? { ...template.rules } : { ...DEFAULT_RULES },
-      ticketPool: template ? [...template.ticketPool] : [],
-      isActive: true,
-      month: month,
-      year: year
-    };
+      // If template, clone prizes
+      if (template) {
+        for (const p of template.prizes) {
+          await supabaseService.createPrize(newProg.id, p);
+        }
+      }
 
-    updateState(prev => ({
-      ...prev,
-      programs: [...prev.programs, newProgram],
-      activeProgramId: newProgram.id
-    }));
-
-    setNewProgramName('');
-    setDescription('');
-    setThumbnail(undefined);
-    setPrizes([]);
+      setNewProgramName('');
+      setDescription('');
+      setThumbnail(undefined);
+      setPrizes([]);
+    } catch (err) {
+      console.error('Error creating program:', err);
+    }
   };
 
-  const handleUpdateProgram = () => {
-    if (!editingProgramId || !newProgramName.trim()) return;
+  const handleUpdateProgram = async () => {
+    if (!editingProgramId || !newProgramName.trim() || !isSupabaseConfigured()) return;
 
-    updateState(prev => ({
-      ...prev,
-      programs: prev.programs.map(p => p.id === editingProgramId ? {
-        ...p,
+    try {
+      await supabaseService.updateProgram(editingProgramId, {
         name: newProgramName,
         description,
         thumbnail,
-        bannerFit,
-        bannerHeight,
-        bannerPosition,
-        theatreBadge,
-        theatreSubtitle,
-        bgmUrl,
-        bgmVolume,
-        bgmEnabled,
-        prizes: prizes.length > 0 ? prizes : p.prizes,
         month,
         year
-      } : p)
-    }));
-
-    setEditingProgramId(null);
-    setNewProgramName('');
-    setDescription('');
-    setThumbnail(undefined);
-    setPrizes([]);
+      });
+      setEditingProgramId(null);
+      setNewProgramName('');
+      setDescription('');
+      setThumbnail(undefined);
+    } catch (err) {
+      console.error('Error updating program:', err);
+    }
   };
 
   const startEditing = (p: DrawProgram) => {
@@ -118,54 +98,46 @@ export default function ProgramManager({ state, updateState }: { state: AppState
     setNewProgramName(p.name);
     setDescription(p.description || '');
     setThumbnail(p.thumbnail);
-    setBannerFit(p.bannerFit || 'cover');
-    setBannerHeight(p.bannerHeight || 20);
-    setBannerPosition(p.bannerPosition || 50);
-    setTheatreBadge(p.theatreBadge || 'LUCKY DRAW');
-    setTheatreSubtitle(p.theatreSubtitle || '');
-    setBgmUrl(p.bgmUrl || 'https://assets.mixkit.co/music/preview/mixkit-celebration-160.mp3');
-    setBgmVolume(p.bgmVolume ?? 0.5);
-    setBgmEnabled(p.bgmEnabled ?? true);
-    setPrizes(p.prizes);
     setMonth(p.month || new Date().getMonth() + 1);
     setYear(p.year || new Date().getFullYear());
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
-  const deleteProgram = (id: string) => {
+  const deleteProgram = async (id: string) => {
+    if (!isSupabaseConfigured()) return;
     if (state.programs.length === 1) {
       alert(t('setup.error_last_program'));
       return;
     }
     if (!confirm(t('setup.confirm_delete'))) return;
 
-    updateState(prev => {
-      const nextPrograms = prev.programs.filter(p => p.id !== id);
-      return {
-        ...prev,
-        programs: nextPrograms,
-        activeProgramId: prev.activeProgramId === id ? (nextPrograms.length > 0 ? nextPrograms[0].id : null) : prev.activeProgramId,
-        winners: prev.winners.filter(w => w.programId !== id)
-      };
-    });
+    try {
+      await supabaseService.deleteProgram(id);
+    } catch (err) {
+      console.error('Error deleting program:', err);
+    }
   };
 
-  const toggleActive = (id: string) => {
-    updateState(prev => ({
-      ...prev,
-      programs: prev.programs.map(p => p.id === id ? { ...p, isActive: !p.isActive } : p)
-    }));
+  const toggleActive = async (id: string) => {
+    const p = state.programs.find(prog => prog.id === id);
+    if (!p) return;
+    try {
+      await supabaseService.updateProgram(id, { isActive: !p.isActive });
+    } catch (err) {
+      console.error('Error toggling active:', err);
+    }
   };
 
-  const updateProgramThumbnail = (id: string, file: File) => {
+  const updateProgramThumbnail = async (id: string, file: File) => {
     const reader = new FileReader();
     reader.onloadend = async () => {
       const dataUrl = reader.result as string;
       const compressed = await compressImage(dataUrl);
-      updateState(prev => ({
-        ...prev,
-        programs: prev.programs.map(p => p.id === id ? { ...p, thumbnail: compressed } : p)
-      }));
+      try {
+        await supabaseService.updateProgram(id, { thumbnail: compressed });
+      } catch (err) {
+        console.error('Error updating thumbnail:', err);
+      }
     };
     reader.readAsDataURL(file);
   };

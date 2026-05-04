@@ -9,6 +9,8 @@ import { Plus, Trash2, Edit3, Image as ImageIcon, Settings2, ShieldCheck, UserCh
 import { generateId, cn } from '../lib/utils';
 import { useTranslation } from 'react-i18next';
 import { motion, AnimatePresence } from 'motion/react';
+import { supabaseService } from '../services/supabaseService';
+import { getSupabase, isSupabaseConfigured } from '../lib/supabase';
 
 export default function PrizeManager({ state, updateState }: { state: AppState, updateState: (updater: (prev: AppState) => AppState) => void }) {
   const { t } = useTranslation();
@@ -24,20 +26,19 @@ export default function PrizeManager({ state, updateState }: { state: AppState, 
     </div>
   );
 
-  const handleUpdateRule = (key: keyof RuleConfig, value: any) => {
-    updateState(prev => ({
-      ...prev,
-      programs: prev.programs.map(p => 
-        p.id === currentProgram.id 
-          ? { ...p, rules: { ...p.rules, [key]: value } } 
-          : p
-      )
-    }));
+  const handleUpdateRule = async (key: keyof RuleConfig, value: any) => {
+    if (!isSupabaseConfigured()) return;
+    const updatedRules = { ...currentProgram.rules, [key]: value };
+    try {
+      await supabaseService.updateProgramRules(currentProgram.id, updatedRules);
+    } catch (err) {
+      console.error('Error updating rules:', err);
+    }
   };
 
-  const handleAddPrize = () => {
-    const newPrize: Prize = {
-      id: generateId(),
+  const handleAddPrize = async () => {
+    if (!isSupabaseConfigured()) return;
+    const newPrize: Partial<Prize> = {
       name: t('prizes.new_prize_name') || 'New Prize',
       quantity: 1,
       remaining: 1,
@@ -47,37 +48,28 @@ export default function PrizeManager({ state, updateState }: { state: AppState, 
       image: "https://images.unsplash.com/photo-1511512578047-dfb367046420?w=400&h=400&fit=crop"
     };
     
-    updateState(prev => ({
-      ...prev,
-      programs: prev.programs.map(p => 
-        p.id === currentProgram.id 
-          ? { ...p, prizes: [...p.prizes, newPrize] } 
-          : p
-      )
-    }));
+    try {
+      await supabaseService.createPrize(currentProgram.id, newPrize);
+    } catch (err) {
+      console.error('Error adding prize:', err);
+    }
   };
 
-  const handleDeletePrize = (id: string) => {
-    if(!confirm(t('prizes.confirm_delete'))) return;
-    updateState(prev => ({
-      ...prev,
-      programs: prev.programs.map(p => 
-        p.id === currentProgram.id 
-          ? { ...p, prizes: p.prizes.filter(pr => pr.id !== id) } 
-          : p
-      )
-    }));
+  const handleDeletePrize = async (id: string) => {
+    if(!confirm(t('prizes.confirm_delete')) || !isSupabaseConfigured()) return;
+    try {
+      await supabaseService.deletePrize(id);
+    } catch (err) {
+      console.error('Error deleting prize:', err);
+    }
   };
 
-  const updatePrize = (prizeId: string, updates: Partial<Prize>) => {
-    updateState(prev => ({
-      ...prev,
-      programs: prev.programs.map(p => 
-        p.id === currentProgram.id 
-          ? { ...p, prizes: p.prizes.map(pr => pr.id === prizeId ? { ...pr, ...updates } : pr) } 
-          : p
-      )
-    }));
+  const updatePrize = async (prizeId: string, updates: Partial<Prize>) => {
+    try {
+      await supabaseService.updatePrize(prizeId, updates);
+    } catch (err) {
+      console.error('Error updating prize:', err);
+    }
   };
 
   return (

@@ -8,6 +8,8 @@ import { shuffleArray } from '../lib/engine';
 import { getAvailableParticipants, drawRandom } from '../utils/drawEngine';
 import { sounds } from '../lib/sounds';
 import { useTranslation } from 'react-i18next';
+import { supabaseService } from '../services/supabaseService';
+import { getSupabase, isSupabaseConfigured } from '../lib/supabase';
 
 // --- Sub-components for better organization ---
 
@@ -469,43 +471,46 @@ const DrawMainPanel = ({
     </div>
 
     <div className="p-6 lg:px-8 lg:pb-8 border-t border-slate-100 bg-slate-50/30">
-      <div className="draw-controls bg-white p-4 lg:p-6 rounded-[2rem] border border-slate-100 shadow-lg max-w-4xl mx-auto w-full">
-        <button 
-          onClick={onReroll} 
-          disabled={!currentWinner || isDrawing}
-          className="flex-1 py-4 bg-slate-50 text-slate-500 rounded-xl font-black uppercase tracking-widest hover:bg-slate-100 hover:text-indigo-600 disabled:opacity-50 disabled:cursor-not-allowed transition-all border border-slate-100 flex items-center justify-center gap-2"
-        >
-          <RefreshCcw size={18} /> Re-roll
-        </button>
+      <div className="draw-controls bg-white p-4 lg:p-6 rounded-[2rem] border border-slate-100 shadow-lg max-w-4xl mx-auto w-full flex gap-4">
+        {!currentWinner && (
+          <button 
+            onClick={onDraw} 
+            disabled={isDrawing || remaining === 0}
+            className={cn(
+              "flex-1 py-5 rounded-2xl font-black text-xl uppercase tracking-[0.2em] transition-all shadow-xl flex items-center justify-center gap-3",
+              (isDrawing || remaining === 0)
+                ? "bg-slate-100 text-slate-300 cursor-not-allowed"
+                : "bg-indigo-600 text-white hover:bg-indigo-700 shadow-indigo-100"
+            )}
+          >
+            {isDrawing ? (
+              <>
+                <div className="w-2 h-2 bg-white rounded-full animate-ping" /> DRAWING...
+              </>
+            ) : (
+              <>
+                <Play size={24} fill="currentColor" /> DRAW
+              </>
+            )}
+          </button>
+        )}
 
-        <button 
-          onClick={onDraw} 
-          disabled={isDrawing || remaining === 0}
-          className={cn(
-            "flex-[2] py-4 rounded-xl font-black text-xl uppercase tracking-[0.2em] transition-all shadow-xl flex items-center justify-center gap-3",
-            (isDrawing || remaining === 0)
-              ? "bg-slate-100 text-slate-300 cursor-not-allowed"
-              : "bg-indigo-600 text-white hover:bg-indigo-700 shadow-indigo-100"
-          )}
-        >
-          {isDrawing ? (
-            <>
-              <div className="w-2 h-2 bg-white rounded-full animate-ping" /> DRAWING...
-            </>
-          ) : (
-            <>
-              <Play size={24} fill="currentColor" /> DRAW
-            </>
-          )}
-        </button>
-
-        <button 
-          onClick={onConfirm} 
-          disabled={!currentWinner}
-          className="flex-1 py-4 bg-indigo-50 text-indigo-600 rounded-xl font-black uppercase tracking-widest hover:bg-indigo-100 disabled:opacity-50 disabled:cursor-not-allowed transition-all border border-indigo-100 flex items-center justify-center gap-2"
-        >
-          <Check size={20} /> Confirm
-        </button>
+        {currentWinner && !isDrawing && (
+          <>
+            <button 
+              onClick={onReroll} 
+              className="flex-1 py-5 bg-slate-100 text-slate-500 rounded-2xl font-black uppercase tracking-widest hover:bg-slate-200 transition-all border border-slate-100 flex items-center justify-center gap-2"
+            >
+              <RefreshCcw size={24} /> Re-roll
+            </button>
+            <button 
+              onClick={onConfirm} 
+              className="flex-[2] py-5 bg-emerald-500 text-white rounded-2xl font-black text-xl uppercase tracking-[0.2em] hover:bg-emerald-600 shadow-xl shadow-emerald-100 transition-all flex items-center justify-center gap-3"
+            >
+              <Check size={24} /> Confirm Winner
+            </button>
+          </>
+        )}
       </div>
     </div>
   </main>
@@ -720,22 +725,34 @@ export default function DrawScreen({ state, updateState, onNavigate }: { state: 
     tick();
   };
 
-  const confirmWinner = () => {
-    if (!currentWinner || !selectedPrize) return;
+  const confirmWinner = async () => {
+    if (!currentWinner || !selectedPrize || !currentProgram) return;
     
-    // Check if this winner is already recorded
-    const alreadyRecorded = state.winners.some(w => w.ticketId === currentWinner.id && w.programId === currentProgram.id);
-    if (alreadyRecorded) return;
+    if (!isSupabaseConfigured()) {
+      alert("Supabase is not configured. Please check your settings.");
+      return;
+    }
+    
+    try {
+      const supabase = getSupabase();
+      // Check if this winner is already recorded
+      const alreadyRecorded = state.winners.some(w => w.ticketId === currentWinner.id && w.programId === currentProgram.id);
+      if (alreadyRecorded) return;
 
-    recordWinner(currentWinner, selectedPrize);
-    
-    // Focus UX: After confirmation, clear the center and prepare for next
-    setTimeout(() => {
-       setCurrentWinner(null);
-    }, 1500);
+      await supabaseService.recordWinner(currentProgram.id, currentWinner.id, selectedPrize.id);
+      await supabaseService.updatePrizeRemaining(selectedPrize.id, Math.max(0, selectedPrize.remaining - 1));
+      
+      // Clear current winner from display after confirmation
+      setTimeout(() => {
+         setCurrentWinner(null);
+      }, 1500);
+    } catch (err) {
+      console.error('Error confirming winner:', err);
+      alert('Lỗi khi ghi nhận người thắng cuộc vào Supabase.');
+    }
   };
 
-  const handleReRoll = () => {
+  const handleReRoll = async () => {
     if (failingValidation()) return;
     
     if (currentWinner) {
@@ -743,20 +760,15 @@ export default function DrawScreen({ state, updateState, onNavigate }: { state: 
       const winnerRecord = state.winners.find(w => w.ticketId === winnerToRevoke.id && w.programId === currentProgram.id);
       
       if (winnerRecord) {
-        updateState(prev => ({
-          ...prev,
-          winners: prev.winners.filter(w => w.id !== winnerRecord.id),
-          programs: prev.programs.map(p => 
-            p.id === currentProgram.id 
-              ? { 
-                  ...p, 
-                  prizes: p.prizes.map(pr => 
-                    pr.id === winnerRecord.prizeId ? { ...pr, remaining: pr.remaining + 1 } : pr
-                  ) 
-                } 
-              : p
-          )
-        }));
+        try {
+          await supabaseService.revokeWinner(winnerRecord.id);
+          const prize = currentProgram.prizes.find(pr => pr.id === winnerRecord.prizeId);
+          if (prize) {
+            await supabaseService.updatePrizeRemaining(prize.id, prize.remaining + 1);
+          }
+        } catch (err) {
+          console.error('Error revoking winner for re-roll:', err);
+        }
       }
       
       setCurrentWinner(null);
@@ -773,64 +785,20 @@ export default function DrawScreen({ state, updateState, onNavigate }: { state: 
     return false;
   };
 
-  const recordWinner = (ticket: Ticket, prize: Prize) => {
-    const newWinner: Winner = {
-      id: generateId(),
-      drawTime: Date.now(),
-      programId: currentProgram.id,
-      programName: currentProgram.name,
-      prizeId: prize.id,
-      prizeName: prize.name,
-      prizeImage: prize.image,
-      ticketId: ticket.id,
-      ticketName: ticket.name,
-      email: ticket.email,
-      employeeId: ticket.employeeId,
-      department: ticket.department,
-      position: ticket.position,
-      channel: ticket.channel,
-      lineManager: ticket.lineManager,
-      region: ticket.region,
-      location: ticket.location || ticket.city,
-      upi: ticket.upi,
-      prizeRemainingAtDraw: prize.remaining - 1
-    };
-
-    updateState(prev => ({
-      ...prev,
-      winners: [newWinner, ...prev.winners],
-      programs: prev.programs.map(p => 
-        p.id === currentProgram.id 
-          ? { 
-              ...p, 
-              prizes: p.prizes.map(pr => 
-                pr.id === prize.id ? { ...pr, remaining: pr.remaining - 1 } : pr
-              ) 
-            } 
-          : p
-      )
-    }));
-    return newWinner;
-  };
-
   const fireConfetti = () => {
     confetti({ particleCount: 150, spread: 70, origin: { y: 0.6 }, colors: ['#6366f1', '#f59e0b', '#FFFFFF'] });
   };
 
-  const resetResults = () => {
+  const resetResults = async () => {
     if (!currentProgram) return;
     if (!confirm("Reset all winners for this program?")) return;
     
-    updateState(prev => ({
-      ...prev,
-      winners: prev.winners.filter(w => w.programId !== currentProgram.id),
-      programs: prev.programs.map(p => 
-        p.id === currentProgram.id 
-          ? { ...p, prizes: p.prizes.map(pr => ({ ...pr, remaining: pr.quantity })) } 
-          : p
-      )
-    }));
-    setCurrentWinner(null);
+    try {
+      await supabaseService.resetProgramWinners(currentProgram.id);
+      setCurrentWinner(null);
+    } catch (err) {
+      console.error('Error resetting winners:', err);
+    }
   };
 
   if (!currentProgram || currentProgram.ticketPool.length === 0 || currentProgram.prizes.length === 0) {

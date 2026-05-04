@@ -13,6 +13,8 @@ import { INITIAL_PRIZES } from '../constants';
 import { useTranslation } from 'react-i18next';
 import { motion, AnimatePresence } from 'motion/react';
 import { cleanParticipantData } from '../utils/drawEngine';
+import { supabaseService } from '../services/supabaseService';
+import { getSupabase, isSupabaseConfigured } from '../lib/supabase';
 
 interface ColumnMapping {
   id: string;
@@ -36,7 +38,12 @@ export default function ParticipantManager({ state, updateState }: { state: AppS
     name: '',
     employeeId: '',
     department: '',
-    programNameCol: ''
+    programNameCol: '',
+    channel: '',
+    upi: '',
+    location: '',
+    region: '',
+    lineManager: ''
   });
   const [isSplitMode, setIsSplitMode] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
@@ -50,51 +57,55 @@ export default function ParticipantManager({ state, updateState }: { state: AppS
     const q = searchQuery.toLowerCase();
     return currentProgram.ticketPool.filter(t => 
       t.name?.toLowerCase().includes(q) || 
-      t.id.toLowerCase().includes(q) || 
+      t.id?.toLowerCase().includes(q) || 
       t.employeeId?.toLowerCase().includes(q) ||
       t.department?.toLowerCase().includes(q)
     );
   }, [currentProgram, searchQuery]);
 
-  const deleteTicket = (ticketId: string) => {
-    if (!currentProgram) return;
-    updateState(prev => ({
-      ...prev,
-      programs: prev.programs.map(p => 
-        p.id === currentProgram.id 
-          ? { ...p, ticketPool: p.ticketPool.filter(t => t.id !== ticketId) } 
-          : p
-      )
-    }));
+  const deleteTicket = async (ticketId: string) => {
+    if (!currentProgram || !isSupabaseConfigured()) return;
+    try {
+      const { error } = await getSupabase().from('participants').delete().eq('id', ticketId);
+      if (error) throw error;
+      // Real-time will handle the state update
+    } catch (err) {
+      console.error('Error deleting participant:', err);
+    }
   };
 
-  const handleUpdateTicket = (e: React.FormEvent) => {
+  const handleUpdateTicket = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!editingTicket || !currentProgram) return;
+    if (!editingTicket || !currentProgram || !isSupabaseConfigured()) return;
 
-    updateState(prev => ({
-      ...prev,
-      programs: prev.programs.map(p => 
-        p.id === currentProgram.id 
-          ? { 
-              ...p, 
-              ticketPool: p.ticketPool.map(t => t.id === editingTicket.id ? editingTicket : t) 
-            } 
-          : p
-      )
-    }));
-    setEditingTicket(null);
+    try {
+      const { error } = await getSupabase().from('participants').update({
+        name: editingTicket.name,
+        employee_id: editingTicket.employeeId,
+        department: editingTicket.department,
+        channel: editingTicket.channel,
+        upi: editingTicket.upi,
+        location: editingTicket.location,
+        region: editingTicket.region,
+        line_manager: editingTicket.lineManager
+      }).eq('id', editingTicket.id);
+      
+      if (error) throw error;
+      setEditingTicket(null);
+    } catch (err) {
+      console.error('Error updating participant:', err);
+    }
   };
 
-  const clearAllTickets = () => {
-    if (!currentProgram) return;
+  const clearAllTickets = async () => {
+    if (!currentProgram || !isSupabaseConfigured()) return;
     if (!confirm(t('participants.confirm_bulk_delete'))) return;
-    updateState(prev => ({
-      ...prev,
-      programs: prev.programs.map(p => 
-        p.id === currentProgram.id ? { ...p, ticketPool: [] } : p
-      )
-    }));
+    try {
+      const { error } = await getSupabase().from('participants').delete().eq('program_id', currentProgram.id);
+      if (error) throw error;
+    } catch (err) {
+      console.error('Error clearing participants:', err);
+    }
   };
 
   const onDrop = useCallback((acceptedFiles: File[]) => {
@@ -130,14 +141,22 @@ export default function ParticipantManager({ state, updateState }: { state: AppS
         setRawData(jsonData);
         
         // Auto-detect mappings
-        const autoMap: ColumnMapping = { id: '', name: '', employeeId: '', department: '', programNameCol: '' };
+        const autoMap: ColumnMapping = { 
+          id: '', name: '', employeeId: '', department: '', programNameCol: '',
+          channel: '', upi: '', location: '', region: '', lineManager: '' 
+        };
         cols.forEach(col => {
           const l = col.toLowerCase();
-          if (l.includes('phiếu') || l.includes('ticket') || l.includes('id')) autoMap.id = col;
+          if (l.includes('phiếu') || l.includes('ticket') || (l.includes('id') && !l.includes('staff') && !l.includes('emp'))) autoMap.id = col;
           if (l.includes('tên') || l.includes('name')) autoMap.name = col;
-          if (l.includes('mã') || l.includes('staff')) autoMap.employeeId = col;
+          if (l.includes('mã') || l.includes('staff') || l.includes('emp')) autoMap.employeeId = col;
           if (l.includes('phòng') || l.includes('dept')) autoMap.department = col;
           if (l.includes('ct') || l.includes('program')) autoMap.programNameCol = col;
+          if (l.includes('kênh') || l.includes('channel')) autoMap.channel = col;
+          if (l.includes('upi')) autoMap.upi = col;
+          if (l.includes('vị trí') || l.includes('location')) autoMap.location = col;
+          if (l.includes('vùng') || l.includes('region')) autoMap.region = col;
+          if (l.includes('manager') || l.includes('quản lý')) autoMap.lineManager = col;
         });
         setMapping(autoMap);
 
@@ -161,7 +180,7 @@ export default function ParticipantManager({ state, updateState }: { state: AppS
     multiple: false
   } as any);
 
-  const handleApply = () => {
+  const handleApply = async () => {
     if (rawData.length === 0) return;
 
     // Check for duplicates in the new data
@@ -177,13 +196,17 @@ export default function ParticipantManager({ state, updateState }: { state: AppS
       name: String(row[mapping.name] || "-"),
       employeeId: String(row[mapping.employeeId] || "-"),
       department: String(row[mapping.department] || "-"),
+      channel: String(row[mapping.channel] || "-"),
+      upi: String(row[mapping.upi] || "-"),
+      location: String(row[mapping.location] || "-"),
+      region: String(row[mapping.region] || "-"),
+      lineManager: String(row[mapping.lineManager] || "-"),
+      position: String(row['Position'] || row['Chức vụ'] || "-"),
       programName: isSplitMode && mapping.programNameCol ? String(row[mapping.programNameCol] || "General") : "",
-      ...row
     })));
 
-    updateState(prev => {
-      let newPrograms = [...prev.programs];
-
+    try {
+      setIsProcessing(true);
       if (isSplitMode && mapping.programNameCol) {
         const programGroups: Record<string, Ticket[]> = {};
         processedData.forEach(item => {
@@ -192,48 +215,27 @@ export default function ParticipantManager({ state, updateState }: { state: AppS
           programGroups[pName].push(item);
         });
 
-        Object.entries(programGroups).forEach(([name, tickets]) => {
-          const existing = newPrograms.find(p => p.name === name);
-          if (existing) {
-            existing.ticketPool = tickets;
-          } else {
-            const newProgram: DrawProgram = {
-              id: `prog-${generateId()}`,
-              name: name,
-              createdAt: Date.now(),
-              prizes: INITIAL_PRIZES.map(p => ({ ...p, id: generateId(), remaining: p.quantity })),
-              rules: {
-                maxWinsPerTicket: 1,
-                maxWinsPerPerson: 1,
-                preventDuplicatePrizeType: true,
-                fairnessRandom: true
-              },
-              ticketPool: tickets,
-              isActive: true,
-              month: new Date().getMonth() + 1,
-              year: new Date().getFullYear()
-            };
-            newPrograms.push(newProgram);
+        for (const [name, tickets] of Object.entries(programGroups)) {
+          let targetProgram = state.programs.find(p => p.name === name);
+          if (!targetProgram) {
+            targetProgram = await supabaseService.createProgram(name);
           }
-        });
+          await supabaseService.uploadParticipants(targetProgram.id, tickets);
+        }
       } else {
-        const activeId = prev.activeProgramId;
+        const activeId = state.activeProgramId;
         if (activeId) {
-          newPrograms = newPrograms.map(p => 
-            p.id === activeId ? { ...p, ticketPool: processedData } : p
-          );
+          await supabaseService.uploadParticipants(activeId, processedData);
         }
       }
-
-      return {
-        ...prev,
-        programs: newPrograms,
-        activeProgramId: (isSplitMode && newPrograms.length > prev.programs.length) ? newPrograms[newPrograms.length - 1].id : prev.activeProgramId
-      };
-    });
-
-    setRawData([]);
-    alert("Đã xử lý dữ liệu và nạp vào hệ thống!");
+      setRawData([]);
+      alert("Đã xử lý dữ liệu và nạp vào hệ thống!");
+    } catch (err) {
+      console.error('Error uploading participants:', err);
+      alert('Lỗi khi tải dữ liệu lên Supabase. Vui lòng kiểm tra kết nối.');
+    } finally {
+      setIsProcessing(false);
+    }
   };
 
   return (

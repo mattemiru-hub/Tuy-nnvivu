@@ -8,8 +8,10 @@ import { LayoutGrid, PlusCircle, Trophy, History, Upload, Settings, RotateCcw, L
 import { motion, AnimatePresence } from 'motion/react';
 import { useTranslation } from 'react-i18next';
 import { AppState, DrawProgram, Prize, Winner, Ticket } from './types';
-import { loadState, saveState, INITIAL_STATE } from './constants';
+import { INITIAL_STATE } from './constants';
 import { cn } from './lib/utils';
+import { supabaseService } from './services/supabaseService';
+import { getSupabase, isSupabaseConfigured } from './lib/supabase';
 
 // Views
 import Dashboard from './components/Dashboard';
@@ -22,13 +24,151 @@ import SystemSettings from './components/SystemSettings';
 
 export default function App() {
   const { t, i18n } = useTranslation();
-  const [state, setState] = useState<AppState>(loadState());
+  const [state, setState] = useState<AppState>(INITIAL_STATE);
   const [activeTab, setActiveTab] = useState<'dashboard' | 'setup' | 'prizes' | 'participants' | 'draw' | 'history' | 'settings'>('dashboard');
   const [showSidebar, setShowSidebar] = useState(true);
+  const [loading, setLoading] = useState(true);
 
+  // Initial Data Fetch
   useEffect(() => {
-    saveState(state);
-  }, [state]);
+    if (!isSupabaseConfigured()) {
+      setLoading(false);
+      return;
+    }
+
+    const fetchData = async () => {
+      try {
+        setLoading(true);
+        const programs = await supabaseService.getPrograms();
+        const allWinners = await supabaseService.getAllWinners();
+        
+        if (programs.length > 0) {
+          const activeId = localStorage.getItem('activeProgramId') || programs[0].id;
+          const participants = await supabaseService.getParticipants(activeId);
+          
+          setState(prev => ({
+            ...prev,
+            programs: programs.map(p => p.id === activeId ? { ...p, ticketPool: participants } : p),
+            winners: allWinners,
+            activeProgramId: activeId
+          }));
+        } else {
+          setState(prev => ({ ...prev, winners: allWinners }));
+        }
+      } catch (error) {
+        console.error('Error fetching initial data:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchData();
+  }, []);
+
+  const refreshData = async () => {
+    if (!isSupabaseConfigured()) {
+      alert("Please configure Supabase first in the Settings menu.");
+      return;
+    }
+    try {
+      setLoading(true);
+      const programs = await supabaseService.getPrograms();
+      const allWinners = await supabaseService.getAllWinners();
+      
+      if (state.activeProgramId) {
+        const participants = await supabaseService.getParticipants(state.activeProgramId);
+        setState(prev => ({
+          ...prev,
+          programs: programs.map(p => p.id === state.activeProgramId ? { ...p, ticketPool: participants } : p),
+          winners: allWinners
+        }));
+      } else {
+        setState(prev => ({ ...prev, programs, winners: allWinners }));
+      }
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Sync active program data when it changes
+  useEffect(() => {
+    if (!state.activeProgramId || loading) return;
+
+    const fetchProgramData = async () => {
+      try {
+        const winners = await supabaseService.getWinners(state.activeProgramId!);
+        const participants = await supabaseService.getParticipants(state.activeProgramId!);
+        
+        setState(prev => ({
+          ...prev,
+          programs: prev.programs.map(p => 
+            p.id === state.activeProgramId 
+              ? { ...p, ticketPool: participants } 
+              : p
+          ),
+          winners
+        }));
+        
+        localStorage.setItem('activeProgramId', state.activeProgramId!);
+      } catch (error) {
+        console.error('Error fetching program data:', error);
+      }
+    };
+
+    fetchProgramData();
+  }, [state.activeProgramId]);
+
+  // Real-time Subscriptions
+  useEffect(() => {
+    if (!state.activeProgramId || !isSupabaseConfigured()) return;
+
+    let supabase;
+    try {
+      supabase = getSupabase();
+    } catch (e) {
+      console.error(e);
+      return;
+    }
+
+    const winnersChannel = supabase
+      .channel('winners-changes')
+      .on('postgres_changes' as any, { event: '*', table: 'winners' }, async () => {
+        const winners = await supabaseService.getAllWinners();
+        setState(prev => ({ ...prev, winners }));
+      })
+      .subscribe();
+
+    const participantsChannel = supabase
+      .channel('participants-changes')
+      .on('postgres_changes' as any, { event: '*', table: 'participants' }, async () => {
+        if (state.activeProgramId) {
+          const participants = await supabaseService.getParticipants(state.activeProgramId);
+          setState(prev => ({
+            ...prev,
+            programs: prev.programs.map(p => 
+              p.id === state.activeProgramId ? { ...p, ticketPool: participants } : p
+            )
+          }));
+        }
+      })
+      .subscribe();
+
+    const prizesChannel = supabase
+      .channel('prizes-changes')
+      .on('postgres_changes' as any, { event: '*', table: 'prizes' }, async () => {
+        const programs = await supabaseService.getPrograms();
+        setState(prev => ({ ...prev, programs }));
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(winnersChannel);
+      supabase.removeChannel(participantsChannel);
+      supabase.removeChannel(prizesChannel);
+    };
+  }, [state.activeProgramId]);
 
   const updateState = (updater: (prev: AppState) => AppState) => {
     setState(prev => updater(prev));
@@ -151,14 +291,11 @@ export default function App() {
                {i18n.language === 'vi' ? 'English' : 'Tiếng Việt'}
              </button>
              <button 
-              onClick={() => {
-                if(confirm(t('app.confirm_purge'))) {
-                  setState(INITIAL_STATE);
-                }
-              }}
-              className="text-[10px] font-black uppercase tracking-widest text-red-500 hover:text-red-600 transition-colors"
+              onClick={refreshData}
+              className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-blue-600 hover:text-blue-700 transition-colors"
              >
-               {t('app.purge')}
+               <RotateCcw size={14} className={loading ? 'animate-spin' : ''} />
+               Cloud Sync
              </button>
              <div className="w-10 h-10 rounded-2xl bg-slate-100 border border-slate-200 flex items-center justify-center font-black text-xs">AI</div>
           </div>
@@ -177,13 +314,36 @@ export default function App() {
               transition={{ duration: 0.2 }}
               className={activeTab === 'draw' ? "h-full" : ""}
             >
-              {activeTab === 'dashboard' && <Dashboard state={state} onSwitchProgram={(id) => updateState(s => ({ ...s, activeProgramId: id }))} />}
-              {activeTab === 'setup' && <ProgramManager state={state} updateState={updateState} />}
-              {activeTab === 'prizes' && <PrizeManager state={state} updateState={updateState} />}
-              {activeTab === 'participants' && <ParticipantManager state={state} updateState={updateState} />}
-              {activeTab === 'draw' && <DrawScreen state={state} updateState={updateState} onNavigate={setActiveTab} />}
-              {activeTab === 'history' && <HistoryView state={state} updateState={updateState} />}
-              {activeTab === 'settings' && <SystemSettings state={state} updateState={updateState} />}
+              {!isSupabaseConfigured() ? (
+                <div className="bg-amber-50 border border-amber-200 rounded-3xl p-8 text-center max-w-2xl mx-auto">
+                  <div className="w-16 h-16 bg-amber-100 text-amber-600 rounded-full flex items-center justify-center mx-auto mb-6">
+                    <Settings font-black size={32} />
+                  </div>
+                  <h3 className="text-xl font-black text-slate-900 mb-2 uppercase tracking-tighter italic">Supabase Connection Required</h3>
+                  <p className="text-slate-600 mb-8 leading-relaxed">
+                    To enable the cloud-synced Lucky Draw features, you need to connect your Supabase project. 
+                    Please set <code className="bg-amber-100 px-1.5 py-0.5 rounded text-amber-800">VITE_SUPABASE_URL</code> and 
+                    <code className="bg-amber-100 px-1.5 py-0.5 rounded text-amber-800">VITE_SUPABASE_ANON_KEY</code> in the 
+                    <strong className="mx-1">Settings</strong> menu of AI Studio.
+                  </p>
+                  <div className="flex flex-col items-center gap-4">
+                     <p className="text-xs text-slate-400 font-bold uppercase tracking-widest leading-loose">
+                       Need a Supabase project? <br/>
+                       <a href="https://supabase.com" target="_blank" rel="noreferrer" className="text-indigo-600 hover:underline">Sign up for free at supabase.com</a>
+                     </p>
+                  </div>
+                </div>
+              ) : (
+                <>
+                  {activeTab === 'dashboard' && <Dashboard state={state} onSwitchProgram={(id) => updateState(s => ({ ...s, activeProgramId: id }))} />}
+                  {activeTab === 'setup' && <ProgramManager state={state} updateState={updateState} />}
+                  {activeTab === 'prizes' && <PrizeManager state={state} updateState={updateState} />}
+                  {activeTab === 'participants' && <ParticipantManager state={state} updateState={updateState} />}
+                  {activeTab === 'draw' && <DrawScreen state={state} updateState={updateState} onNavigate={setActiveTab} />}
+                  {activeTab === 'history' && <HistoryView state={state} updateState={updateState} />}
+                  {activeTab === 'settings' && <SystemSettings state={state} updateState={updateState} />}
+                </>
+              )}
             </motion.div>
           </AnimatePresence>
         </div>

@@ -8,6 +8,7 @@ import * as XLSX from 'xlsx';
 import { AppState, Winner } from '../types';
 import { Download, Trash2, Filter, Search, User, Trophy, Calendar } from 'lucide-react';
 import { formatDate, cn } from '../lib/utils';
+import { supabaseService } from '../services/supabaseService';
 
 export default function HistoryView({ state, updateState }: { state: AppState, updateState: (updater: (prev: AppState) => AppState) => void }) {
   const [searchTerm, setSearchTerm] = React.useState("");
@@ -54,28 +55,25 @@ export default function HistoryView({ state, updateState }: { state: AppState, u
     XLSX.writeFile(workbook, `LuckyDraw_Winners_${new Date().toISOString().slice(0,10)}.xlsx`);
   };
 
-  const deleteRecord = (id: string) => {
+  const deleteRecord = async (id: string) => {
     if(!confirm("Xóa lịch sử trúng giải này? Phiếu sẽ được quay lại pool nếu chưa hết giới hạn.")) return;
     
-    updateState(prev => {
-      const record = prev.winners.find(w => w.id === id);
-      if (!record) return prev;
+    const record = state.winners.find(w => w.id === id);
+    if (!record) return;
 
-      return {
-        ...prev,
-        winners: prev.winners.filter(w => w.id !== id),
-        programs: prev.programs.map(p => 
-          p.id === record.programId 
-          ? { 
-              ...p, 
-              prizes: p.prizes.map(pr => 
-                pr.id === record.prizeId ? { ...pr, remaining: pr.remaining + 1 } : pr
-              ) 
-            } 
-          : p
-        )
-      };
-    });
+    try {
+      await supabaseService.revokeWinner(id);
+      
+      const program = state.programs.find(p => p.id === record.programId);
+      if (program) {
+        const prize = program.prizes.find(pr => pr.id === record.prizeId);
+        if (prize) {
+          await supabaseService.updatePrizeRemaining(prize.id, prize.remaining + 1);
+        }
+      }
+    } catch (err) {
+      console.error('Error deleting winner record:', err);
+    }
   };
 
   return (
