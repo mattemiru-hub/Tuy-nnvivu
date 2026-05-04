@@ -22,6 +22,7 @@ export default function DrawScreen({ state, updateState, onNavigate }: { state: 
   const [currentWinner, setCurrentWinner] = useState<Ticket | null>(null);
   const [pendingWinner, setPendingWinner] = useState<Ticket | null>(null);
   const [visualPool, setVisualPool] = useState<Ticket[]>([]); 
+  const [countdown, setCountdown] = useState<number | null>(null);
   const [showMobilePrizes, setShowMobilePrizes] = useState(false);
   const [showMobileWinners, setShowMobileWinners] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -93,6 +94,25 @@ export default function DrawScreen({ state, updateState, onNavigate }: { state: 
 
   const handleDraw = () => {
     if (isDrawing || pendingWinner || !selectedPrize) return;
+    
+    // Start Countdown 3-2-1
+    let cd = 3;
+    setCountdown(cd);
+    
+    const cdInterval = setInterval(() => {
+      cd--;
+      if (cd > 0) {
+        setCountdown(cd);
+        sounds.playSpinProgress(0.1); // Use a short sound for tick
+      } else {
+        clearInterval(cdInterval);
+        setCountdown(null);
+        startActualDraw();
+      }
+    }, 800);
+  };
+
+  const startActualDraw = () => {
     setIsDrawing(true);
     setCurrentWinner(null);
     setError(null);
@@ -192,6 +212,26 @@ export default function DrawScreen({ state, updateState, onNavigate }: { state: 
 
   const fireConfetti = () => {
     confetti({ particleCount: 150, spread: 70, origin: { y: 0.6 }, colors: ['#6366f1', '#f59e0b', '#FFFFFF'] });
+  };
+
+  const resetResults = () => {
+    if (!currentProgram) return;
+    if (!confirm("Bạn có chắc chắn muốn xóa TẤT CẢ kết quả của chương trình này? Hành động này không thể hoàn tác.")) return;
+    
+    updateState(prev => ({
+      ...prev,
+      winners: prev.winners.filter(w => w.programId !== currentProgram.id),
+      programs: prev.programs.map(p => 
+        p.id === currentProgram.id 
+          ? { 
+              ...p, 
+              prizes: p.prizes.map(pr => ({ ...pr, remaining: pr.quantity })) 
+            } 
+          : p
+      )
+    }));
+    setCurrentWinner(null);
+    setPendingWinner(null);
   };
 
   const programWinners = state.winners.filter(w => w.programId === currentProgram.id);
@@ -297,9 +337,17 @@ export default function DrawScreen({ state, updateState, onNavigate }: { state: 
 
            <div className="flex-1 overflow-y-auto scrollbar-hide p-6 space-y-8">
               <section>
-                 <h4 className="text-[10px] font-black text-white/30 uppercase tracking-widest mb-4 flex items-center gap-2">
-                    <Gift size={12} className="text-indigo-500" /> Selective Prizes
-                 </h4>
+                 <div className="flex items-center justify-between mb-4">
+                    <h4 className="text-[10px] font-black text-white/30 uppercase tracking-widest flex items-center gap-2">
+                       <Gift size={12} className="text-indigo-500" /> Selective Prizes
+                    </h4>
+                    <button 
+                      onClick={resetResults}
+                      className="text-[9px] font-black text-red-500/50 hover:text-red-500 uppercase tracking-widest transition-colors cursor-pointer"
+                    >
+                      Reset All
+                    </button>
+                 </div>
                  <div className="space-y-3">
                     {activePrizes.map((p) => (
                        <button
@@ -405,6 +453,21 @@ export default function DrawScreen({ state, updateState, onNavigate }: { state: 
            </div>
 
            <div className="flex-1 relative flex flex-col items-center justify-center p-4 md:p-6 lg:p-8 min-h-0">
+               {/* Countdown Overlay */}
+               <AnimatePresence>
+                 {countdown !== null && (
+                   <motion.div 
+                     initial={{ opacity: 0, scale: 2 }}
+                     animate={{ opacity: 1, scale: 1 }}
+                     exit={{ opacity: 0, scale: 0.5 }}
+                     className="absolute inset-0 z-[60] flex items-center justify-center pointer-events-none"
+                   >
+                     <p className="text-[200px] font-black text-indigo-500 shadow-[0_0_50px_rgba(99,102,241,0.5)] italic">
+                       {countdown}
+                     </p>
+                   </motion.div>
+                 )}
+               </AnimatePresence>
               {/* Error Toast */}
               <AnimatePresence>
                 {error && (
@@ -580,6 +643,15 @@ export default function DrawScreen({ state, updateState, onNavigate }: { state: 
                       <X size={24} /> {t('common.cancel') || 'DISCARD'}
                     </button>
                     <button 
+                      onClick={() => {
+                        setPendingWinner(null);
+                        handleDraw();
+                      }}
+                      className="flex-1 py-4 md:py-5 lg:py-6 bg-white/5 border border-white/10 hover:bg-indigo-500/10 hover:border-indigo-400 text-indigo-400 rounded-2xl md:rounded-3xl font-black text-lg md:text-2xl uppercase tracking-widest transition-all flex items-center justify-center gap-3 italic"
+                    >
+                      <RefreshCcw size={24} /> RE-ROLL
+                    </button>
+                    <button 
                       onClick={confirmWinner}
                       className="flex-[2] py-4 md:py-5 lg:py-6 bg-indigo-600 text-white rounded-2xl md:rounded-3xl font-black text-lg md:text-2xl uppercase tracking-widest hover:bg-indigo-500 shadow-[0_0_50px_rgba(79,70,229,0.4)] transition-all flex items-center justify-center gap-3 italic"
                     >
@@ -630,7 +702,10 @@ export default function DrawScreen({ state, updateState, onNavigate }: { state: 
                        initial={{ opacity: 0, x: 20 }}
                        animate={{ opacity: 1, x: 0 }}
                        transition={{ delay: idx * 0.1 }}
-                       className="bg-white/5 border border-white/5 rounded-2xl p-4 group hover:bg-white/10 transition-all"
+                       className={cn(
+                          "bg-white/5 border rounded-2xl p-4 group hover:bg-white/10 transition-all",
+                          idx === 0 ? "border-indigo-500 bg-indigo-500/10 shadow-[0_0_20px_rgba(79,70,229,0.2)]" : "border-white/5"
+                        )}
                     >
                        <div className="flex items-center gap-3 mb-3">
                           <div className="w-8 h-8 rounded-lg bg-indigo-600/20 text-indigo-400 flex items-center justify-center text-[10px] font-black">

@@ -27,6 +27,7 @@ export default function ParticipantManager({ state, updateState }: { state: AppS
   const [activeSubTab, setActiveSubTab] = useState<'upload' | 'list'>('upload');
   const [isProcessing, setIsProcessing] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [warning, setWarning] = useState<string | null>(null);
   const [rawData, setRawData] = useState<any[]>([]);
   const [columns, setColumns] = useState<string[]>([]);
   const [mapping, setMapping] = useState<ColumnMapping>({
@@ -109,10 +110,15 @@ export default function ParticipantManager({ state, updateState }: { state: AppS
         const workbook = XLSX.read(data, { type: 'array' });
         const sheetName = workbook.SheetNames[0];
         const worksheet = workbook.Sheets[sheetName];
-        const jsonData = XLSX.utils.sheet_to_json(worksheet) as any[];
+        let jsonData = XLSX.utils.sheet_to_json(worksheet, { defval: "" }) as any[];
+
+        // Skip empty rows (rows where all values are empty or whitespace)
+        jsonData = jsonData.filter(row => 
+          Object.values(row).some(val => val !== null && val !== undefined && String(val).trim() !== "")
+        );
 
         if (jsonData.length === 0) {
-          throw new Error("The Excel/CSV file is empty or formatted incorrectly. Please ensure it has data rows and a header.");
+          throw new Error("The Excel/CSV file is empty or contains only empty rows.");
         }
 
         const cols = Object.keys(jsonData[0]);
@@ -156,6 +162,14 @@ export default function ParticipantManager({ state, updateState }: { state: AppS
 
   const handleApply = () => {
     if (rawData.length === 0) return;
+
+    // Check for duplicates in the new data
+    const ids = rawData.map(row => String(row[mapping.id] || ""));
+    const duplicateIdsInFile = ids.filter((id, index) => id && ids.indexOf(id) !== index);
+    
+    if (duplicateIdsInFile.length > 0 && !confirm(`Phát hiện ${duplicateIdsInFile.length} mã bị trùng trong file. Bạn có muốn tiếp tục?`)) {
+      return;
+    }
 
     const processedData = rawData.map((row, index) => ({
       id: String(row[mapping.id] || `T-${1000 + index}`),
@@ -397,7 +411,10 @@ export default function ParticipantManager({ state, updateState }: { state: AppS
 
                 <div className="flex gap-4">
                   <button 
-                    onClick={() => setRawData([])}
+                    onClick={() => {
+                      setRawData([]);
+                      setWarning(null);
+                    }}
                     className="flex-1 px-8 py-4 bg-slate-100 text-slate-500 font-black uppercase tracking-widest text-xs rounded-2xl hover:bg-slate-200 transition-colors"
                   >
                     Cancel
@@ -410,6 +427,33 @@ export default function ParticipantManager({ state, updateState }: { state: AppS
                     {t('upload.process')}
                   </button>
                 </div>
+
+                {/* Data Preview */}
+                {rawData.length > 0 && (
+                  <div className="mt-8 space-y-4">
+                    <h4 className="font-black uppercase tracking-widest text-xs text-slate-400">Data Preview (First 5 rows)</h4>
+                    <div className="overflow-x-auto border border-slate-100 rounded-2xl">
+                      <table className="w-full text-left border-collapse text-xs">
+                        <thead className="bg-slate-50">
+                          <tr>
+                            {columns.slice(0, 5).map(col => (
+                              <th key={col} className="px-4 py-2 font-black text-slate-500 uppercase tracking-tighter">{col}</th>
+                            ))}
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {rawData.slice(0, 5).map((row, i) => (
+                            <tr key={i} className="border-t border-slate-50">
+                              {columns.slice(0, 5).map(col => (
+                                <td key={col} className="px-4 py-2 text-slate-600 truncate max-w-[150px]">{String(row[col] || "-")}</td>
+                              ))}
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                )}
               </div>
             )}
 
