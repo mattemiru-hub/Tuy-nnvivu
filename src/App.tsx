@@ -12,6 +12,7 @@ import { INITIAL_STATE } from './constants';
 import { cn } from './lib/utils';
 import { supabaseService } from './services/supabaseService';
 import { getSupabase, isSupabaseConfigured } from './lib/supabase';
+import { Session } from '@supabase/supabase-js';
 
 // Views
 import Dashboard from './components/Dashboard';
@@ -21,6 +22,7 @@ import ParticipantManager from './components/ParticipantManager';
 import DrawScreen from './components/DrawScreen';
 import HistoryView from './components/HistoryView';
 import SystemSettings from './components/SystemSettings';
+import Login from './components/Login';
 
 export default function App() {
   const { t, i18n } = useTranslation();
@@ -28,13 +30,26 @@ export default function App() {
   const [activeTab, setActiveTab] = useState<'dashboard' | 'setup' | 'prizes' | 'participants' | 'draw' | 'history' | 'settings'>('dashboard');
   const [showSidebar, setShowSidebar] = useState(true);
   const [loading, setLoading] = useState(true);
+  const [session, setSession] = useState<Session | null>(null);
 
-  // Initial Data Fetch
+  // Initial Data Fetch & Auth Check
   useEffect(() => {
     if (!isSupabaseConfigured()) {
       setLoading(false);
       return;
     }
+
+    const supabase = getSupabase();
+
+    // Check current session
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setSession(session);
+    });
+
+    // Listen for auth changes
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setSession(session);
+    });
 
     const fetchData = async () => {
       try {
@@ -63,6 +78,8 @@ export default function App() {
     };
 
     fetchData();
+
+    return () => subscription.unsubscribe();
   }, []);
 
   const refreshData = async () => {
@@ -94,7 +111,7 @@ export default function App() {
 
   // Sync active program data when it changes
   useEffect(() => {
-    if (!state.activeProgramId || loading) return;
+    if (!state.activeProgramId || loading || !session) return;
 
     const fetchProgramData = async () => {
       try {
@@ -118,11 +135,11 @@ export default function App() {
     };
 
     fetchProgramData();
-  }, [state.activeProgramId]);
+  }, [state.activeProgramId, session]);
 
   // Real-time Subscriptions
   useEffect(() => {
-    if (!state.activeProgramId || !isSupabaseConfigured()) return;
+    if (!state.activeProgramId || !isSupabaseConfigured() || !session) return;
 
     let supabase;
     try {
@@ -297,6 +314,14 @@ export default function App() {
                <RotateCcw size={14} className={loading ? 'animate-spin' : ''} />
                Cloud Sync
              </button>
+             {session && (
+               <button 
+                 onClick={() => getSupabase().auth.signOut()}
+                 className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-slate-500 hover:text-red-600 transition-colors"
+               >
+                 Sign Out
+               </button>
+             )}
              <div className="w-10 h-10 rounded-2xl bg-slate-100 border border-slate-200 flex items-center justify-center font-black text-xs">AI</div>
           </div>
         </header>
@@ -333,6 +358,8 @@ export default function App() {
                      </p>
                   </div>
                 </div>
+              ) : !session ? (
+                <Login />
               ) : (
                 <>
                   {activeTab === 'dashboard' && <Dashboard state={state} onSwitchProgram={(id) => updateState(s => ({ ...s, activeProgramId: id }))} />}
