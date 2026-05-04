@@ -99,25 +99,27 @@
   font-weight: bold;
 }
 
-.winner-display {
-  width: 100%;
-  padding: 24px 20px;
-  text-align: center;
-  background: #ffffff;
-  border-radius: 20px;
-  margin-bottom: 24px;
-  overflow: visible;
-  border: 1px solid #f1f5f9;
-}
-
 .winner-name {
-  font-size: 56px;
-  font-weight: 800;
+  font-size: clamp(3rem, 10vw, 6rem);
+  font-weight: 900;
   margin-bottom: 20px;
   word-break: break-word;
-  line-height: 1.1;
+  line-height: 0.9;
+  letter-spacing: -0.04em;
   color: #0f172a;
   text-align: center;
+}
+
+.winner-display {
+  width: 100%;
+  padding: 40px;
+  text-align: center;
+  background: #ffffff;
+  border-radius: 32px;
+  margin-bottom: 32px;
+  overflow: visible;
+  border: 1px solid #f1f5f9;
+  box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.05), 0 2px 4px -2px rgb(0 0 0 / 0.05);
 }
 
 .winner-id {
