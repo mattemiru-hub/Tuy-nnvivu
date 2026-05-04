@@ -49,69 +49,72 @@ const DrawHeader = ({
   return (
     <header className="bg-white border-b border-slate-200 sticky top-0 z-30 shadow-sm w-full">
       <div className="w-full">
-        {/* Compact Banner Area */}
-        {currentProgram.thumbnail && (
-          <div className="relative group bg-slate-900 flex items-center justify-center overflow-hidden h-[60px] lg:h-[80px]">
-            <img 
-              src={currentProgram.thumbnail} 
-              alt={currentProgram.name} 
-              className="banner-img w-full h-full object-contain"
-            />
-            <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-4 backdrop-blur-sm">
-              <label className="cursor-pointer bg-white text-slate-800 px-3 py-1.5 rounded-lg shadow-lg hover:scale-105 transition-transform flex items-center gap-2 font-black text-[9px] uppercase tracking-widest">
-                <ImageIcon size={14} /> Change Banner
-                <input type="file" className="hidden" accept="image/*" onChange={handleBannerUpload} />
-              </label>
-              <button 
-                onClick={removeBanner}
-                className="bg-red-500 text-white px-3 py-1.5 rounded-lg shadow-lg hover:scale-105 transition-transform flex items-center gap-2 font-black text-[9px] uppercase tracking-widest"
-              >
-                <Trash2 size={14} /> Hide
-              </button>
+        {/* Banner Area */}
+        <div className="relative group bg-slate-900 shadow-inner flex items-center justify-center min-h-[120px]">
+          {currentProgram.thumbnail ? (
+            <div className="w-full relative flex items-center justify-center bg-slate-900 overflow-hidden h-[120px] lg:h-[180px]">
+              <img 
+                src={currentProgram.thumbnail} 
+                alt={currentProgram.name} 
+                className="banner-img w-full h-full object-contain block"
+              />
+              <div className="absolute inset-0 bg-black/10 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-4">
+                <label className="cursor-pointer bg-white/90 backdrop-blur text-slate-800 p-2 lg:p-3 rounded-xl shadow-lg hover:scale-110 transition-transform flex items-center gap-2 font-black text-[10px] uppercase tracking-widest">
+                  <ImageIcon size={16} /> Replace
+                  <input type="file" className="hidden" accept="image/*" onChange={handleBannerUpload} />
+                </label>
+                <button 
+                  onClick={removeBanner}
+                  className="bg-white/90 backdrop-blur text-red-600 p-2 lg:p-3 rounded-xl shadow-lg hover:scale-110 transition-transform flex items-center gap-2 font-black text-[10px] uppercase tracking-widest"
+                >
+                  <Trash2 size={16} /> Remove
+                </button>
+              </div>
             </div>
-          </div>
-        )}
+          ) : (
+            <div className="h-[120px] lg:h-[160px] w-full flex flex-col items-center justify-center border-b-2 border-dashed border-white/10 bg-slate-100">
+               <label className="cursor-pointer flex flex-col items-center gap-2 text-slate-400 hover:text-indigo-500 transition-colors">
+                  <ImageIcon size={32} strokeWidth={1.5} />
+                  <span className="text-[10px] font-black uppercase tracking-widest">Upload Banner</span>
+                  <input type="file" className="hidden" accept="image/*" onChange={handleBannerUpload} />
+               </label>
+            </div>
+          )}
+        </div>
 
-        {/* Action Bar */}
-        <div className="px-6 py-3 flex items-center justify-between gap-4">
-          <div className="flex items-center gap-4">
-             <div className="flex flex-col">
-                <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest leading-none mb-1">Live Event Session</span>
-                <div className="relative flex items-center gap-3">
-                   <div className="relative group/prog">
-                      <select 
-                         value={state.activeProgramId || ''} 
-                         onChange={(e) => updateState(prev => ({ ...prev, activeProgramId: e.target.value }))}
-                         className="appearance-none bg-slate-50 border border-slate-200 rounded-lg px-3 py-1.5 pr-8 text-xs font-black text-slate-900 uppercase tracking-widest cursor-pointer hover:border-indigo-300 transition-all outline-none"
-                      >
-                         {state.programs.map(p => (
-                            <option key={p.id} value={p.id}>{p.name}</option>
-                         ))}
-                      </select>
-                      <ChevronRight size={12} className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none rotate-90" />
-                   </div>
-                   {!currentProgram.thumbnail && (
-                      <label className="cursor-pointer text-indigo-600 hover:text-indigo-800 transition-colors">
-                        <ImageIcon size={18} />
-                        <input type="file" className="hidden" accept="image/*" onChange={handleBannerUpload} />
-                      </label>
-                   )}
-                </div>
+        {/* Info & Navigation */}
+        <div className="px-6 py-4 flex items-center justify-between gap-4">
+          <div className="flex items-center gap-4 min-w-0">
+             <div className="relative group/prog">
+                <select 
+                   value={state.activeProgramId || ''} 
+                   onChange={(e) => updateState(prev => ({ ...prev, activeProgramId: e.target.value }))}
+                   className="appearance-none bg-indigo-50 border border-indigo-100 rounded-xl px-4 py-2 pr-10 text-sm font-black text-indigo-700 uppercase tracking-widest cursor-pointer hover:bg-indigo-100 transition-all outline-none"
+                >
+                   {state.programs.map(p => (
+                      <option key={p.id} value={p.id}>{p.name}</option>
+                   ))}
+                </select>
+                <ChevronRight size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-indigo-400 pointer-events-none rotate-90" />
+             </div>
+             
+             <div className="hidden sm:flex items-center gap-2 px-3 py-1 bg-green-50 text-green-600 rounded-lg border border-green-100 text-[10px] font-black uppercase tracking-widest">
+                <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" /> Live Session
              </div>
           </div>
 
-          <div className="flex items-center gap-3">
-            <div className="hidden lg:flex flex-col items-end px-4 border-r border-slate-100">
-               <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Pool Size</span>
-               <span className="text-xs font-black text-indigo-600 tracking-tight">{currentProgram.ticketPool.length} Participants</span>
-            </div>
+          <div className="flex items-center gap-2">
             <button 
               onClick={toggleFullscreen}
-              className="w-9 h-9 rounded-lg bg-slate-50 border border-slate-200 flex items-center justify-center text-slate-400 hover:bg-slate-100 hover:text-indigo-600 transition-all shadow-sm"
-              title="Toggle Fullscreen"
+              className="w-10 h-10 rounded-xl bg-slate-50 border border-slate-200 flex items-center justify-center text-slate-400 hover:bg-slate-100 hover:text-slate-600 transition-all"
             >
-              {isFullscreen ? <Minimize2 size={16} /> : <Maximize2 size={16} />}
+              {isFullscreen ? <Minimize2 size={18} /> : <Maximize2 size={18} />}
             </button>
+            <div className="h-8 w-px bg-slate-200 mx-2" />
+            <div className="hidden md:flex flex-col items-end">
+               <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Total Candidates</span>
+               <span className="text-sm font-black text-slate-800">{currentProgram.ticketPool.length}</span>
+            </div>
           </div>
         </div>
       </div>
