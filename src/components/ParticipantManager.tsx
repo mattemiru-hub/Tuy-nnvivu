@@ -12,6 +12,7 @@ import { generateId, cn } from '../lib/utils';
 import { INITIAL_PRIZES } from '../constants';
 import { useTranslation } from 'react-i18next';
 import { motion, AnimatePresence } from 'motion/react';
+import { cleanParticipantData } from '../utils/drawEngine';
 
 interface ColumnMapping {
   id: string;
@@ -167,18 +168,18 @@ export default function ParticipantManager({ state, updateState }: { state: AppS
     const ids = rawData.map(row => String(row[mapping.id] || ""));
     const duplicateIdsInFile = ids.filter((id, index) => id && ids.indexOf(id) !== index);
     
-    if (duplicateIdsInFile.length > 0 && !confirm(`Phát hiện ${duplicateIdsInFile.length} mã bị trùng trong file. Bạn có muốn tiếp tục?`)) {
+    if (duplicateIdsInFile.length > 0 && !confirm(`Phát hiện ${duplicateIdsInFile.length} mã bị trùng trong file. Hệ thống sẽ tự động lọc bỏ các mã trùng. Bạn có muốn tiếp tục?`)) {
       return;
     }
 
-    const processedData = rawData.map((row, index) => ({
+    const processedData = cleanParticipantData(rawData.map((row, index) => ({
       id: String(row[mapping.id] || `T-${1000 + index}`),
       name: String(row[mapping.name] || "-"),
       employeeId: String(row[mapping.employeeId] || "-"),
       department: String(row[mapping.department] || "-"),
       programName: isSplitMode && mapping.programNameCol ? String(row[mapping.programNameCol] || "General") : "",
       ...row
-    }));
+    })));
 
     updateState(prev => {
       let newPrograms = [...prev.programs];

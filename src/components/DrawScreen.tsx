@@ -9,7 +9,8 @@ import { motion, AnimatePresence } from 'motion/react';
 import confetti from 'canvas-confetti';
 import { Trophy, RefreshCcw, LayoutGrid, ChevronRight, AlertTriangle, Power, Users, Ticket as TicketIcon, Play, Check, Info, X, Zap, Clock, Star, Gift, Music } from 'lucide-react';
 import { cn, generateId } from '../lib/utils';
-import { getEligibleTickets, pickWinner, shuffleArray } from '../lib/engine';
+import { shuffleArray } from '../lib/engine';
+import { getEligibleParticipants, pickRandomWinner } from '../utils/drawEngine';
 import { sounds } from '../lib/sounds';
 import { useTranslation } from 'react-i18next';
 
@@ -66,6 +67,35 @@ export default function DrawScreen({ state, updateState, onNavigate }: { state: 
 
   const activePrizes = currentProgram?.prizes.filter(p => p.isActive && p.remaining > 0).sort((a, b) => b.priority - a.priority) || [];
   const selectedPrize = activePrizes.find(p => p.id === selectedPrizeId) || activePrizes[0];
+  
+  const programWinners = state.winners.filter(w => w.programId === currentProgram?.id);
+  const eligiblePool = currentProgram ? getEligibleParticipants(currentProgram.ticketPool, state.winners, currentProgram.id) : [];
+
+  if (!currentProgram || currentProgram.ticketPool.length === 0 || currentProgram.prizes.length === 0) return (
+    <div className="bg-white p-12 rounded-3xl border border-gray-100 text-center space-y-6 max-w-2xl mx-auto shadow-sm mt-20">
+       <div className="w-20 h-20 bg-amber-50 text-amber-500 rounded-full flex items-center justify-center mx-auto">
+         <AlertTriangle size={40} />
+       </div>
+       <div className="space-y-2">
+         <h3 className="text-2xl font-black uppercase tracking-tight text-slate-800">
+           {!currentProgram ? "No Active Sessions" : 
+            currentProgram.ticketPool.length === 0 ? "No Participants Loaded" : 
+            "No Prizes Configured"}
+         </h3>
+         <p className="text-slate-500 font-medium">
+           {!currentProgram ? "Please create or select a program first." : 
+            currentProgram.ticketPool.length === 0 ? "Please import participants for this program." : 
+            "Please add at least one prize to this program."}
+         </p>
+       </div>
+       <div className="flex gap-4 justify-center pt-4">
+         <button onClick={() => onNavigate('setup')} className="px-8 py-4 bg-slate-100 text-slate-600 rounded-2xl font-black uppercase tracking-widest text-[10px] hover:bg-slate-200 transition-all">Go to Programs</button>
+         <button onClick={() => onNavigate(currentProgram?.ticketPool.length === 0 ? 'participants' : 'prizes')} className="px-8 py-4 bg-indigo-600 text-white rounded-2xl font-black uppercase tracking-widest text-[10px] hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-600/20">
+           {currentProgram?.ticketPool.length === 0 ? "Import Data" : "Manage Prizes"}
+         </button>
+       </div>
+    </div>
+  );
 
   const handleToggleProgramActive = (id: string) => {
     updateState(prev => ({
@@ -81,16 +111,6 @@ export default function DrawScreen({ state, updateState, onNavigate }: { state: 
       if (animationRef.current) clearTimeout(animationRef.current);
     };
   }, [selectedPrizeId]);
-
-  if (!currentProgram) return (
-    <div className="bg-white p-12 rounded-3xl border border-gray-100 text-center space-y-6 max-w-2xl mx-auto shadow-sm">
-       <div className="w-20 h-20 bg-slate-50 text-slate-400 rounded-full flex items-center justify-center mx-auto">
-         <AlertTriangle size={40} />
-       </div>
-       <h3 className="text-2xl font-black uppercase tracking-tight">No Active Sessions</h3>
-       <button onClick={() => onNavigate('setup')} className="px-8 py-4 bg-blue-600 text-white rounded-2xl font-black uppercase tracking-widest text-xs hover:bg-blue-700 transition-all shadow-lg shadow-blue-600/20">Go to Program Manager</button>
-    </div>
-  );
 
   const handleDraw = () => {
     if (isDrawing || pendingWinner || !selectedPrize) return;
@@ -117,10 +137,10 @@ export default function DrawScreen({ state, updateState, onNavigate }: { state: 
     setCurrentWinner(null);
     setError(null);
 
-    const winner = pickWinner(currentProgram, state.winners, selectedPrize);
+    const winner = pickRandomWinner(eligiblePool);
 
     if (!winner) {
-      setError(t('draw.error_no_tickets') || "Không tìm thấy phiếu hợp lệ thỏa mãn các quy tắc.");
+      setError(t('draw.error_no_tickets') || "Không tìm thấy người tham gia hợp lệ (có thể mọi người đã trúng giải).");
       setIsDrawing(false);
       return;
     }
@@ -233,8 +253,6 @@ export default function DrawScreen({ state, updateState, onNavigate }: { state: 
     setCurrentWinner(null);
     setPendingWinner(null);
   };
-
-  const programWinners = state.winners.filter(w => w.programId === currentProgram.id);
 
   return (
     <div className="flex flex-col h-full overflow-hidden bg-[#0a0a0f]">
@@ -440,14 +458,19 @@ export default function DrawScreen({ state, updateState, onNavigate }: { state: 
                  </h2>
               </div>
               <div className="flex items-center gap-6">
-                 <div className="hidden md:flex items-center gap-2">
-                    <Users size={14} className="text-white/20" />
-                    <span className="text-[10px] font-black text-white/40 uppercase tracking-widest">{currentProgram.ticketPool.length} CANDIDATES</span>
-                 </div>
-                 <div className="w-px h-6 bg-white/5" />
-                 <div className="flex items-center gap-2">
-                    <Trophy size={14} className="text-white/20" />
-                    <span className="text-[10px] font-black text-white/40 uppercase tracking-widest">{programWinners.length} WINNERS</span>
+                 <div className="hidden md:flex flex-col items-end gap-1">
+                    <div className="flex items-center gap-2">
+                       <Users size={12} className="text-white/20" />
+                       <span className="text-[9px] font-black text-white/40 uppercase tracking-widest">Pool: {currentProgram.ticketPool.length}</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                       <Trophy size={12} className="text-white/20" />
+                       <span className="text-[9px] font-black text-indigo-400 uppercase tracking-widest">Winners: {programWinners.length}</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                       <Info size={12} className="text-white/20" />
+                       <span className="text-[9px] font-black text-green-400 uppercase tracking-widest">Remaining: {eligiblePool.length}</span>
+                    </div>
                  </div>
               </div>
            </div>
