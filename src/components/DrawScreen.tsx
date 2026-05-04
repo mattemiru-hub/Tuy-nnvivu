@@ -333,26 +333,25 @@ const WinnerDisplay = ({
             </div>
             
             {/* Winner Details Grid */}
-            <div className="winner-detail grid grid-cols-2 md:grid-cols-3 gap-4 w-full">
-              {[
-                { label: 'UPI/ID', value: winner.upi || winner.employeeId, icon: <TicketIcon size={16} /> },
-                { label: 'Dept/Channel', value: winner.department, icon: <LayoutGrid size={16} /> },
-                { label: 'Region', value: winner.region, icon: <Star size={16} /> },
-                { label: 'Location', value: winner.location, icon: <Info size={16} /> },
-                { label: 'Line Manager', value: winner.lineManager, icon: <Users size={16} /> },
-                { label: 'Position', value: winner.position, icon: <LayoutGrid size={16} /> },
-              ].map((field, i) => field.value && (
-                <div 
-                  key={`detail-${field.label}-${i}`}
-                  className="p-5 bg-white rounded-3xl border border-slate-100 flex flex-col items-start text-left shadow-sm hover:shadow-md transition-shadow"
-                >
+            <div className="grid grid-cols-2 gap-4 w-full">
+              {winner.employeeId && (
+                <div key="detail-id" className="p-5 bg-white rounded-3xl border border-slate-100 flex flex-col items-start text-left shadow-sm">
                   <div className="flex items-center gap-2 mb-2 text-indigo-400">
-                    {field.icon}
-                    <span className="text-[10px] font-black uppercase tracking-[0.1em]">{field.label}</span>
+                    <TicketIcon size={16} />
+                    <span className="text-[10px] font-black uppercase tracking-[0.1em]">Staff ID</span>
                   </div>
-                  <p className="text-base font-black text-slate-800 truncate w-full">{field.value}</p>
+                  <p className="text-base font-black text-slate-800 truncate w-full">{winner.employeeId}</p>
                 </div>
-              ))}
+              )}
+              {winner.department && (
+                <div key="detail-dept" className="p-5 bg-white rounded-3xl border border-slate-100 flex flex-col items-start text-left shadow-sm">
+                  <div className="flex items-center gap-2 mb-2 text-indigo-400">
+                    <LayoutGrid size={16} />
+                    <span className="text-[10px] font-black uppercase tracking-[0.1em]">Department</span>
+                  </div>
+                  <p className="text-base font-black text-slate-800 truncate w-full">{winner.department}</p>
+                </div>
+              )}
             </div>
           </motion.div>
         )}

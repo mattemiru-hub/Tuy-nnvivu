@@ -147,12 +147,6 @@ export const supabaseService = {
       name: p.name || 'Unknown',
       department: p.department,
       employee_id: p.employeeId,
-      upi: p.upi,
-      location: p.location,
-      region: p.region,
-      line_manager: p.lineManager,
-      channel: p.channel,
-      position: p.position
     }));
 
     const { error } = await getSupabase()

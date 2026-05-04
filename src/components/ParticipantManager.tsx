@@ -609,7 +609,7 @@ export default function ParticipantManager({ state, updateState }: { state: AppS
                   />
                 </div>
                 <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
+                  <div className="space-y-2 text-left">
                     <label className="text-[10px] font-black uppercase text-slate-400 px-1">Employee ID</label>
                     <input 
                       type="text"
@@ -618,54 +618,12 @@ export default function ParticipantManager({ state, updateState }: { state: AppS
                       className="w-full px-4 py-3 bg-slate-50 border-2 border-slate-100 rounded-2xl focus:border-indigo-500 font-bold outline-none"
                     />
                   </div>
-                  <div className="space-y-2">
+                  <div className="space-y-2 text-left">
                     <label className="text-[10px] font-black uppercase text-slate-400 px-1">Department</label>
                     <input 
                       type="text"
                       value={editingTicket.department || ''}
                       onChange={e => setEditingTicket({ ...editingTicket, department: e.target.value })}
-                      className="w-full px-4 py-3 bg-slate-50 border-2 border-slate-100 rounded-2xl focus:border-indigo-500 font-bold outline-none"
-                    />
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <label className="text-[10px] font-black uppercase text-slate-400 px-1">UPI</label>
-                    <input 
-                      type="text"
-                      value={editingTicket.upi || ''}
-                      onChange={e => setEditingTicket({ ...editingTicket, upi: e.target.value })}
-                      className="w-full px-4 py-3 bg-slate-50 border-2 border-slate-100 rounded-2xl focus:border-indigo-500 font-bold outline-none"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <label className="text-[10px] font-black uppercase text-slate-400 px-1">Channel</label>
-                    <input 
-                      type="text"
-                      value={editingTicket.channel || ''}
-                      onChange={e => setEditingTicket({ ...editingTicket, channel: e.target.value })}
-                      className="w-full px-4 py-3 bg-slate-50 border-2 border-slate-100 rounded-2xl focus:border-indigo-500 font-bold outline-none"
-                    />
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <label className="text-[10px] font-black uppercase text-slate-400 px-1">Location</label>
-                    <input 
-                      type="text"
-                      value={editingTicket.location || ''}
-                      onChange={e => setEditingTicket({ ...editingTicket, location: e.target.value })}
-                      className="w-full px-4 py-3 bg-slate-50 border-2 border-slate-100 rounded-2xl focus:border-indigo-500 font-bold outline-none"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <label className="text-[10px] font-black uppercase text-slate-400 px-1">Region</label>
-                    <input 
-                      type="text"
-                      value={editingTicket.region || ''}
-                      onChange={e => setEditingTicket({ ...editingTicket, region: e.target.value })}
                       className="w-full px-4 py-3 bg-slate-50 border-2 border-slate-100 rounded-2xl focus:border-indigo-500 font-bold outline-none"
                     />
                   </div>
