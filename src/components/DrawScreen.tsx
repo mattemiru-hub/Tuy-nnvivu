@@ -50,13 +50,13 @@ const DrawHeader = ({
     <header className="bg-white border-b border-slate-200 sticky top-0 z-30 shadow-sm w-full">
       <div className="w-full">
         {/* Banner Area */}
-        <div className="relative group bg-slate-900 shadow-inner flex items-center justify-center min-h-[120px]">
+        <div className="relative group bg-slate-900 shadow-inner flex items-center justify-center min-h-[100px]">
           {currentProgram.thumbnail ? (
-            <div className="w-full relative flex items-center justify-center bg-slate-900 overflow-hidden">
+            <div className="w-full relative flex items-center justify-center bg-slate-900 overflow-hidden h-[120px] lg:h-[180px]">
               <img 
                 src={currentProgram.thumbnail} 
                 alt={currentProgram.name} 
-                className="banner-img w-full h-auto max-h-[400px] object-contain block"
+                className="banner-img w-full h-full object-contain block"
               />
               <div className="absolute inset-0 bg-black/10 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-4">
                 <label className="cursor-pointer bg-white/90 backdrop-blur text-slate-800 p-2 lg:p-3 rounded-xl shadow-lg hover:scale-110 transition-transform flex items-center gap-2 font-black text-[10px] uppercase tracking-widest">
@@ -381,52 +381,56 @@ const DrawMainPanel = ({
   selectedPrizeId: string | null,
   onSelectPrize: (id: string) => void
 }) => (
-  <main className="draw-main-panel h-full overflow-y-auto custom-scrollbar flex flex-col p-6 lg:p-8">
-    <PrizeSelector 
-      prizes={allPrizes} 
-      selectedPrizeId={selectedPrizeId} 
-      onSelect={onSelectPrize} 
-    />
+  <main className="draw-main-panel h-full flex flex-col bg-white overflow-hidden">
+    <div className="flex-1 overflow-y-auto custom-scrollbar p-6 lg:p-8">
+      <PrizeSelector 
+        prizes={allPrizes} 
+        selectedPrizeId={selectedPrizeId} 
+        onSelect={onSelectPrize} 
+      />
 
-    <WinnerDisplay winner={currentWinner} isDrawing={isDrawing} />
+      <WinnerDisplay winner={currentWinner} isDrawing={isDrawing} />
+    </div>
 
-    <div className="draw-controls bg-white p-4 lg:p-6 rounded-2xl border border-slate-100 shadow-sm mt-auto">
-      <button 
-        onClick={onReroll} 
-        disabled={!currentWinner || isDrawing}
-        className="flex-1 py-4 bg-slate-50 text-slate-500 rounded-xl font-black uppercase tracking-widest hover:bg-slate-100 hover:text-indigo-600 disabled:opacity-50 disabled:cursor-not-allowed transition-all border border-slate-100 flex items-center justify-center gap-2"
-      >
-        <RefreshCcw size={18} /> Re-roll
-      </button>
+    <div className="p-6 lg:px-8 lg:pb-8 border-t border-slate-100 bg-slate-50/30">
+      <div className="draw-controls bg-white p-4 lg:p-6 rounded-2xl border border-slate-100 shadow-sm">
+        <button 
+          onClick={onReroll} 
+          disabled={!currentWinner || isDrawing}
+          className="flex-1 py-4 bg-slate-50 text-slate-500 rounded-xl font-black uppercase tracking-widest hover:bg-slate-100 hover:text-indigo-600 disabled:opacity-50 disabled:cursor-not-allowed transition-all border border-slate-100 flex items-center justify-center gap-2"
+        >
+          <RefreshCcw size={18} /> Re-roll
+        </button>
 
-      <button 
-        onClick={onDraw} 
-        disabled={isDrawing || remaining === 0}
-        className={cn(
-          "flex-[2] py-4 rounded-xl font-black text-xl uppercase tracking-[0.2em] transition-all shadow-xl flex items-center justify-center gap-3",
-          (isDrawing || remaining === 0)
-            ? "bg-slate-100 text-slate-300 cursor-not-allowed"
-            : "bg-indigo-600 text-white hover:bg-indigo-700 shadow-indigo-100"
-        )}
-      >
-        {isDrawing ? (
-          <>
-            <div className="w-2 h-2 bg-white rounded-full animate-ping" /> DRAWING...
-          </>
-        ) : (
-          <>
-            <Play size={24} fill="currentColor" /> DRAW
-          </>
-        )}
-      </button>
+        <button 
+          onClick={onDraw} 
+          disabled={isDrawing || remaining === 0}
+          className={cn(
+            "flex-[2] py-4 rounded-xl font-black text-xl uppercase tracking-[0.2em] transition-all shadow-xl flex items-center justify-center gap-3",
+            (isDrawing || remaining === 0)
+              ? "bg-slate-100 text-slate-300 cursor-not-allowed"
+              : "bg-indigo-600 text-white hover:bg-indigo-700 shadow-indigo-100"
+          )}
+        >
+          {isDrawing ? (
+            <>
+              <div className="w-2 h-2 bg-white rounded-full animate-ping" /> DRAWING...
+            </>
+          ) : (
+            <>
+              <Play size={24} fill="currentColor" /> DRAW
+            </>
+          )}
+        </button>
 
-      <button 
-        onClick={onConfirm} 
-        disabled={!currentWinner}
-        className="flex-1 py-4 bg-indigo-50 text-indigo-600 rounded-xl font-black uppercase tracking-widest hover:bg-indigo-100 disabled:opacity-50 disabled:cursor-not-allowed transition-all border border-indigo-100 flex items-center justify-center gap-2"
-      >
-        <Check size={20} /> Confirm
-      </button>
+        <button 
+          onClick={onConfirm} 
+          disabled={!currentWinner}
+          className="flex-1 py-4 bg-indigo-50 text-indigo-600 rounded-xl font-black uppercase tracking-widest hover:bg-indigo-100 disabled:opacity-50 disabled:cursor-not-allowed transition-all border border-indigo-100 flex items-center justify-center gap-2"
+        >
+          <Check size={20} /> Confirm
+        </button>
+      </div>
     </div>
   </main>
 );
