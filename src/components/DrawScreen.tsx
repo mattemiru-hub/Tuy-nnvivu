@@ -52,11 +52,11 @@ const DrawHeader = ({
         {/* Banner Area */}
         <div className="relative group bg-slate-900 shadow-inner flex items-center justify-center min-h-[120px]">
           {currentProgram.thumbnail ? (
-            <div className="w-full relative max-h-[320px] flex items-center justify-center bg-slate-900 overflow-hidden">
+            <div className="w-full relative flex items-center justify-center bg-slate-900 overflow-hidden">
               <img 
                 src={currentProgram.thumbnail} 
                 alt={currentProgram.name} 
-                className="w-full h-auto max-h-[320px] object-contain block"
+                className="banner-img w-full h-auto max-h-[400px] object-contain block"
               />
               <div className="absolute inset-0 bg-black/10 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-4">
                 <label className="cursor-pointer bg-white/90 backdrop-blur text-slate-800 p-2 lg:p-3 rounded-xl shadow-lg hover:scale-110 transition-transform flex items-center gap-2 font-black text-[10px] uppercase tracking-widest">
@@ -253,11 +253,31 @@ const WinnerDisplay = ({
       <div className="winner-name">{winner.name}</div>
       <div className="winner-id">ID: {winner.id}</div>
       <div className="winner-detail">
-        {winner.channel && <div><strong>CHANNEL:</strong> {winner.channel}</div>}
-        {winner.upi && <div><strong>UPI:</strong> {winner.upi}</div>}
-        {winner.location && <div><strong>VỊ TRÍ:</strong> {winner.location}</div>}
-        {winner.region && <div><strong>KHU VỰC:</strong> {winner.region}</div>}
-        {winner.lineManager && <div><strong>LINE MANAGER:</strong> {winner.lineManager}</div>}
+        {winner.channel && (
+          <div className="p-4 bg-slate-50 rounded-xl border border-slate-100">
+            <p className="text-sm font-bold text-slate-700"><strong>CHANNEL:</strong> {winner.channel}</p>
+          </div>
+        )}
+        {(winner.upi || winner.employeeId) && (
+          <div className="p-4 bg-slate-50 rounded-xl border border-slate-100">
+            <p className="text-sm font-bold text-slate-700"><strong>UPI:</strong> {winner.upi || winner.employeeId}</p>
+          </div>
+        )}
+        {winner.location && (
+          <div className="p-4 bg-slate-50 rounded-xl border border-slate-100">
+            <p className="text-sm font-bold text-slate-700"><strong>VỊ TRÍ:</strong> {winner.location}</p>
+          </div>
+        )}
+        {winner.region && (
+          <div className="p-4 bg-slate-50 rounded-xl border border-slate-100">
+            <p className="text-sm font-bold text-slate-700"><strong>KHU VỰC:</strong> {winner.region}</p>
+          </div>
+        )}
+        {winner.lineManager && (
+          <div className="p-4 bg-slate-50 rounded-xl border border-slate-100">
+            <p className="text-sm font-bold text-slate-700"><strong>LINE MANAGER:</strong> {winner.lineManager}</p>
+          </div>
+        )}
       </div>
     </div>
   );
@@ -345,7 +365,7 @@ const WinnerSidebar = ({
   onShowDetail: (w: Winner) => void 
 }) => {
   return (
-    <aside className="lg:col-span-1 border-l border-slate-200 bg-white flex flex-col min-h-0 overflow-hidden lg:max-w-[300px] w-full">
+    <aside className="draw-sidebar border-l border-slate-200 bg-white flex flex-col min-h-0 overflow-hidden">
        <div className="p-8 border-b border-slate-100 flex items-center justify-between">
           <div>
             <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Live Feed</h4>
@@ -504,6 +524,8 @@ export default function DrawScreen({ state, updateState, onNavigate }: { state: 
       setIsDrawing(false);
       return;
     }
+
+    console.log("Winner Drawn:", winner);
 
     const poolTickets = currentProgram.ticketPool.length > 0 ? currentProgram.ticketPool : [];
     let count = 0;
