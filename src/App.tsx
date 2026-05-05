@@ -38,9 +38,16 @@ export default function App() {
       const programs = await supabaseService.getPrograms();
       let activeId = programId || state.activeProgramId;
       
+      // If the current activeId is invalid (like the old 'prog-demo'), reset it
+      const isValidUuid = (id: string) => /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id);
+      
+      if (activeId && !isValidUuid(activeId)) {
+        activeId = undefined;
+      }
+
       if (!activeId && programs.length > 0) activeId = programs[0].id;
       
-      if (activeId) {
+      if (activeId && isValidUuid(activeId)) {
         const [participants, prizes, winners] = await Promise.all([
           supabaseService.getParticipants(activeId),
           supabaseService.getPrizes(activeId),

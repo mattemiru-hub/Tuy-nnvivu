@@ -71,9 +71,15 @@ export const supabaseService = {
   },
 
   async createProgram(name: string, details?: Partial<DrawProgram>) {
-    const { data, error } = await getSupabase()
+    const supabase = getSupabase();
+    const { data: { user } } = await supabase.auth.getUser();
+    
+    if (!user) throw new Error('User must be authenticated to create programs');
+
+    const { data, error } = await supabase
       .from('programs')
       .insert({ 
+        user_id: user.id,
         name,
         description: details?.description || '',
         thumbnail: details?.thumbnail || '',
@@ -148,8 +154,13 @@ export const supabaseService = {
   },
 
   async uploadParticipants(programId: string, participants: Ticket[]): Promise<void> {
+    const supabase = getSupabase();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) throw new Error('User must be authenticated');
+
     const records = participants.map(p => ({
       program_id: programId,
+      user_id: user.id,
       name: p.name || 'Unknown',
       phone: p.phone || '',
       ticket_number: p.ticket_number || '',
@@ -160,7 +171,7 @@ export const supabaseService = {
       line_manager: p.line_manager || '',
     }));
 
-    const { error } = await getSupabase()
+    const { error } = await supabase
       .from('participants')
       .insert(records);
 
@@ -169,8 +180,13 @@ export const supabaseService = {
 
   // Prizes
   async createPrize(programId: string, prize: Partial<Prize>) {
-    const { error } = await getSupabase().from('prizes').insert({
+    const supabase = getSupabase();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) throw new Error('User must be authenticated');
+
+    const { error } = await supabase.from('prizes').insert({
       program_id: programId,
+      user_id: user.id,
       name: prize.name || 'New Prize',
       quantity: prize.quantity || 1,
       remaining: prize.remaining ?? prize.quantity ?? 1,
@@ -230,18 +246,23 @@ export const supabaseService = {
   },
 
   async confirmWinner(participantId: string, programId: string, prizeId: string, currentRemaining: number) {
+    const supabase = getSupabase();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) throw new Error('User must be authenticated');
+
     // 1. Insert Winner
-    const { error: winnerError } = await getSupabase()
+    const { error: winnerError } = await supabase
       .from('winners')
       .insert({
         participant_id: participantId,
         program_id: programId,
-        prize_id: prizeId
+        prize_id: prizeId,
+        user_id: user.id
       });
     if (winnerError) throw winnerError;
 
     // 2. Update Prize Remaining
-    const { error: prizeError } = await getSupabase()
+    const { error: prizeError } = await supabase
       .from('prizes')
       .update({ remaining: Math.max(0, currentRemaining - 1) })
       .eq('id', prizeId);
@@ -249,12 +270,17 @@ export const supabaseService = {
   },
 
   async recordWinner(programId: string, participantId: string, prizeId: string): Promise<void> {
-    const { error } = await getSupabase()
+    const supabase = getSupabase();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) throw new Error('User must be authenticated');
+
+    const { error } = await supabase
       .from('winners')
       .insert({
         program_id: programId,
         participant_id: participantId,
-        prize_id: prizeId
+        prize_id: prizeId,
+        user_id: user.id
       });
 
     if (error) throw error;
