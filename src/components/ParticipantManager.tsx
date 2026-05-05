@@ -512,7 +512,7 @@ export default function ParticipantManager({ state, updateState }: { state: AppS
                     </thead>
                     <tbody className="divide-y divide-slate-50">
                        {filteredTickets.length > 0 ? (
-                         filteredTickets.slice(0, 500).map((ticket) => (
+                         filteredTickets.slice(0, 2000).map((ticket) => (
                            <tr key={ticket.id} className="hover:bg-slate-50/50 transition-colors group">
                              <td className="px-8 py-4">
                                 <span className="font-mono text-xs font-bold text-indigo-600 bg-indigo-50 px-2 py-1 rounded">{ticket.ticket_number}</span>
@@ -554,10 +554,10 @@ export default function ParticipantManager({ state, updateState }: { state: AppS
                             </td>
                          </tr>
                        )}
-                       {filteredTickets.length > 500 && (
+                       {filteredTickets.length > 2000 && (
                          <tr>
                            <td colSpan={5} className="px-8 py-4 text-center text-[10px] font-bold text-slate-400 uppercase tracking-widest bg-slate-50/30">
-                              Đang hiển thị 500 kết quả đầu tiên... Sử dụng ô tìm kiếm để tìm nhanh hơn.
+                              Đang hiển thị 2000 kết quả đầu tiên... Sử dụng ô tìm kiếm để tìm nhanh hơn.
                            </td>
                          </tr>
                        )}

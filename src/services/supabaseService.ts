@@ -18,7 +18,12 @@ const mapProgram = (p: any): DrawProgram => ({
   year: p.year,
   bgmUrl: p.bgm_url || '',
   bgmVolume: p.bgm_volume ?? 0.5,
-  bgmEnabled: p.bgm_enabled ?? true
+  bgmEnabled: p.bgm_enabled ?? true,
+  theatreBadge: p.theatre_badge || 'LUCKY DRAW',
+  theatreSubtitle: p.theatre_subtitle || '',
+  bannerHeight: p.banner_height ?? 20,
+  bannerPosition: p.banner_position ?? 50,
+  bannerFit: p.banner_fit || 'cover'
 });
 
 const mapPrize = (pr: any): Prize => ({
@@ -100,6 +105,11 @@ export const supabaseService = {
         bgm_url: details?.bgmUrl || '',
         bgm_volume: details?.bgmVolume ?? 0.5,
         bgm_enabled: details?.bgmEnabled ?? true,
+        theatre_badge: details?.theatreBadge || 'LUCKY DRAW',
+        theatre_subtitle: details?.theatreSubtitle || '',
+        banner_height: details?.bannerHeight ?? 20,
+        banner_position: details?.bannerPosition ?? 50,
+        banner_fit: details?.bannerFit || 'cover',
         is_active: true
       })
       .select()
@@ -120,6 +130,11 @@ export const supabaseService = {
     if (updates.bgmUrl !== undefined) payload.bgm_url = updates.bgmUrl;
     if (updates.bgmVolume !== undefined) payload.bgm_volume = updates.bgmVolume;
     if (updates.bgmEnabled !== undefined) payload.bgm_enabled = updates.bgmEnabled;
+    if (updates.theatreBadge !== undefined) payload.theatre_badge = updates.theatreBadge;
+    if (updates.theatreSubtitle !== undefined) payload.theatre_subtitle = updates.theatreSubtitle;
+    if (updates.bannerHeight !== undefined) payload.banner_height = updates.bannerHeight;
+    if (updates.bannerPosition !== undefined) payload.banner_position = updates.bannerPosition;
+    if (updates.bannerFit !== undefined) payload.banner_fit = updates.bannerFit;
     if (updates.isActive !== undefined) payload.is_active = updates.isActive;
 
     const { data, error } = await getSupabase()
@@ -153,7 +168,7 @@ export const supabaseService = {
       .from('participants')
       .select('*')
       .eq('program_id', programId)
-      .limit(10000); // Increased limit for large events
+      .limit(50000); // Increased limit for very large events
 
     if (error) throw error;
     return data.map(mapParticipant);

@@ -51,34 +51,56 @@ const DrawHeader = ({
     <header className="bg-white border-b border-slate-200 sticky top-0 z-30 shadow-sm w-full">
       <div className="w-full">
         {/* Banner Area */}
-        <div className="relative group bg-slate-900 shadow-inner flex items-center justify-center min-h-[120px]">
+        <div 
+          className="relative group bg-slate-900 shadow-inner flex items-center justify-center overflow-hidden"
+          style={{ 
+            height: `${currentProgram.bannerHeight || 20}vh`,
+            maxHeight: '400px'
+          }}
+        >
           {currentProgram.thumbnail ? (
-            <div className="w-full relative flex items-center justify-center bg-slate-900 overflow-hidden h-[120px] lg:h-[180px]">
+            <div className="w-full h-full relative flex items-center justify-center bg-slate-900">
               <img 
                 src={currentProgram.thumbnail} 
                 alt={currentProgram.name} 
-                className="banner-img w-full h-full object-contain block"
+                className={cn(
+                  "banner-img w-full h-full block transform transition-transform duration-[2000ms] group-hover:scale-105",
+                  currentProgram.bannerFit === 'contain' ? "object-contain" : "object-cover"
+                )}
+                style={{ 
+                  objectPosition: `center ${currentProgram.bannerPosition ?? 50}%` 
+                }}
               />
-              <div className="absolute inset-0 bg-black/10 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-4">
-                <label className="cursor-pointer bg-white/90 backdrop-blur text-slate-800 p-2 lg:p-3 rounded-xl shadow-lg hover:scale-110 transition-transform flex items-center gap-2 font-black text-[10px] uppercase tracking-widest">
-                  <ImageIcon size={16} /> Replace
-                  <input type="file" className="hidden" accept="image/*" onChange={handleBannerUpload} />
-                </label>
-                <button 
-                  onClick={removeBanner}
-                  className="bg-white/90 backdrop-blur text-red-600 p-2 lg:p-3 rounded-xl shadow-lg hover:scale-110 transition-transform flex items-center gap-2 font-black text-[10px] uppercase tracking-widest"
-                >
-                  <Trash2 size={16} /> Remove
-                </button>
+              
+              {/* Badge & Subtitle Overlay */}
+              <div className="absolute inset-0 flex flex-col items-center justify-center p-6 bg-black/20 text-center pointer-events-none">
+                 {currentProgram.theatreBadge && (
+                   <motion.div 
+                    initial={{ opacity: 0, y: -10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="px-4 py-1.5 bg-indigo-600/90 text-white rounded-full text-[10px] font-black uppercase tracking-[0.3em] shadow-2xl mb-2 backdrop-blur-md border border-indigo-400/30"
+                   >
+                     {currentProgram.theatreBadge}
+                   </motion.div>
+                 )}
+                 {currentProgram.theatreSubtitle && (
+                   <motion.p 
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    className="text-white font-black italic text-xl md:text-3xl uppercase tracking-tighter drop-shadow-2xl brightness-110"
+                    style={{ textShadow: '0 4px 12px rgba(0,0,0,0.5)' }}
+                   >
+                     {currentProgram.theatreSubtitle}
+                   </motion.p>
+                 )}
               </div>
             </div>
           ) : (
-            <div className="h-[120px] lg:h-[160px] w-full flex flex-col items-center justify-center border-b-2 border-dashed border-white/10 bg-slate-100">
-               <label className="cursor-pointer flex flex-col items-center gap-2 text-slate-400 hover:text-indigo-500 transition-colors">
-                  <ImageIcon size={32} strokeWidth={1.5} />
-                  <span className="text-[10px] font-black uppercase tracking-widest">Upload Banner</span>
-                  <input type="file" className="hidden" accept="image/*" onChange={handleBannerUpload} />
-               </label>
+            <div className="h-full w-full flex flex-col items-center justify-center border-b-2 border-dashed border-white/10 bg-slate-100">
+               <div className="flex flex-col items-center gap-2 text-slate-300">
+                  <ImageIcon size={48} strokeWidth={1} />
+                  <span className="text-[10px] font-black uppercase tracking-widest">No Banner Configured</span>
+               </div>
             </div>
           )}
         </div>

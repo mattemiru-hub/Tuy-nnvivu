@@ -76,7 +76,12 @@ export default function ProgramManager({ state, updateState }: { state: AppState
         year: year,
         bgmUrl: template ? template.bgmUrl : bgmUrl,
         bgmVolume: template ? template.bgmVolume : bgmVolume,
-        bgmEnabled: template ? template.bgmEnabled : bgmEnabled
+        bgmEnabled: template ? template.bgmEnabled : bgmEnabled,
+        theatreBadge: template ? template.theatreBadge : theatreBadge,
+        theatreSubtitle: template ? template.theatreSubtitle : theatreSubtitle,
+        bannerHeight: template ? template.bannerHeight : bannerHeight,
+        bannerPosition: template ? template.bannerPosition : bannerPosition,
+        bannerFit: template ? template.bannerFit : bannerFit
       });
 
       // If template, clone prizes
@@ -114,7 +119,12 @@ export default function ProgramManager({ state, updateState }: { state: AppState
         year,
         bgmUrl,
         bgmVolume,
-        bgmEnabled
+        bgmEnabled,
+        theatreBadge,
+        theatreSubtitle,
+        bannerHeight,
+        bannerPosition,
+        bannerFit
       });
       setEditingProgramId(null);
       setNewProgramName('');
@@ -138,6 +148,11 @@ export default function ProgramManager({ state, updateState }: { state: AppState
     setBgmUrl(p.bgmUrl || '');
     setBgmVolume(p.bgmVolume ?? 0.5);
     setBgmEnabled(p.bgmEnabled ?? true);
+    setTheatreBadge(p.theatreBadge || 'LUCKY DRAW');
+    setTheatreSubtitle(p.theatreSubtitle || '');
+    setBannerHeight(p.bannerHeight ?? 20);
+    setBannerPosition(p.bannerPosition ?? 50);
+    setBannerFit(p.bannerFit || 'cover');
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
