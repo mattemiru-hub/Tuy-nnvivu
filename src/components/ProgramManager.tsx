@@ -398,8 +398,9 @@ export default function ProgramManager({ state, updateState }: { state: AppState
                             placeholder="https://example.com/music.mp3"
                             className="flex-1 px-4 py-3 bg-white border-2 border-slate-100 rounded-xl focus:border-indigo-500 font-bold outline-none text-xs"
                           />
-                          <label className="cursor-pointer px-4 py-3 bg-slate-50 border-2 border-slate-100 rounded-xl hover:bg-slate-100 transition-colors flex items-center justify-center text-slate-600" title="Tải file lên">
-                            <Upload size={16} />
+                          <label className="cursor-pointer px-4 py-3 bg-indigo-50 border-2 border-indigo-100 rounded-xl hover:bg-indigo-100 transition-colors flex items-center gap-2 text-indigo-700 font-bold text-[10px] uppercase tracking-wider shrink-0" title="Tải file lên">
+                            <Upload size={14} />
+                            <span>Tải nhạc</span>
                             <input 
                               type="file" 
                               className="hidden" 
@@ -409,7 +410,7 @@ export default function ProgramManager({ state, updateState }: { state: AppState
                                 if (!file) return;
                                 try {
                                   setIsSubmitting(true);
-                                  const path = `${Date.now()}_${file.name}`;
+                                  const path = `audio/${Date.now()}_${file.name}`;
                                   const url = await supabaseService.uploadFile('audio', path, file);
                                   setBgmUrl(url);
                                 } catch (err: any) {
@@ -421,6 +422,11 @@ export default function ProgramManager({ state, updateState }: { state: AppState
                             />
                           </label>
                         </div>
+                        {bgmUrl && (
+                          <div className="mt-2 p-3 bg-slate-50 rounded-xl border border-slate-100">
+                            <audio src={bgmUrl} controls className="w-full h-8" />
+                          </div>
+                        )}
                       </div>
                     </div>
 

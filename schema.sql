@@ -80,6 +80,7 @@ ALTER TABLE participants ADD COLUMN IF NOT EXISTS employee_id TEXT;
 ALTER TABLE participants ADD COLUMN IF NOT EXISTS ticket_number TEXT;
 
 ALTER TABLE programs ADD COLUMN IF NOT EXISTS rules JSONB DEFAULT '{"maxWinsPerTicket": 1, "maxWinsPerPerson": 1, "preventDuplicatePrizeType": true, "fairnessRandom": true}'::jsonb;
+ALTER TABLE programs ADD COLUMN IF NOT EXISTS is_active BOOLEAN DEFAULT true;
 ALTER TABLE prizes ADD COLUMN IF NOT EXISTS remaining INTEGER DEFAULT 0;
 
 -- Cập nhật giá trị còn lại nếu đang bị null
@@ -154,10 +155,12 @@ VALUES ('prizes', 'prizes', true)
 ON CONFLICT (id) DO NOTHING;
 
 -- Cho phép mọi người xem ảnh (Read)
+DROP POLICY IF EXISTS "Public Access" ON storage.objects;
 CREATE POLICY "Public Access" ON storage.objects
   FOR SELECT USING (bucket_id = 'prizes');
 
 -- Cho phép người dùng đã đăng nhập tải ảnh lên (Insert)
+DROP POLICY IF EXISTS "Authenticated Users Can Upload" ON storage.objects;
 CREATE POLICY "Authenticated Users Can Upload" ON storage.objects
   FOR INSERT WITH CHECK (
     bucket_id = 'prizes' 
@@ -165,9 +168,11 @@ CREATE POLICY "Authenticated Users Can Upload" ON storage.objects
   );
 
 -- Cho phép người dùng cập nhật/xóa ảnh của mình (Update/Delete)
+DROP POLICY IF EXISTS "Users Can Update Their Own Objects" ON storage.objects;
 CREATE POLICY "Users Can Update Their Own Objects" ON storage.objects
   FOR UPDATE USING (bucket_id = 'prizes' AND auth.uid() = owner);
 
+DROP POLICY IF EXISTS "Users Can Delete Their Own Objects" ON storage.objects;
 CREATE POLICY "Users Can Delete Their Own Objects" ON storage.objects
   FOR DELETE USING (bucket_id = 'prizes' AND auth.uid() = owner);
 
@@ -176,14 +181,17 @@ INSERT INTO storage.buckets (id, name, public)
 VALUES ('audio', 'audio', true)
 ON CONFLICT (id) DO NOTHING;
 
+DROP POLICY IF EXISTS "Audio Public Access" ON storage.objects;
 CREATE POLICY "Audio Public Access" ON storage.objects
   FOR SELECT USING (bucket_id = 'audio');
 
+DROP POLICY IF EXISTS "Authenticated Users Can Upload Audio" ON storage.objects;
 CREATE POLICY "Authenticated Users Can Upload Audio" ON storage.objects
   FOR INSERT WITH CHECK (
     bucket_id = 'audio' 
     AND auth.role() = 'authenticated'
   );
 
+DROP POLICY IF EXISTS "Users Can Manage Their Own Audio" ON storage.objects;
 CREATE POLICY "Users Can Manage Their Own Audio" ON storage.objects
   FOR ALL USING (bucket_id = 'audio' AND auth.uid() = owner);
