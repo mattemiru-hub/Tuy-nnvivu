@@ -209,15 +209,23 @@ export const supabaseService = {
       line_manager: p.line_manager || '',
     }));
 
-    // Split records into chunks of 500 to avoid request size limits
-    const CHUNK_SIZE = 500;
+    // Split records into chunks of 200 to avoid request size limits and use sequential processing
+    const CHUNK_SIZE = 200;
     for (let i = 0; i < records.length; i += CHUNK_SIZE) {
       const chunk = records.slice(i, i + CHUNK_SIZE);
       const { error } = await supabase
         .from('participants')
         .insert(chunk);
       
-      if (error) throw error;
+      if (error) {
+        console.error(`Error uploading chunk ${i / CHUNK_SIZE}:`, error);
+        throw error;
+      }
+      
+      // Small pause between chunks to let the connection breathe
+      if (records.length > CHUNK_SIZE) {
+        await new Promise(resolve => setTimeout(resolve, 50));
+      }
     }
   },
 

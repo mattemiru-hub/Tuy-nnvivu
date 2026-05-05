@@ -181,27 +181,49 @@ export default function ParticipantManager({ state, updateState }: { state: AppS
   const handleApply = async () => {
     if (rawData.length === 0) return;
 
-    // Check for duplicates in the new data
-    const ids = rawData.map(row => String(row[mapping.ticket_number] || ""));
-    const duplicateIdsInFile = ids.filter((id, index) => id && ids.indexOf(id) !== index);
+    // Optimized duplicate check for large datasets
+    const seen = new Set<string>();
+    const duplicateIdsInFile = [];
+    for (const row of rawData) {
+      const id = String(row[mapping.ticket_number] || "");
+      if (id && seen.has(id)) {
+        duplicateIdsInFile.push(id);
+      } else if (id) {
+        seen.add(id);
+      }
+    }
     
-    if (duplicateIdsInFile.length > 0 && !confirm(`Phát hiện ${duplicateIdsInFile.length} mã bị trùng trong file. Hệ thống sẽ tự động lọc bỏ các mã trùng. Bạn có muốn tiếp tục?`)) {
+    if (duplicateIdsInFile.length > 0 && !confirm(`Phát hiện ${duplicateIdsInFile.length} mã bị trùng trong file. Hệ thống sẽ tự động lọc bỏ các mã trùng và chỉ nạp mã duy nhất. Bạn có muốn tiếp tục?`)) {
       return;
     }
 
-  const processedData = rawData.map((row, index) => ({
-      id: `TEMP-${Date.now()}-${index}`,
-      program_id: currentProgram.id,
-      ticket_number: String(row[mapping.ticket_number] || ""),
-      name: String(row[mapping.name] || "-"),
-      channel: String(row[mapping.channel] || ""),
-      upi: String(row[mapping.upi] || ""),
-      location: String(row[mapping.location] || ""),
-      region: String(row[mapping.region] || ""),
-      line_manager: String(row[mapping.line_manager] || ""),
-      programName: isSplitMode && mapping.programNameCol ? String(row[mapping.programNameCol] || "General") : "",
-      created_at: new Date().toISOString()
-    }));
+    // Filter out duplicates from processed data before sending to server
+    const uniqueSeen = new Set<string>();
+    const processedData = rawData
+      .filter(row => {
+        const id = String(row[mapping.ticket_number] || "");
+        if (!id || uniqueSeen.has(id)) return false;
+        uniqueSeen.add(id);
+        return true;
+      })
+      .map((row, index) => ({
+        id: `TEMP-${Date.now()}-${index}`,
+        program_id: currentProgram.id,
+        ticket_number: String(row[mapping.ticket_number] || ""),
+        name: String(row[mapping.name] || "-"),
+        channel: String(row[mapping.channel] || ""),
+        upi: String(row[mapping.upi] || ""),
+        location: String(row[mapping.location] || ""),
+        region: String(row[mapping.region] || ""),
+        line_manager: String(row[mapping.line_manager] || ""),
+        programName: isSplitMode && mapping.programNameCol ? String(row[mapping.programNameCol] || "General") : "",
+        created_at: new Date().toISOString()
+      }));
+
+    if (processedData.length === 0) {
+      alert("Không có dữ liệu hợp lệ để tải lên.");
+      return;
+    }
 
     try {
       setIsProcessing(true);
