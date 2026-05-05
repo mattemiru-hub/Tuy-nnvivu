@@ -88,6 +88,13 @@ export default function PrizeManager({ state, updateState }: { state: AppState, 
 
   const handleImageUpload = async (prizeId: string, file: File) => {
     try {
+      // Validate file size (10MB)
+      const MAX_SIZE = 10 * 1024 * 1024;
+      if (file.size > MAX_SIZE) {
+        setError("Ảnh quá lớn. Vui lòng chọn file dưới 10MB.");
+        return;
+      }
+
       setIsSubmitting(true);
       setError(null);
       const filename = `${prizeId}-${Date.now()}-${file.name}`;

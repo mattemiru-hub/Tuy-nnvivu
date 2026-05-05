@@ -32,11 +32,19 @@ export default function ProgramManager({ state, updateState }: { state: AppState
   const [prizes, setPrizes] = useState<Prize[]>([]);
 
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isUploadingAudio, setIsUploadingAudio] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
+      // Validate image size (10MB)
+      const MAX_IMG_SIZE = 10 * 1024 * 1024;
+      if (file.size > MAX_IMG_SIZE) {
+        setError("Ảnh quá lớn. Vui lòng chọn ảnh dưới 10MB.");
+        return;
+      }
+      
       setError(null);
       const reader = new FileReader();
       reader.onloadend = async () => {
@@ -398,29 +406,55 @@ export default function ProgramManager({ state, updateState }: { state: AppState
                             placeholder="https://example.com/music.mp3"
                             className="flex-1 px-4 py-3 bg-white border-2 border-slate-100 rounded-xl focus:border-indigo-500 font-bold outline-none text-xs"
                           />
-                          <label className="cursor-pointer px-4 py-3 bg-indigo-50 border-2 border-indigo-100 rounded-xl hover:bg-indigo-100 transition-colors flex items-center gap-2 text-indigo-700 font-bold text-[10px] uppercase tracking-wider shrink-0" title="Tải file lên">
-                            <Upload size={14} />
-                            <span>Tải nhạc</span>
-                            <input 
-                              type="file" 
-                              className="hidden" 
-                              accept="audio/*" 
-                              onChange={async (e) => {
-                                const file = e.target.files?.[0];
-                                if (!file) return;
-                                try {
-                                  setIsSubmitting(true);
-                                  const path = `audio/${Date.now()}_${file.name}`;
-                                  const url = await supabaseService.uploadFile('audio', path, file);
-                                  setBgmUrl(url);
-                                } catch (err: any) {
+                          <button
+                            type="button"
+                            onClick={() => document.getElementById('bgm-upload')?.click()}
+                            disabled={isUploadingAudio}
+                            className={cn(
+                              "px-4 py-3 border-2 rounded-xl transition-all flex items-center gap-2 font-bold text-[10px] uppercase tracking-wider shrink-0",
+                              isUploadingAudio 
+                                ? "bg-slate-50 border-slate-100 text-slate-400 cursor-not-allowed" 
+                                : "bg-indigo-50 border-indigo-100 text-indigo-700 hover:bg-indigo-100"
+                            )}
+                          >
+                            {isUploadingAudio ? <RefreshCcw size={14} className="animate-spin" /> : <Upload size={14} />}
+                            <span>{isUploadingAudio ? "Đang tải..." : "Tải nhạc"}</span>
+                          </button>
+                          <input 
+                            id="bgm-upload"
+                            type="file" 
+                            className="hidden" 
+                            accept="audio/*"
+                            disabled={isUploadingAudio}
+                            onChange={async (e) => {
+                              const file = e.target.files?.[0];
+                              if (!file) return;
+
+                              // Validate file size (60MB)
+                              const MAX_SIZE = 60 * 1024 * 1024;
+                              if (file.size > MAX_SIZE) {
+                                setError("File nhạc quá lớn. Vui lòng chọn file dưới 60MB.");
+                                return;
+                              }
+
+                              try {
+                                setIsUploadingAudio(true);
+                                setError(null);
+                                const path = `${Date.now()}_${file.name}`;
+                                const url = await supabaseService.uploadFile('audio', path, file);
+                                setBgmUrl(url);
+                              } catch (err: any) {
+                                console.error("Audio upload error:", err);
+                                if (err.message?.includes('exceeded the maximum allowed size')) {
+                                  setError("Lỗi: File vượt quá kích thước cho phép của Supabase. Vui lòng kiểm tra lại cấu hình Bucket.");
+                                } else {
                                   setError(err.message || "Failed to upload audio");
-                                } finally {
-                                  setIsSubmitting(false);
                                 }
-                              }} 
-                            />
-                          </label>
+                              } finally {
+                                setIsUploadingAudio(false);
+                              }
+                            }} 
+                          />
                         </div>
                         {bgmUrl && (
                           <div className="mt-2 p-3 bg-slate-50 rounded-xl border border-slate-100">

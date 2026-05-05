@@ -391,6 +391,9 @@ export const supabaseService = {
       if (error.message.includes('Bucket not found')) {
         throw new Error(`Chưa tìm thấy thư mục lưu trữ '${bucket}'. Vui lòng vào Supabase Dashboard -> Storage -> Tạo Bucket mới tên là '${bucket}' và để chế độ Public.`);
       }
+      if (error.message.includes('exceeded the maximum allowed size')) {
+        throw new Error(`File quá lớn. Giới hạn tối đa của hệ thống hiện tại có thể thấp hơn file bạn chọn. Vui lòng thử file nhỏ hơn hoặc kiểm tra cấu hình Bucket trong Supabase.`);
+      }
       throw error;
     }
 
