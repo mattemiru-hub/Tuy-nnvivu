@@ -234,7 +234,7 @@ const DrawLayout = ({ children }: { children: React.ReactNode }) => (
 
 const DrawContent = ({ children }: { children: React.ReactNode }) => (
   <div className="flex-1 overflow-hidden w-full">
-    <div className="draw-content h-full w-full flex">
+    <div className="draw-content h-full w-full flex flex-col lg:flex-row overflow-y-auto lg:overflow-hidden">
       {children}
     </div>
   </div>
@@ -320,7 +320,7 @@ const WinnerDisplay = ({
                </motion.div>
             </div>
             
-            <h2 className="winner-name text-7xl lg:text-9xl font-black text-slate-900 tracking-tighter mb-6 leading-[0.8] drop-shadow-md text-center">
+            <h2 className="winner-name text-5xl md:text-7xl lg:text-9xl font-black text-slate-900 tracking-tighter mb-6 leading-[0.8] drop-shadow-md text-center break-words w-full">
               {winner.name || 'Anonymous'}
             </h2>
             
@@ -447,7 +447,7 @@ const DrawMainPanel = ({
   selectedPrizeObject?: Prize,
   eligibleCount: number
 }) => (
-  <main className="draw-main-panel flex-1 h-full flex flex-col bg-white overflow-hidden">
+  <main className="draw-main-panel flex-1 flex flex-col bg-white overflow-hidden min-h-[500px] lg:h-full">
     <div className="flex-1 overflow-y-auto custom-scrollbar p-6 lg:p-8 xl:p-12">
       <PrizeSelector 
         prizes={allPrizes} 
@@ -471,7 +471,7 @@ const DrawMainPanel = ({
           </p>
         </div>
       )}
-      <div className="draw-controls bg-white p-4 lg:p-6 rounded-[2rem] border border-slate-100 shadow-lg w-full flex gap-4">
+      <div className="draw-controls bg-white p-4 lg:p-6 rounded-[2rem] border border-slate-100 shadow-lg w-full flex flex-col sm:flex-row gap-4">
         {!currentWinner && (
           <button 
             onClick={onDraw} 
@@ -527,7 +527,7 @@ const WinnerSidebar = ({
   onShowDetail: (w: Winner) => void 
 }) => {
   return (
-    <aside className="draw-sidebar w-[400px] border-l border-slate-200 bg-white flex flex-col min-h-0 overflow-hidden">
+    <aside className="draw-sidebar w-full lg:w-[400px] border-t lg:border-t-0 lg:border-l border-slate-200 bg-white flex flex-col min-h-[400px] lg:min-h-0 lg:h-full overflow-hidden">
        <div className="p-8 border-b border-slate-100 flex items-center justify-between">
           <div>
             <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Live Feed</h4>
@@ -603,7 +603,7 @@ export default function DrawScreen({ state, updateState, onNavigate }: { state: 
   
   const selectedPrize = allPrizes.find(p => p.id === selectedPrizeId) || allPrizes[0];
   const programWinners = state.winners.filter(w => w.program_id === currentProgram?.id);
-  const eligiblePool = (currentProgram) ? getEligibleTickets(state.participants, state.winners) : [];
+  const eligiblePool = (currentProgram && selectedPrize) ? getEligibleTickets(state.participants, state.winners, currentProgram, selectedPrize) : [];
 
   const handleSelectPrize = (id: string) => {
     if (isDrawing) return;
@@ -639,7 +639,7 @@ export default function DrawScreen({ state, updateState, onNavigate }: { state: 
       if (ticks < maxTicks) {
         animationRef.current = setTimeout(tick, 50 + ticks * 1.5);
       } else {
-        const winner = pickWinner(state.participants, state.winners);
+        const winner = pickWinner(state.participants, state.winners, currentProgram, selectedPrize);
         if (winner) {
           setCurrentWinner(winner);
           sounds.playSuccess();

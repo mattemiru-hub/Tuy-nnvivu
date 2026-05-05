@@ -14,6 +14,9 @@ export interface Ticket {
   location?: string;
   region?: string;
   line_manager?: string;
+  employee_id?: string;
+  department?: string;
+  position?: string;
   created_at: string;
 }
 

@@ -185,11 +185,16 @@ export const supabaseService = {
       line_manager: p.line_manager || '',
     }));
 
-    const { error } = await supabase
-      .from('participants')
-      .insert(records);
-
-    if (error) throw error;
+    // Split records into chunks of 500 to avoid request size limits
+    const CHUNK_SIZE = 500;
+    for (let i = 0; i < records.length; i += CHUNK_SIZE) {
+      const chunk = records.slice(i, i + CHUNK_SIZE);
+      const { error } = await supabase
+        .from('participants')
+        .insert(chunk);
+      
+      if (error) throw error;
+    }
   },
 
   // Prizes
