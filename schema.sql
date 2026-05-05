@@ -141,3 +141,29 @@ BEGIN
   WHERE program_id = prog_id;
 END;
 $$ LANGUAGE plpgsql;
+
+-- 6. HƯỚNG DẪN SETUP STORAGE & FIX LỖI UPLOAD (QUAN TRỌNG)
+-- Chạy đoạn này để cấp quyền cho phép bạn tải ảnh lên bucket 'prizes'
+
+-- Tạo bucket nếu chưa có
+INSERT INTO storage.buckets (id, name, public)
+VALUES ('prizes', 'prizes', true)
+ON CONFLICT (id) DO NOTHING;
+
+-- Cho phép mọi người xem ảnh (Read)
+CREATE POLICY "Public Access" ON storage.objects
+  FOR SELECT USING (bucket_id = 'prizes');
+
+-- Cho phép người dùng đã đăng nhập tải ảnh lên (Insert)
+CREATE POLICY "Authenticated Users Can Upload" ON storage.objects
+  FOR INSERT WITH CHECK (
+    bucket_id = 'prizes' 
+    AND auth.role() = 'authenticated'
+  );
+
+-- Cho phép người dùng cập nhật/xóa ảnh của mình (Update/Delete)
+CREATE POLICY "Users Can Update Their Own Objects" ON storage.objects
+  FOR UPDATE USING (bucket_id = 'prizes' AND auth.uid() = owner);
+
+CREATE POLICY "Users Can Delete Their Own Objects" ON storage.objects
+  FOR DELETE USING (bucket_id = 'prizes' AND auth.uid() = owner);

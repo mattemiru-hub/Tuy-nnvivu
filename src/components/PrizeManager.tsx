@@ -86,6 +86,24 @@ export default function PrizeManager({ state, updateState }: { state: AppState, 
     }
   };
 
+  const handleImageUpload = async (prizeId: string, file: File) => {
+    try {
+      setIsSubmitting(true);
+      setError(null);
+      const filename = `${prizeId}-${Date.now()}-${file.name}`;
+      const url = await supabaseService.uploadFile('prizes', filename, file);
+      await updatePrize(prizeId, { image: url });
+      if (isEditingPrize && isEditingPrize.id === prizeId) {
+        setIsEditingPrize({ ...isEditingPrize, image: url });
+      }
+    } catch (err: any) {
+      console.error('Error uploading image:', err);
+      setError('Lỗi khi tải ảnh lên: ' + (err.message || 'Unknown error'));
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
   return (
     <div className="space-y-10 pb-20">
       {/* Context Header */}
@@ -215,28 +233,29 @@ export default function PrizeManager({ state, updateState }: { state: AppState, 
                </div>
                
                <div className="p-6 md:p-8 -mt-4 relative bg-white rounded-t-[2.5rem]">
-                 <div className="flex items-start justify-between gap-4 mb-2">
-                   <input 
-                    type="text" 
-                    value={prize.name}
-                    onChange={(e) => updatePrize(prize.id, { name: e.target.value })}
-                    className="flex-1 font-black text-xl italic uppercase tracking-tighter text-slate-900 focus:outline-none focus:text-indigo-600 bg-transparent"
-                   />
-                   <div className="flex items-center gap-2">
-                     <button 
-                       onClick={() => setIsEditingPrize(prize)}
-                       className="w-10 h-10 flex items-center justify-center text-slate-300 hover:text-indigo-600 hover:bg-indigo-50 rounded-xl transition-all"
-                     >
-                       <Edit3 size={20} />
-                     </button>
-                     <button 
-                      onClick={() => handleDeletePrize(prize.id)}
-                      className="w-10 h-10 flex items-center justify-center text-slate-300 hover:text-red-500 hover:bg-red-50 rounded-xl transition-all"
-                     >
-                       <Trash2 size={20} />
-                     </button>
+                    <div className="flex items-start justify-between gap-4 mb-2 group/title">
+                      <input 
+                        type="text" 
+                        value={prize.name}
+                        onChange={(e) => updatePrize(prize.id, { name: e.target.value })}
+                        className="flex-1 font-black text-xl italic uppercase tracking-tighter text-slate-900 focus:outline-none focus:text-indigo-600 bg-transparent py-1 px-2 rounded-lg border border-transparent hover:border-slate-100 focus:border-indigo-200 transition-all w-full"
+                        placeholder="Tên giải thưởng"
+                      />
+                     <div className="flex items-center gap-2 opacity-0 group-hover/title:opacity-100 transition-opacity">
+                       <button 
+                         onClick={() => setIsEditingPrize(prize)}
+                         className="w-10 h-10 flex items-center justify-center text-slate-400 hover:text-indigo-600 hover:bg-white rounded-xl transition-all shadow-sm bg-slate-50"
+                       >
+                         <Edit3 size={20} />
+                       </button>
+                       <button 
+                        onClick={() => handleDeletePrize(prize.id)}
+                        className="w-10 h-10 flex items-center justify-center text-slate-400 hover:text-red-500 hover:bg-white rounded-xl transition-all shadow-sm bg-slate-50"
+                       >
+                         <Trash2 size={20} />
+                       </button>
+                     </div>
                    </div>
-                 </div>
 
                  <div className="mt-6 flex flex-col gap-4 bg-slate-50 p-6 rounded-3xl border border-slate-100">
                     <div className="flex items-center justify-between">
@@ -273,15 +292,18 @@ export default function PrizeManager({ state, updateState }: { state: AppState, 
                  </div>
 
                  <div className="mt-8 grid grid-cols-2 gap-4">
-                   <button 
-                    onClick={() => {
-                      const url = prompt(t('prizes.image_url') || "Image URL", prize.image);
-                      if (url) updatePrize(prize.id, { image: url });
-                    }}
-                    className="flex items-center justify-center gap-2 py-4 text-[10px] font-black uppercase tracking-widest text-slate-500 bg-white border-2 border-slate-100 rounded-2xl hover:border-indigo-500 hover:text-indigo-600 transition-all active:scale-95 shadow-sm"
-                   >
-                     <Edit3 size={14} /> {t('prizes.edit_image')}
-                   </button>
+                   <label className="flex items-center justify-center gap-2 py-4 text-[10px] font-black uppercase tracking-widest text-slate-500 bg-white border-2 border-slate-100 rounded-2xl hover:border-indigo-500 hover:text-indigo-600 transition-all active:scale-95 shadow-sm cursor-pointer">
+                     <ImageIcon size={14} /> {t('prizes.edit_image')}
+                     <input 
+                       type="file" 
+                       className="hidden" 
+                       accept="image/*"
+                       onChange={(e) => {
+                         const file = e.target.files?.[0];
+                         if (file) handleImageUpload(prize.id, file);
+                       }}
+                     />
+                   </label>
                    <button 
                     onClick={() => updatePrize(prize.id, { isActive: !prize.isActive })}
                     className={cn(
@@ -332,31 +354,57 @@ export default function PrizeManager({ state, updateState }: { state: AppState, 
 
               <div className="space-y-6">
                 <div className="space-y-2">
-                  <label className="text-[10px] font-black uppercase text-slate-400 px-1">Prize Name</label>
+                  <label className="text-[10px] font-black uppercase text-slate-400 px-1">Tên giải thưởng</label>
                   <input 
                     type="text"
                     value={isEditingPrize.name}
                     onChange={e => setIsEditingPrize({ ...isEditingPrize, name: e.target.value })}
                     className="w-full px-6 py-4 bg-slate-50 border-2 border-slate-100 rounded-2xl focus:border-indigo-500 font-bold outline-none"
+                    placeholder="Nhập tên giải thưởng..."
                   />
                 </div>
 
                 <div className="space-y-2">
-                  <label className="text-[10px] font-black uppercase text-slate-400 px-1">Image URL</label>
-                  <div className="flex gap-4">
-                    <img src={isEditingPrize.image} className="w-16 h-16 rounded-xl object-cover border-2 border-slate-100" />
+                  <label className="text-[10px] font-black uppercase text-slate-400 px-1">Hình ảnh</label>
+                  <div className="flex flex-col gap-4">
+                    <div className="flex gap-4">
+                      {isEditingPrize.image ? (
+                        <img src={isEditingPrize.image} className="w-24 h-24 rounded-2xl object-cover border-2 border-slate-100 shadow-sm" />
+                      ) : (
+                        <div className="w-24 h-24 rounded-2xl bg-slate-50 border-2 border-dashed border-slate-200 flex items-center justify-center text-slate-300">
+                          <ImageIcon size={32} />
+                        </div>
+                      )}
+                      <div className="flex-1 space-y-3">
+                        <label className="inline-flex items-center gap-2 px-6 py-3 bg-indigo-50 text-indigo-600 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-indigo-100 transition-colors cursor-pointer w-full justify-center">
+                          <Plus size={16} /> {isSubmitting ? 'Đang tải...' : 'Tải từ máy tính'}
+                          <input 
+                            type="file" 
+                            className="hidden" 
+                            accept="image/*"
+                            disabled={isSubmitting}
+                            onChange={(e) => {
+                              const file = e.target.files?.[0];
+                              if (file) handleImageUpload(isEditingPrize.id, file);
+                            }}
+                          />
+                        </label>
+                        <p className="text-[9px] text-slate-400 font-medium px-1">Hoặc dán link ảnh bên dưới</p>
+                      </div>
+                    </div>
                     <input 
                       type="text"
                       value={isEditingPrize.image}
                       onChange={e => setIsEditingPrize({ ...isEditingPrize, image: e.target.value })}
-                      className="flex-1 px-4 py-3 bg-slate-50 border-2 border-slate-100 rounded-2xl focus:border-indigo-500 font-bold outline-none text-xs"
+                      className="w-full px-4 py-3 bg-slate-50 border-2 border-slate-100 rounded-2xl focus:border-indigo-500 font-bold outline-none text-[10px]"
+                      placeholder="https://..."
                     />
                   </div>
                 </div>
 
                 <div className="grid grid-cols-2 gap-6">
                   <div className="space-y-2">
-                    <label className="text-[10px] font-black uppercase text-slate-400 px-1">Monetary Value</label>
+                    <label className="text-[10px] font-black uppercase text-slate-400 px-1">Giá trị (VNĐ)</label>
                     <input 
                       type="number"
                       value={isEditingPrize.value}
@@ -365,7 +413,7 @@ export default function PrizeManager({ state, updateState }: { state: AppState, 
                     />
                   </div>
                   <div className="space-y-2">
-                    <label className="text-[10px] font-black uppercase text-slate-400 px-1">Priority (Order)</label>
+                    <label className="text-[10px] font-black uppercase text-slate-400 px-1">Thứ tự ưu tiên</label>
                     <input 
                       type="number"
                       value={isEditingPrize.priority}
@@ -383,7 +431,7 @@ export default function PrizeManager({ state, updateState }: { state: AppState, 
                     }}
                     className="w-full py-5 bg-indigo-600 text-white rounded-2xl font-black uppercase tracking-widest shadow-xl shadow-indigo-600/20 hover:bg-indigo-700 active:scale-95 transition-all"
                   >
-                    Update Prize Details
+                    Lưu Thay Đổi
                   </button>
                 </div>
               </div>

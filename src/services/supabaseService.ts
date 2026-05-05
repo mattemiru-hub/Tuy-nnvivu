@@ -363,5 +363,27 @@ export const supabaseService = {
          }
        }
     }
+  },
+
+  async uploadFile(bucket: string, path: string, file: File): Promise<string> {
+    const supabase = getSupabase();
+    
+    // Attempt to ensure bucket exists, but check specifically for the upload
+    const { data, error } = await supabase.storage
+      .from(bucket)
+      .upload(path, file, { upsert: true });
+
+    if (error) {
+      if (error.message.includes('Bucket not found')) {
+        throw new Error(`Chưa tìm thấy thư mục lưu trữ '${bucket}'. Vui lòng vào Supabase Dashboard -> Storage -> Tạo Bucket mới tên là '${bucket}' và để chế độ Public.`);
+      }
+      throw error;
+    }
+
+    const { data: { publicUrl } } = supabase.storage
+      .from(bucket)
+      .getPublicUrl(data.path);
+
+    return publicUrl;
   }
 };
