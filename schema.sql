@@ -89,15 +89,25 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
--- 5. MIGRATION GUIDE (Run these in SQL Editor if you see "column does not exist" errors)
--- If missing user_id columns or channel:
+-- 5. MIGRATION GUIDE (Run những dòng này trong SQL Editor của Supabase để sửa lỗi thiếu cột)
 ALTER TABLE programs ADD COLUMN IF NOT EXISTS user_id UUID REFERENCES auth.users(id);
 ALTER TABLE prizes ADD COLUMN IF NOT EXISTS user_id UUID REFERENCES auth.users(id);
 ALTER TABLE participants ADD COLUMN IF NOT EXISTS user_id UUID REFERENCES auth.users(id);
 ALTER TABLE winners ADD COLUMN IF NOT EXISTS user_id UUID REFERENCES auth.users(id);
+
+-- Cập nhật bảng participants
 ALTER TABLE participants ADD COLUMN IF NOT EXISTS channel TEXT;
+ALTER TABLE participants ADD COLUMN IF NOT EXISTS upi TEXT;
+ALTER TABLE participants ADD COLUMN IF NOT EXISTS location TEXT;
+ALTER TABLE participants ADD COLUMN IF NOT EXISTS region TEXT;
+ALTER TABLE participants ADD COLUMN IF NOT EXISTS line_manager TEXT;
 ALTER TABLE participants ADD COLUMN IF NOT EXISTS phone TEXT;
+ALTER TABLE participants ADD COLUMN IF NOT EXISTS department TEXT;
+ALTER TABLE participants ADD COLUMN IF NOT EXISTS position TEXT;
+ALTER TABLE participants ADD COLUMN IF NOT EXISTS employee_id TEXT;
 ALTER TABLE participants ADD COLUMN IF NOT EXISTS ticket_number TEXT;
+
+-- Cập nhật bảng programs & prizes
 ALTER TABLE programs ADD COLUMN IF NOT EXISTS rules JSONB DEFAULT '{"maxWinsPerTicket": 1, "maxWinsPerPerson": 1, "preventDuplicatePrizeType": true, "fairnessRandom": true}'::jsonb;
 ALTER TABLE prizes ADD COLUMN IF NOT EXISTS remaining INTEGER DEFAULT 0;
 UPDATE prizes SET remaining = quantity WHERE remaining IS NULL;
