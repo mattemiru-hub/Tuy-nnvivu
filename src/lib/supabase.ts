@@ -23,7 +23,10 @@ export function getSupabase(): SupabaseClient {
 
   try {
     // Basic validation before passing to createClient
-    new URL(supabaseUrl);
+    const parsedUrl = new URL(supabaseUrl);
+    if (window.location.protocol === 'https:' && parsedUrl.protocol === 'http:') {
+      console.warn('Mixed Content Warning: You are using an insecure http Supabase URL on an https site. This will likely cause "Failed to fetch" errors.');
+    }
   } catch (e) {
     throw new Error(`Invalid VITE_SUPABASE_URL: "${supabaseUrl}". It must be a valid URL starting with http:// or https://`);
   }

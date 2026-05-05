@@ -31,10 +31,12 @@ export default function App() {
   const [showSidebar, setShowSidebar] = useState(true);
   const [loading, setLoading] = useState(true);
   const [session, setSession] = useState<Session | null>(null);
+  const [fetchError, setFetchError] = useState<string | null>(null);
 
   const fetchData = async (programId?: string) => {
     try {
       setLoading(true);
+      setFetchError(null);
       const programs = await supabaseService.getPrograms();
       let activeId = programId || state.activeProgramId;
       
@@ -66,8 +68,9 @@ export default function App() {
       } else {
         setState(prev => ({ ...prev, programs, isLoading: false }));
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error fetching initial data:', error);
+      setFetchError(error.message || 'Failed to connect to Supabase. Please check your network or configuration.');
     } finally {
       setLoading(false);
     }
@@ -319,6 +322,23 @@ export default function App() {
                 </div>
               ) : !session ? (
                 <Login />
+              ) : fetchError ? (
+                <div className="bg-red-50 border border-red-200 rounded-3xl p-8 text-center max-w-2xl mx-auto">
+                  <div className="w-16 h-16 bg-red-100 text-red-600 rounded-full flex items-center justify-center mx-auto mb-6">
+                    <RotateCcw className="animate-spin-slow" size={32} />
+                  </div>
+                  <h3 className="text-xl font-black text-slate-900 mb-2 uppercase tracking-tighter italic">Lỗi Kết Nối Dữ Liệu</h3>
+                  <p className="text-slate-600 mb-8 leading-relaxed">
+                    Có vẻ như ứng dụng không thể kết nối tới cơ sở dữ liệu Supabase. 
+                    Lỗi chi tiết: <code className="bg-red-100 px-1.5 py-0.5 rounded text-red-800 break-all">{fetchError}</code>
+                  </p>
+                  <button 
+                    onClick={() => fetchData()}
+                    className="px-8 py-4 bg-indigo-600 text-white rounded-2xl font-black uppercase tracking-widest hover:bg-indigo-700 transition-all shadow-xl shadow-indigo-600/20"
+                  >
+                    Thử Lại Ngay
+                  </button>
+                </div>
               ) : (
                 <>
                   {activeTab === 'dashboard' && <Dashboard state={state} onSwitchProgram={(id) => updateState(s => ({ ...s, activeProgramId: id }))} />}

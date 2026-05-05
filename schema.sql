@@ -81,6 +81,9 @@ ALTER TABLE participants ADD COLUMN IF NOT EXISTS ticket_number TEXT;
 
 ALTER TABLE programs ADD COLUMN IF NOT EXISTS rules JSONB DEFAULT '{"maxWinsPerTicket": 1, "maxWinsPerPerson": 1, "preventDuplicatePrizeType": true, "fairnessRandom": true}'::jsonb;
 ALTER TABLE programs ADD COLUMN IF NOT EXISTS is_active BOOLEAN DEFAULT true;
+ALTER TABLE programs ADD COLUMN IF NOT EXISTS bgm_url TEXT;
+ALTER TABLE programs ADD COLUMN IF NOT EXISTS bgm_volume FLOAT DEFAULT 0.5;
+ALTER TABLE programs ADD COLUMN IF NOT EXISTS bgm_enabled BOOLEAN DEFAULT true;
 ALTER TABLE prizes ADD COLUMN IF NOT EXISTS remaining INTEGER DEFAULT 0;
 
 -- Cập nhật giá trị còn lại nếu đang bị null
