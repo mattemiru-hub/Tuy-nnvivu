@@ -181,7 +181,7 @@ CREATE POLICY "Users Can Delete Their Own Objects" ON storage.objects
 
 -- Thêm quyền cho bucket 'audio'
 INSERT INTO storage.buckets (id, name, public, file_size_limit)
-VALUES ('audio', 'audio', true, 62914560) -- 60MB
+VALUES ('audio', 'audio', true, 104857600) -- 100MB
 ON CONFLICT (id) DO UPDATE SET file_size_limit = EXCLUDED.file_size_limit;
 
 DROP POLICY IF EXISTS "Audio Public Access" ON storage.objects;
