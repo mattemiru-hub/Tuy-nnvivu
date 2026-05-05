@@ -114,7 +114,7 @@ const DrawHeader = ({
             <div className="h-8 w-px bg-slate-200 mx-2" />
             <div className="hidden md:flex flex-col items-end">
                <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Total Candidates</span>
-               <span className="text-sm font-black text-slate-800">{currentProgram.ticketPool.length}</span>
+               <span className="text-sm font-black text-slate-800">{state.participants.length}</span>
             </div>
           </div>
         </div>
@@ -149,16 +149,16 @@ const WinnerListItem = ({
           "w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0 font-black text-xs",
           isRecent ? "bg-indigo-600 text-white shadow-lg shadow-indigo-200" : "bg-slate-100 text-slate-500"
         )}>
-          {winner.prizeImage ? <img src={winner.prizeImage} className="w-full h-full object-cover rounded-xl" /> : <Trophy size={20} />}
+          {winner.prize?.image ? <img src={winner.prize.image} className="w-full h-full object-cover rounded-xl" /> : <Trophy size={20} />}
         </div>
         <div className="flex-1 min-w-0">
           <div className="flex justify-between items-start mb-0.5">
-            <h5 className="text-sm font-black text-slate-800 truncate">{winner.ticketName}</h5>
+            <h5 className="text-sm font-black text-slate-800 truncate">{winner.participant?.name || 'Unknown'}</h5>
             <span className="text-[9px] font-bold text-slate-400 whitespace-nowrap ml-2">
-              {new Date(winner.drawTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+              {new Date(winner.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
             </span>
           </div>
-          <p className="text-[10px] font-black text-indigo-500 uppercase tracking-widest">{winner.prizeName}</p>
+          <p className="text-[10px] font-black text-indigo-500 uppercase tracking-widest">{winner.prize?.name || 'Unknown Prize'}</p>
         </div>
       </div>
     </motion.div>
@@ -190,17 +190,20 @@ const WinnerDetail = ({
         
         <div className="p-8 pt-6 space-y-8">
            <div className="text-center">
-              <h2 className="text-3xl font-black text-slate-900 tracking-tighter mb-2">{winner.ticketName}</h2>
+              <h2 className="text-3xl font-black text-slate-900 tracking-tighter mb-2">{winner.participant?.name}</h2>
               <div className="inline-block px-4 py-1.5 bg-indigo-50 border border-indigo-100 rounded-xl">
-                <p className="text-sm font-bold text-indigo-600 font-mono">ID: {winner.ticketId}</p>
+                <p className="text-sm font-bold text-indigo-600 font-mono">Ticket: {winner.participant?.ticket_number}</p>
               </div>
            </div>
            
             <div className="grid grid-cols-2 gap-x-8 gap-y-6 bg-slate-50 p-6 rounded-3xl border border-slate-100">
                {[
-                 { label: 'Prize', value: winner.prizeName },
-                 { label: 'Dept/Channel', value: winner.department },
-                 { label: 'Employee ID', value: winner.employeeId },
+                 { label: 'Prize', value: winner.prize?.name },
+                 { label: 'Channel', value: winner.participant?.channel },
+                 { label: 'UPI', value: winner.participant?.upi },
+                 { label: 'Location', value: winner.participant?.location },
+                 { label: 'Region', value: winner.participant?.region },
+                 { label: 'Line Manager', value: winner.participant?.line_manager },
                ].map(field => field.value && (
                 <div key={field.label}>
                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">{field.label}</p>
@@ -323,20 +326,20 @@ const WinnerDisplay = ({
             
             <div className="mb-12 text-center">
                <div className="inline-flex items-center gap-3 px-6 py-3 bg-indigo-600 text-white rounded-2xl shadow-xl shadow-indigo-100 ring-4 ring-indigo-50 font-mono text-2xl font-black">
-                  <span className="opacity-50">ID</span>
-                  <span>{winner.employeeId || winner.id}</span>
+                  <span className="opacity-50">#</span>
+                  <span>{winner.ticket_number || '---'}</span>
                </div>
             </div>
             
-            {/* Winner Details Grid */}
+            {/* Winner Details Grid (Required: Name, Channel, UPI, Location, Region, Line Manager) */}
             <div className="grid grid-cols-2 lg:grid-cols-3 gap-4 w-full">
               {[
-                { label: 'Staff ID', value: winner.employeeId, icon: TicketIcon },
-                { label: 'Department', value: winner.department, icon: LayoutGrid },
-                { label: 'Channel', value: winner.channel, icon: Users },
+                { label: 'Name', value: winner.name, icon: Users },
+                { label: 'Channel', value: winner.channel, icon: LayoutGrid },
                 { label: 'UPI', value: winner.upi, icon: Star },
                 { label: 'Location', value: winner.location, icon: Info },
-                { label: 'Line Manager', value: winner.lineManager, icon: Users },
+                { label: 'Region', value: winner.region, icon: Info },
+                { label: 'Line Manager', value: winner.line_manager, icon: Users },
               ].map(field => field.value && (
                 <div key={field.label} className="p-4 bg-white rounded-2xl border border-slate-100 flex flex-col items-start text-left shadow-sm">
                   <div className="flex items-center gap-2 mb-1 text-indigo-400">
@@ -575,7 +578,7 @@ const WinnerSidebar = ({
 export default function DrawScreen({ state, updateState, onNavigate }: { state: AppState, updateState: (updater: (prev: AppState) => AppState) => void, onNavigate: (tab: any) => void }) {
   const { t } = useTranslation();
   const currentProgram = state.programs.find(p => p.id === state.activeProgramId) || state.programs[0];
-  const participants = currentProgram?.ticketPool || [];
+  const participants = state.participants;
   
   const [selectedPrizeId, setSelectedPrizeId] = useState<string | null>(null);
   const [isDrawing, setIsDrawing] = useState(false);
@@ -594,10 +597,13 @@ export default function DrawScreen({ state, updateState, onNavigate }: { state: 
     };
   }, [state.activeProgramId]);
 
-  const allPrizes = currentProgram?.prizes.filter(p => p.isActive).sort((a, b) => b.priority - a.priority) || [];
+  const allPrizes = state.prizes
+    .filter(p => (p as any).is_active !== false)
+    .sort((a, b) => (b.priority || 0) - (a.priority || 0)) || [];
+  
   const selectedPrize = allPrizes.find(p => p.id === selectedPrizeId) || allPrizes[0];
-  const programWinners = state.winners.filter(w => w.programId === currentProgram?.id);
-  const eligiblePool = (currentProgram && selectedPrize) ? getEligibleTickets(currentProgram, state.winners, selectedPrize) : [];
+  const programWinners = state.winners.filter(w => w.program_id === currentProgram?.id);
+  const eligiblePool = (currentProgram) ? getEligibleTickets(state.participants, state.winners) : [];
 
   const handleSelectPrize = (id: string) => {
     if (isDrawing) return;
@@ -633,7 +639,7 @@ export default function DrawScreen({ state, updateState, onNavigate }: { state: 
       if (ticks < maxTicks) {
         animationRef.current = setTimeout(tick, 50 + ticks * 1.5);
       } else {
-        const winner = pickWinner(currentProgram, state.winners, selectedPrize);
+        const winner = pickWinner(state.participants, state.winners);
         if (winner) {
           setCurrentWinner(winner);
           sounds.playSuccess();
@@ -651,8 +657,7 @@ export default function DrawScreen({ state, updateState, onNavigate }: { state: 
     if (!currentWinner || !selectedPrize || !currentProgram) return;
     
     try {
-      await supabaseService.recordWinner(currentProgram.id, currentWinner.id, selectedPrize.id);
-      await supabaseService.updatePrizeRemaining(selectedPrize.id, Math.max(0, selectedPrize.remaining - 1));
+      await supabaseService.confirmWinner(currentWinner.id, currentProgram.id, selectedPrize.id, selectedPrize.remaining);
       setCurrentWinner(null);
     } catch (err) {
       console.error('Error confirming winner:', err);

@@ -27,32 +27,32 @@ export default function Dashboard({ state, onSwitchProgram }: { state: AppState,
   const { t } = useTranslation();
   const currentProgram = state.programs.find(p => p.id === state.activeProgramId);
   
-  const totalTickets = state.programs.reduce((acc, p) => acc + p.ticketPool.length, 0);
+  const totalParticipantsCount = state.participants.length;
   const totalWinners = state.winners.length;
-  const participationRate = totalTickets > 0 ? Math.round((totalWinners / totalTickets) * 100) : 0;
+  const participationRate = totalParticipantsCount > 0 ? Math.round((totalWinners / totalParticipantsCount) * 100) : 0;
 
   const stats = [
     { label: t('dashboard.active_programs'), value: state.programs.length, icon: Trophy, color: 'text-indigo-600', bg: 'bg-indigo-50', trend: '+12%' },
-    { label: t('dashboard.total_tickets'), value: totalTickets, icon: Ticket, color: 'text-amber-500', bg: 'bg-amber-50', trend: '+5.4%' },
+    { label: t('dashboard.total_tickets'), value: totalParticipantsCount, icon: Ticket, color: 'text-amber-500', bg: 'bg-amber-50', trend: '+5.4%' },
     { label: t('dashboard.lucky_winners'), value: totalWinners, icon: CheckCircle2, color: 'text-emerald-500', bg: 'bg-emerald-50', trend: '+8.1%' },
   ];
 
-  // Distribution by Department
-  const deptMap: Record<string, number> = {};
+  // Distribution by Region
+  const regionMap: Record<string, number> = {};
   state.winners.forEach(w => {
-    const dept = w.department || 'Unknown';
-    deptMap[dept] = (deptMap[dept] || 0) + 1;
+    const region = w.participant?.region || 'Unknown';
+    regionMap[region] = (regionMap[region] || 0) + 1;
   });
 
-  const deptData = Object.entries(deptMap)
+  const regionData = Object.entries(regionMap)
     .map(([name, value]) => ({ name, value }))
     .sort((a, b) => b.value - a.value)
     .slice(0, 5);
 
   const programData = state.programs.map(p => ({
     name: p.name,
-    tickets: p.ticketPool.length,
-    winners: state.winners.filter(w => w.programId === p.id).length
+    tickets: p.id === state.activeProgramId ? state.participants.length : 0,
+    winners: state.winners.filter(w => w.program_id === p.id).length
   }));
 
   const COLORS = ['#6366f1', '#10b981', '#f59e0b', '#ec4899', '#8b5cf6'];
@@ -88,13 +88,13 @@ export default function Dashboard({ state, onSwitchProgram }: { state: AppState,
         <div className="lg:col-span-8 bg-white p-8 rounded-[2.5rem] border border-slate-100 shadow-xl shadow-slate-200/50">
           <div className="flex items-center justify-between mb-8">
             <h3 className="text-lg font-black tracking-tighter uppercase italic text-slate-800 flex items-center gap-2">
-               <Zap className="text-amber-500" size={20} /> Win Velocity by Department
+               <Zap className="text-amber-500" size={20} /> Win Velocity by Region
             </h3>
             <span className="text-[10px] font-black text-slate-400 bg-slate-50 px-3 py-1 rounded-full uppercase tracking-widest leading-none">Last 30 Days</span>
           </div>
           <div className="h-[350px] w-full">
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={deptData} layout="vertical" margin={{ left: 40, right: 40 }}>
+              <BarChart data={regionData} layout="vertical" margin={{ left: 40, right: 40 }}>
                 <CartesianGrid strokeDasharray="3 3" horizontal={true} vertical={false} stroke="#f1f5f9" />
                 <XAxis type="number" hide />
                 <YAxis 
@@ -110,7 +110,7 @@ export default function Dashboard({ state, onSwitchProgram }: { state: AppState,
                   contentStyle={{ borderRadius: '1rem', border: 'none', boxShadow: '0 20px 40px rgba(0,0,0,0.1)', fontWeight: 900 }}
                 />
                 <Bar dataKey="value" fill="#6366f1" radius={[0, 10, 10, 0]} barSize={32}>
-                  {deptData.map((entry, index) => (
+                  {regionData.map((entry, index) => (
                     <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                   ))}
                 </Bar>
@@ -198,20 +198,20 @@ export default function Dashboard({ state, onSwitchProgram }: { state: AppState,
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
                     <div className="p-4 bg-slate-50 rounded-2xl border border-slate-100">
                        <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Rewards</p>
-                       <p className="text-2xl font-black text-indigo-600">{currentProgram.prizes.length}</p>
+                       <p className="text-2xl font-black text-indigo-600">{state.prizes.length}</p>
                     </div>
                     <div className="p-4 bg-slate-50 rounded-2xl border border-slate-100">
                        <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Total Pool</p>
-                       <p className="text-2xl font-black text-slate-900">{currentProgram.ticketPool.length}</p>
+                       <p className="text-2xl font-black text-slate-900">{state.participants.length}</p>
                     </div>
                     <div className="p-4 bg-slate-50 rounded-2xl border border-slate-100">
                        <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Won</p>
-                       <p className="text-2xl font-black text-emerald-500">{state.winners.filter(w => w.programId === currentProgram.id).length}</p>
+                       <p className="text-2xl font-black text-emerald-500">{state.winners.filter(w => w.program_id === currentProgram.id).length}</p>
                     </div>
                     <div className="p-4 bg-slate-50 rounded-2xl border border-slate-100">
                        <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Remaining</p>
                        <p className="text-2xl font-black text-amber-500">
-                          {currentProgram.prizes.reduce((a, b) => a + b.remaining, 0)}
+                          {state.prizes.reduce((a, b) => a + b.remaining, 0)}
                        </p>
                     </div>
                   </div>
@@ -272,12 +272,12 @@ export default function Dashboard({ state, onSwitchProgram }: { state: AppState,
                 <div className="flex items-center gap-4">
                    <div>
                      <p className={cn("text-[8px] font-black uppercase tracking-widest", p.id === state.activeProgramId ? "text-white/40" : "text-slate-300")}>Pool</p>
-                     <p className="text-sm font-black tabular-nums">{p.ticketPool.length}</p>
+                     <p className="text-sm font-black tabular-nums">{p.id === state.activeProgramId ? state.participants.length : '...'}</p>
                    </div>
                    <div className={cn("w-px h-6", p.id === state.activeProgramId ? "bg-white/20" : "bg-slate-100")} />
                    <div>
                      <p className={cn("text-[8px] font-black uppercase tracking-widest", p.id === state.activeProgramId ? "text-white/40" : "text-slate-300")}>Wins</p>
-                     <p className="text-sm font-black tabular-nums">{state.winners.filter(w => w.programId === p.id).length}</p>
+                     <p className="text-sm font-black tabular-nums">{state.winners.filter(w => w.program_id === p.id).length}</p>
                    </div>
                 </div>
               </div>

@@ -20,41 +20,38 @@ const mapProgram = (p: any): DrawProgram => ({
 
 const mapPrize = (pr: any): Prize => ({
   id: pr.id,
+  program_id: pr.program_id,
   name: pr.name,
   quantity: pr.quantity || 0,
   remaining: pr.remaining ?? pr.quantity ?? 0,
   priority: pr.priority || 0,
-  isActive: pr.is_active ?? true,
   image: pr.image || '',
-  value: pr.value || 0
+  value: pr.value || 0,
+  isActive: pr.is_active ?? true
 });
 
 const mapParticipant = (p: any): Ticket => ({
-  ...p,
   id: p.id,
+  program_id: p.program_id,
   name: p.name,
-  channel: p.channel,
-  upi: p.upi,
-  location: p.location,
-  region: p.region,
-  lineManager: p.line_manager,
-  employeeId: p.employee_id,
-  department: p.department,
+  phone: p.phone || '',
+  ticket_number: p.ticket_number || '',
+  channel: p.channel || '',
+  upi: p.upi || '',
+  location: p.location || '',
+  region: p.region || '',
+  line_manager: p.line_manager || '',
+  created_at: p.created_at || new Date().toISOString()
 });
 
 const mapWinner = (w: any): Winner => ({
   id: w.id,
-  drawTime: new Date(w.created_at).getTime(),
-  programId: w.program_id,
-  programName: w.program_name || '', 
-  prizeId: w.prize_id,
-  prizeName: w.prizes?.name || 'Unknown Prize',
-  prizeImage: w.prizes?.image,
-  ticketId: w.participant_id,
-  ticketName: w.participants?.name,
-  department: w.participants?.department,
-  employeeId: w.participants?.employee_id,
-  upi: w.participants?.upi,
+  participant_id: w.participant_id,
+  program_id: w.program_id,
+  prize_id: w.prize_id,
+  created_at: w.created_at,
+  participant: w.participants ? mapParticipant(w.participants) : undefined,
+  prize: w.prizes ? mapPrize(w.prizes) : undefined
 });
 
 export const supabaseService = {
@@ -139,17 +136,28 @@ export const supabaseService = {
     return data.map(mapParticipant);
   },
 
+  async getPrizes(programId: string): Promise<Prize[]> {
+    const { data, error } = await getSupabase()
+      .from('prizes')
+      .select('*')
+      .eq('program_id', programId)
+      .order('priority', { ascending: false });
+
+    if (error) throw error;
+    return data.map(mapPrize);
+  },
+
   async uploadParticipants(programId: string, participants: Ticket[]): Promise<void> {
     const records = participants.map(p => ({
       program_id: programId,
       name: p.name || 'Unknown',
+      phone: p.phone || '',
+      ticket_number: p.ticket_number || '',
       channel: p.channel || '',
       upi: p.upi || '',
       location: p.location || '',
       region: p.region || '',
-      line_manager: p.lineManager || '',
-      department: p.department || '',
-      employee_id: p.employeeId || '',
+      line_manager: p.line_manager || '',
     }));
 
     const { error } = await getSupabase()
@@ -219,6 +227,25 @@ export const supabaseService = {
 
     if (error) throw error;
     return data.map(mapWinner);
+  },
+
+  async confirmWinner(participantId: string, programId: string, prizeId: string, currentRemaining: number) {
+    // 1. Insert Winner
+    const { error: winnerError } = await getSupabase()
+      .from('winners')
+      .insert({
+        participant_id: participantId,
+        program_id: programId,
+        prize_id: prizeId
+      });
+    if (winnerError) throw winnerError;
+
+    // 2. Update Prize Remaining
+    const { error: prizeError } = await getSupabase()
+      .from('prizes')
+      .update({ remaining: Math.max(0, currentRemaining - 1) })
+      .eq('id', prizeId);
+    if (prizeError) throw prizeError;
   },
 
   async recordWinner(programId: string, participantId: string, prizeId: string): Promise<void> {

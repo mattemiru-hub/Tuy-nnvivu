@@ -5,7 +5,7 @@
 
 import React, { useState } from 'react';
 import { AppState, DrawProgram, Prize } from '../types';
-import { Plus, Trash2, Calendar, LayoutGrid, FileText, CheckCircle2, Copy, History, Image as ImageIcon, Trophy, Save, Music, Info } from 'lucide-react';
+import { Plus, Trash2, Calendar, LayoutGrid, FileText, CheckCircle2, Copy, History, Image as ImageIcon, Trophy, Save, Music, Info, RefreshCcw } from 'lucide-react';
 import { generateId, cn, formatDate, compressImage } from '../lib/utils';
 import { DEFAULT_RULES, INITIAL_PRIZES } from '../constants';
 import { useTranslation } from 'react-i18next';
@@ -477,7 +477,7 @@ export default function ProgramManager({ state, updateState }: { state: AppState
         
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
           {state.programs.map((p) => {
-            const winnersCount = state.winners.filter(w => w.programId === p.id).length;
+            const winnersCount = state.winners.filter(w => w.program_id === p.id).length;
             const totalPrizes = p.prizes.reduce((acc, curr) => acc + curr.quantity, 0);
             const isActiveSession = state.activeProgramId === p.id;
 

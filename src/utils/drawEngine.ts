@@ -10,8 +10,8 @@ export const getAvailableParticipants = (
 ): Ticket[] => {
   const winnerIds = new Set(
     winners
-      .filter(w => w.programId === programId)
-      .map(w => w.ticketId)
+      .filter(w => w.program_id === programId)
+      .map(w => w.participant_id)
   );
   
   return participants.filter(p => !winnerIds.has(p.id));

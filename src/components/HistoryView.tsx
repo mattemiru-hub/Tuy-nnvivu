@@ -15,16 +15,16 @@ export default function HistoryView({ state, updateState }: { state: AppState, u
   const [filterProgramId, setFilterProgramId] = React.useState<string>("all");
   const [filterPrizeName, setFilterPrizeName] = React.useState<string>("all");
 
-  const uniquePrizes = Array.from(new Set(state.winners.map(w => w.prizeName)));
+  const uniquePrizes = Array.from(new Set(state.winners.map(w => w.prize?.name || 'Unknown')));
 
   const filteredWinners = state.winners.filter(winner => {
     const matchesSearch = 
-      winner.ticketId.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      winner.prizeName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      winner.ticketName?.toLowerCase().includes(searchTerm.toLowerCase());
+      (winner.participant?.ticket_number || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (winner.prize?.name || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (winner.participant?.name || '').toLowerCase().includes(searchTerm.toLowerCase());
     
-    const matchesProgram = filterProgramId === "all" || winner.programId === filterProgramId;
-    const matchesPrize = filterPrizeName === "all" || winner.prizeName === filterPrizeName;
+    const matchesProgram = filterProgramId === "all" || winner.program_id === filterProgramId;
+    const matchesPrize = filterPrizeName === "all" || winner.prize?.name === filterPrizeName;
     
     return matchesSearch && matchesProgram && matchesPrize;
   });
@@ -32,16 +32,19 @@ export default function HistoryView({ state, updateState }: { state: AppState, u
   const exportToExcel = () => {
     if (state.winners.length === 0) return;
 
-    const data = state.winners.map(w => ({
-      "Thời gian": formatDate(w.drawTime),
-      "Chương trình": w.programName,
-      "Giải thưởng": w.prizeName,
-      "Tên người trúng": w.ticketName || "-",
-      "Mã nhân viên": w.employeeId || "-",
-      "UPI": w.upi || "-",
-      "Phòng ban": w.department || "-",
-      "Mã số phiếu (ID)": w.ticketId,
-    }));
+    const data = state.winners.map(w => {
+      const prog = state.programs.find(p => p.id === w.program_id);
+      return {
+        "Thời gian": formatDate(w.created_at),
+        "Chương trình": prog?.name || "Unknown",
+        "Giải thưởng": w.prize?.name || "Unknown",
+        "Tên người trúng": w.participant?.name || "-",
+        "Channel": w.participant?.channel || "-",
+        "UPI": w.participant?.upi || "-",
+        "Vùng/Khu vực": w.participant?.region || "-",
+        "Mã số phiếu (ID)": w.participant?.ticket_number || "-",
+      };
+    });
 
     const worksheet = XLSX.utils.json_to_sheet(data);
     const workbook = XLSX.utils.book_new();
@@ -65,9 +68,9 @@ export default function HistoryView({ state, updateState }: { state: AppState, u
     try {
       await supabaseService.revokeWinner(id);
       
-      const program = state.programs.find(p => p.id === record.programId);
+      const program = state.programs.find(p => p.id === record.program_id);
       if (program) {
-        const prize = program.prizes.find(pr => pr.id === record.prizeId);
+        const prize = state.prizes.find(pr => pr.id === record.prize_id);
         if (prize) {
           await supabaseService.updatePrizeRemaining(prize.id, prize.remaining + 1);
         }
@@ -166,20 +169,26 @@ export default function HistoryView({ state, updateState }: { state: AppState, u
                       <div className="w-8 h-8 rounded-lg bg-blue-50 flex items-center justify-center text-blue-600">
                          <Calendar size={14} />
                       </div>
-                      <span className="text-slate-500 font-bold text-xs">{formatDate(winner.drawTime)}</span>
+                      <span className="text-slate-500 font-bold text-xs">{formatDate(winner.created_at)}</span>
                     </div>
                   </td>
                   <td className="px-8 py-6">
                     <span className="text-[10px] font-black uppercase tracking-widest text-slate-400 bg-slate-100 px-3 py-1 rounded-full">
-                      {winner.programName}
+                      {state.programs.find(p => p.id === winner.program_id)?.name || 'Unknown'}
                     </span>
                   </td>
                   <td className="px-8 py-6">
                     <div className="flex items-center gap-4">
                       <div className="w-12 h-12 rounded-xl overflow-hidden bg-slate-50 border border-slate-100 p-1">
-                        <img src={winner.prizeImage} className="w-full h-full object-cover rounded-lg" referrerPolicy="no-referrer" />
+                        {winner.prize?.image ? (
+                          <img src={winner.prize.image} className="w-full h-full object-cover rounded-lg" referrerPolicy="no-referrer" />
+                        ) : (
+                          <div className="w-full h-full flex items-center justify-center text-slate-300">
+                             <Trophy size={20} />
+                          </div>
+                        )}
                       </div>
-                      <span className="font-black text-sm uppercase tracking-tight text-slate-800">{winner.prizeName}</span>
+                      <span className="font-black text-sm uppercase tracking-tight text-slate-800">{winner.prize?.name || 'Unknown Prize'}</span>
                     </div>
                   </td>
                   <td className="px-8 py-6">
@@ -188,14 +197,14 @@ export default function HistoryView({ state, updateState }: { state: AppState, u
                         <User size={18} />
                       </div>
                       <div>
-                        <p className="font-black text-sm text-slate-900">{winner.ticketName || "Anonymous"}</p>
-                        <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-0.5">{winner.department || "No Department"}</p>
+                        <p className="font-black text-sm text-slate-900">{winner.participant?.name || "Anonymous"}</p>
+                        <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-0.5">{winner.participant?.region || "No Region"}</p>
                       </div>
                     </div>
                   </td>
                   <td className="px-8 py-6">
                     <div className="px-4 py-2 bg-slate-900 text-white font-mono font-black text-sm rounded-xl inline-flex items-center justify-center shadow-lg transform group-hover:scale-105 transition-transform">
-                      {winner.ticketId}
+                      {winner.participant?.ticket_number}
                     </div>
                   </td>
                   <td className="px-8 py-6">

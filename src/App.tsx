@@ -32,25 +32,32 @@ export default function App() {
   const [loading, setLoading] = useState(true);
   const [session, setSession] = useState<Session | null>(null);
 
-  const fetchData = async () => {
+  const fetchData = async (programId?: string) => {
     try {
       setLoading(true);
       const programs = await supabaseService.getPrograms();
-      const allWinners = await supabaseService.getAllWinners();
+      let activeId = programId || state.activeProgramId;
       
-      let activeId = state.activeProgramId || localStorage.getItem('activeProgramId');
       if (!activeId && programs.length > 0) activeId = programs[0].id;
       
       if (activeId) {
-        const participants = await supabaseService.getParticipants(activeId);
+        const [participants, prizes, winners] = await Promise.all([
+          supabaseService.getParticipants(activeId),
+          supabaseService.getPrizes(activeId),
+          supabaseService.getWinners(activeId)
+        ]);
+
         setState(prev => ({
           ...prev,
-          programs: programs.map(p => p.id === activeId ? { ...p, ticketPool: participants } : p),
-          winners: allWinners,
-          activeProgramId: activeId
+          programs,
+          activeProgramId: activeId,
+          participants,
+          prizes,
+          winners,
+          isLoading: false
         }));
       } else {
-        setState(prev => ({ ...prev, programs, winners: allWinners }));
+        setState(prev => ({ ...prev, programs, isLoading: false }));
       }
     } catch (error) {
       console.error('Error fetching initial data:', error);
@@ -78,83 +85,42 @@ export default function App() {
 
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
+      if (session) fetchData();
     });
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       setSession(session);
+      if (session) fetchData();
     });
 
-    fetchData();
-
     return () => subscription.unsubscribe();
-  }, [session === null]);
+  }, []);
 
   // Sync active program data when it changes
   useEffect(() => {
     if (!state.activeProgramId || loading || !session) return;
-
-    localStorage.setItem('activeProgramId', state.activeProgramId);
-    
-    const fetchProgramData = async () => {
-      try {
-        const participants = await supabaseService.getParticipants(state.activeProgramId!);
-        setState(prev => ({
-          ...prev,
-          programs: prev.programs.map(p => 
-            p.id === state.activeProgramId 
-              ? { ...p, ticketPool: participants } 
-              : p
-          )
-        }));
-      } catch (error) {
-        console.error('Error fetching program data:', error);
-      }
-    };
-
-    fetchProgramData();
-  }, [state.activeProgramId, session]);
+    fetchData(state.activeProgramId);
+  }, [state.activeProgramId]);
 
   // Real-time Subscriptions
   useEffect(() => {
     if (!state.activeProgramId || !isSupabaseConfigured() || !session) return;
 
-    let supabase;
-    try {
-      supabase = getSupabase();
-    } catch (e) {
-      console.error(e);
-      return;
-    }
+    const supabase = getSupabase();
 
     const winnersChannel = supabase
       .channel('winners-changes')
-      .on('postgres_changes' as any, { event: '*', table: 'winners' }, async () => {
-        const winners = await supabaseService.getAllWinners();
-        setState(prev => ({ ...prev, winners }));
-      })
+      .on('postgres_changes' as any, { event: '*', table: 'winners' }, () => fetchData(state.activeProgramId!))
       .subscribe();
 
     const participantsChannel = supabase
       .channel('participants-changes')
-      .on('postgres_changes' as any, { event: '*', table: 'participants' }, async () => {
-        if (state.activeProgramId) {
-          const participants = await supabaseService.getParticipants(state.activeProgramId);
-          setState(prev => ({
-            ...prev,
-            programs: prev.programs.map(p => 
-              p.id === state.activeProgramId ? { ...p, ticketPool: participants } : p
-            )
-          }));
-        }
-      })
+      .on('postgres_changes' as any, { event: '*', table: 'participants' }, () => fetchData(state.activeProgramId!))
       .subscribe();
 
     const prizesChannel = supabase
       .channel('prizes-changes')
-      .on('postgres_changes' as any, { event: '*', table: 'prizes' }, async () => {
-        const programs = await supabaseService.getPrograms();
-        setState(prev => ({ ...prev, programs }));
-      })
+      .on('postgres_changes' as any, { event: '*', table: 'prizes' }, () => fetchData(state.activeProgramId!))
       .subscribe();
 
     const programsChannel = supabase
@@ -171,7 +137,7 @@ export default function App() {
       supabase.removeChannel(prizesChannel);
       supabase.removeChannel(programsChannel);
     };
-  }, [state.activeProgramId]);
+  }, [state.activeProgramId, session]);
 
   const updateState = (updater: (prev: AppState) => AppState) => {
     setState(prev => updater(prev));

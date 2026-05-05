@@ -5,7 +5,7 @@
 
 import React, { useState } from 'react';
 import { AppState, Prize, RuleConfig } from '../types';
-import { Plus, Trash2, Edit3, Image as ImageIcon, Settings2, ShieldCheck, UserCheck, Shuffle, Info, X } from 'lucide-react';
+import { Plus, Trash2, Edit3, Image as ImageIcon, Settings2, ShieldCheck, UserCheck, Shuffle, Info, X, RefreshCcw } from 'lucide-react';
 import { generateId, cn } from '../lib/utils';
 import { useTranslation } from 'react-i18next';
 import { motion, AnimatePresence } from 'motion/react';
@@ -49,7 +49,7 @@ export default function PrizeManager({ state, updateState }: { state: AppState, 
       name: t('prizes.new_prize_name') || 'New Prize',
       quantity: 1,
       remaining: 1,
-      priority: currentProgram.prizes.length + 1,
+      priority: state.prizes.length + 1,
       isActive: true,
       value: 0,
       image: "https://images.unsplash.com/photo-1511512578047-dfb367046420?w=400&h=400&fit=crop"
@@ -95,11 +95,11 @@ export default function PrizeManager({ state, updateState }: { state: AppState, 
         <div className="flex flex-wrap gap-3 md:gap-4 mt-4 md:mt-6">
           <div className="px-4 py-2 bg-white/10 rounded-xl backdrop-blur-sm border border-white/10">
             <p className="text-[9px] font-black uppercase tracking-widest opacity-60">Total Pool</p>
-            <p className="font-black text-sm">{currentProgram.ticketPool.length} Tickets</p>
+            <p className="font-black text-sm">{state.participants.length} Tickets</p>
           </div>
           <div className="px-4 py-2 bg-white/10 rounded-xl backdrop-blur-sm border border-white/10">
             <p className="text-[9px] font-black uppercase tracking-widest opacity-60">Prize Tiers</p>
-            <p className="font-black text-sm">{currentProgram.prizes.length} Levels</p>
+            <p className="font-black text-sm">{state.prizes.length} Levels</p>
           </div>
         </div>
       </div>
@@ -199,7 +199,7 @@ export default function PrizeManager({ state, updateState }: { state: AppState, 
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-          {currentProgram.prizes.sort((a, b) => a.priority - b.priority).map((prize) => (
+          {state.prizes.sort((a, b) => (a.priority || 0) - (b.priority || 0)).map((prize) => (
             <div key={prize.id} className="bg-white border-2 border-slate-100 rounded-[2.5rem] overflow-hidden group hover:border-indigo-400 hover:shadow-2xl hover:shadow-indigo-600/10 transition-all duration-300">
                <div className="h-56 bg-slate-50 relative overflow-hidden">
                  {prize.image ? (

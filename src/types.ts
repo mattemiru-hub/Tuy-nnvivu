@@ -5,27 +5,28 @@
 
 export interface Ticket {
   id: string;
+  program_id: string;
   name: string;
+  phone?: string;
+  ticket_number?: string;
   channel?: string;
   upi?: string;
   location?: string;
   region?: string;
-  lineManager?: string;
-  department?: string;
-  position?: string;
-  employeeId?: string;
-  [key: string]: any;
+  line_manager?: string;
+  created_at: string;
 }
 
 export interface Prize {
   id: string;
+  program_id: string;
   name: string;
-  image?: string;
   quantity: number;
   remaining: number;
-  priority: number;
-  isActive: boolean;
-  value: number;
+  priority?: number;
+  image?: string;
+  value?: number;
+  isActive?: boolean;
 }
 
 export interface RuleConfig {
@@ -59,18 +60,12 @@ export interface DrawProgram {
 
 export interface Winner {
   id: string;
-  drawTime: number;
-  programId: string;
-  programName: string;
-  prizeId: string;
-  prizeName: string;
-  prizeImage?: string;
-  ticketId: string;
-  ticketName?: string;
-  employeeId?: string;
-  upi?: string;
-  department?: string;
-  prizeRemainingAtDraw?: number;
+  participant_id: string;
+  program_id: string;
+  prize_id: string;
+  created_at: string;
+  participant?: Ticket;
+  prize?: Prize;
 }
 
 export interface AppSettings {
@@ -80,7 +75,10 @@ export interface AppSettings {
 
 export interface AppState {
   programs: DrawProgram[];
-  winners: Winner[];
   activeProgramId: string | null;
+  participants: Ticket[];
+  prizes: Prize[];
+  winners: Winner[];
   settings: AppSettings;
+  isLoading: boolean;
 }

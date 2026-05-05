@@ -17,15 +17,13 @@ import { supabaseService } from '../services/supabaseService';
 import { getSupabase, isSupabaseConfigured } from '../lib/supabase';
 
 interface ColumnMapping {
-  id: string;
+  ticket_number: string;
   name: string;
-  employeeId: string;
-  department: string;
   channel: string;
   upi: string;
   location: string;
   region: string;
-  lineManager: string;
+  line_manager: string;
   programNameCol?: string;
   [key: string]: string | undefined;
 }
@@ -39,15 +37,13 @@ export default function ParticipantManager({ state, updateState }: { state: AppS
   const [rawData, setRawData] = useState<any[]>([]);
   const [columns, setColumns] = useState<string[]>([]);
   const [mapping, setMapping] = useState<ColumnMapping>({
-    id: '',
+    ticket_number: '',
     name: '',
-    employeeId: '',
-    department: '',
     channel: '',
     upi: '',
     location: '',
     region: '',
-    lineManager: '',
+    line_manager: '',
     programNameCol: '',
   });
   const [isSplitMode, setIsSplitMode] = useState(false);
@@ -58,15 +54,15 @@ export default function ParticipantManager({ state, updateState }: { state: AppS
 
   const filteredTickets = useMemo(() => {
     if (!currentProgram) return [];
-    if (!searchQuery) return currentProgram.ticketPool;
+    if (!searchQuery) return state.participants;
     const q = searchQuery.toLowerCase();
-    return currentProgram.ticketPool.filter(t => 
+    return state.participants.filter(t => 
       t.name?.toLowerCase().includes(q) || 
-      t.id?.toLowerCase().includes(q) || 
-      t.employeeId?.toLowerCase().includes(q) ||
-      t.department?.toLowerCase().includes(q)
+      t.ticket_number?.toLowerCase().includes(q) || 
+      t.upi?.toLowerCase().includes(q) ||
+      t.location?.toLowerCase().includes(q)
     );
-  }, [currentProgram, searchQuery]);
+  }, [state.participants, searchQuery]);
 
   const deleteTicket = async (ticketId: string) => {
     if (!currentProgram || !isSupabaseConfigured()) return;
@@ -86,8 +82,12 @@ export default function ParticipantManager({ state, updateState }: { state: AppS
     try {
       const { error } = await getSupabase().from('participants').update({
         name: editingTicket.name,
-        employee_id: editingTicket.employeeId,
-        department: editingTicket.department,
+        ticket_number: editingTicket.ticket_number,
+        channel: editingTicket.channel,
+        upi: editingTicket.upi,
+        location: editingTicket.location,
+        region: editingTicket.region,
+        line_manager: editingTicket.line_manager,
       }).eq('id', editingTicket.id);
       
       if (error) throw error;
@@ -142,22 +142,19 @@ export default function ParticipantManager({ state, updateState }: { state: AppS
         
         // Auto-detect mappings
         const autoMap: ColumnMapping = { 
-          id: '', name: '', employeeId: '', department: '', 
-          channel: '', upi: '', location: '', region: '', lineManager: '',
+          ticket_number: '', name: '', channel: '', upi: '', location: '', region: '', line_manager: '',
           programNameCol: ''
         };
         cols.forEach(col => {
           const l = col.toLowerCase();
-          if (l.includes('phiếu') || l.includes('stt') || (l.includes('id') && !l.includes('staff') && !l.includes('emp'))) autoMap.id = col;
+          if (l.includes('phiếu') || l.includes('stt') || l.includes('ticket')) autoMap.ticket_number = col;
           if (l.includes('tên') || l.includes('name')) autoMap.name = col;
-          if (l.includes('mã') || l.includes('staff') || l.includes('emp') || l === 'upi') autoMap.employeeId = col;
-          if (l.includes('phòng') || l.includes('dept')) autoMap.department = col;
           if (l.includes('ct') || l.includes('program')) autoMap.programNameCol = col;
           if (l.includes('channel') || l.includes('kênh')) autoMap.channel = col;
           if (l.includes('upi')) autoMap.upi = col;
           if (l.includes('location') || l.includes('địa điểm')) autoMap.location = col;
           if (l.includes('region') || l.includes('vùng')) autoMap.region = col;
-          if (l.includes('manager') || l.includes('quản lý')) autoMap.lineManager = col;
+          if (l.includes('manager') || l.includes('quản lý')) autoMap.line_manager = col;
         });
         setMapping(autoMap);
 
@@ -185,25 +182,26 @@ export default function ParticipantManager({ state, updateState }: { state: AppS
     if (rawData.length === 0) return;
 
     // Check for duplicates in the new data
-    const ids = rawData.map(row => String(row[mapping.id] || ""));
+    const ids = rawData.map(row => String(row[mapping.ticket_number] || ""));
     const duplicateIdsInFile = ids.filter((id, index) => id && ids.indexOf(id) !== index);
     
     if (duplicateIdsInFile.length > 0 && !confirm(`Phát hiện ${duplicateIdsInFile.length} mã bị trùng trong file. Hệ thống sẽ tự động lọc bỏ các mã trùng. Bạn có muốn tiếp tục?`)) {
       return;
     }
 
-    const processedData = cleanParticipantData(rawData.map((row, index) => ({
-      id: String(row[mapping.id] || `T-${1000 + index}`),
+  const processedData = rawData.map((row, index) => ({
+      id: `TEMP-${Date.now()}-${index}`,
+      program_id: currentProgram.id,
+      ticket_number: String(row[mapping.ticket_number] || ""),
       name: String(row[mapping.name] || "-"),
-      employeeId: String(row[mapping.employeeId] || "-"),
-      department: String(row[mapping.department] || "-"),
       channel: String(row[mapping.channel] || ""),
       upi: String(row[mapping.upi] || ""),
       location: String(row[mapping.location] || ""),
       region: String(row[mapping.region] || ""),
-      lineManager: String(row[mapping.lineManager] || ""),
+      line_manager: String(row[mapping.line_manager] || ""),
       programName: isSplitMode && mapping.programNameCol ? String(row[mapping.programNameCol] || "General") : "",
-    })));
+      created_at: new Date().toISOString()
+    }));
 
     try {
       setIsProcessing(true);
@@ -283,7 +281,7 @@ export default function ParticipantManager({ state, updateState }: { state: AppS
                <div className="text-right">
                   <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest">Pool Status</p>
                   <p className="font-black text-indigo-600">
-                    {state.programs.find(p => p.id === state.activeProgramId)?.ticketPool.length || 0} Tickets Loaded
+                    {state.participants.length} Tickets Loaded
                   </p>
                </div>
             </div>
@@ -344,7 +342,7 @@ export default function ParticipantManager({ state, updateState }: { state: AppS
                       <TableIcon size={16} /> {t('upload.mapping')}
                     </h4>
                     <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
-                      {['id', 'name', 'employeeId', 'department', 'channel', 'upi', 'location', 'region', 'lineManager'].map(field => (
+                      {['ticket_number', 'name', 'channel', 'upi', 'location', 'region', 'line_manager'].map(field => (
                         <div key={field} className="space-y-1.5">
                           <label className="text-[10px] font-black uppercase text-slate-400 px-1">{field}</label>
                           <select 
@@ -489,7 +487,7 @@ export default function ParticipantManager({ state, updateState }: { state: AppS
               </div>
               <div className="flex items-center gap-3 w-full md:w-auto">
                  <div className="px-5 py-3.5 bg-slate-50 border border-slate-100 rounded-2xl text-[10px] font-black uppercase tracking-widest text-slate-400 whitespace-nowrap">
-                    {filteredTickets.length} / {currentProgram?.ticketPool.length || 0} Records
+                    {filteredTickets.length} / {state.participants.length} Records
                  </div>
                  <button 
                   onClick={clearAllTickets}
@@ -505,10 +503,10 @@ export default function ParticipantManager({ state, updateState }: { state: AppS
                  <table className="w-full text-left border-collapse">
                     <thead>
                        <tr className="bg-slate-50/50 border-b border-slate-100">
-                          <th className="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest">ID / Ticket</th>
+                          <th className="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest">Ticket #</th>
                           <th className="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest">Full Name</th>
-                          <th className="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest">Employee ID</th>
-                          <th className="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest">Department</th>
+                          <th className="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest">Channel</th>
+                          <th className="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest">Region</th>
                           <th className="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right">Actions</th>
                        </tr>
                     </thead>
@@ -517,13 +515,13 @@ export default function ParticipantManager({ state, updateState }: { state: AppS
                          filteredTickets.slice(0, 100).map((ticket) => (
                            <tr key={ticket.id} className="hover:bg-slate-50/50 transition-colors group">
                              <td className="px-8 py-4">
-                                <span className="font-mono text-xs font-bold text-indigo-600 bg-indigo-50 px-2 py-1 rounded">{ticket.id}</span>
+                                <span className="font-mono text-xs font-bold text-indigo-600 bg-indigo-50 px-2 py-1 rounded">{ticket.ticket_number}</span>
                              </td>
                              <td className="px-8 py-4 font-bold text-slate-700">{ticket.name}</td>
-                             <td className="px-8 py-4 text-sm text-slate-400 font-bold">{ticket.employeeId}</td>
+                             <td className="px-8 py-4 text-sm text-slate-400 font-bold">{ticket.channel}</td>
                              <td className="px-8 py-4">
                                 <span className="text-[10px] font-black uppercase text-slate-500 bg-slate-100 px-3 py-1 rounded-full whitespace-nowrap">
-                                  {ticket.department}
+                                  {ticket.region}
                                 </span>
                              </td>
                              <td className="px-8 py-4 text-right">
@@ -612,13 +610,12 @@ export default function ParticipantManager({ state, updateState }: { state: AppS
                   />
                 </div>
                 {[
-                  { label: 'Employee ID', key: 'employeeId' },
-                  { label: 'Department', key: 'department' },
+                  { label: 'Ticket #', key: 'ticket_number' },
                   { label: 'Channel', key: 'channel' },
                   { label: 'UPI', key: 'upi' },
                   { label: 'Location', key: 'location' },
                   { label: 'Region', key: 'region' },
-                  { label: 'Line Manager', key: 'lineManager' },
+                  { label: 'Line Manager', key: 'line_manager' },
                 ].map(field => (
                   <div key={field.key} className="space-y-2 text-left">
                     <label className="text-[10px] font-black uppercase text-slate-400 px-1">{field.label}</label>
