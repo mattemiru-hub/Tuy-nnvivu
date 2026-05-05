@@ -5,6 +5,7 @@
 
 class SoundManager {
   private ctx: AudioContext | null = null;
+  private bgmAudio: HTMLAudioElement | null = null;
 
   private init() {
     try {
@@ -19,6 +20,41 @@ class SoundManager {
       }
     } catch (e) {
       console.warn("AudioContext init failed", e);
+    }
+  }
+
+  startBGM(url: string, volume: number = 0.5) {
+    try {
+      if (this.bgmAudio) {
+        this.bgmAudio.pause();
+        this.bgmAudio = null;
+      }
+      
+      this.bgmAudio = new Audio(url);
+      this.bgmAudio.loop = true;
+      this.bgmAudio.volume = volume;
+      
+      const playPromise = this.bgmAudio.play();
+      if (playPromise !== undefined) {
+        playPromise.catch(error => {
+          console.warn("BGM play failed (likely browser interaction policy):", error);
+        });
+      }
+    } catch (e) {
+      console.error("Error starting BGM:", e);
+    }
+  }
+
+  stopBGM() {
+    if (this.bgmAudio) {
+      this.bgmAudio.pause();
+      this.bgmAudio = null;
+    }
+  }
+
+  setBGMVolume(volume: number) {
+    if (this.bgmAudio) {
+      this.bgmAudio.volume = Math.max(0, Math.min(1, volume));
     }
   }
 

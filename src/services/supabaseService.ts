@@ -15,7 +15,10 @@ const mapProgram = (p: any): DrawProgram => ({
   prizes: p.prizes?.map(mapPrize) || [],
   isActive: p.is_active ?? true,
   month: p.month,
-  year: p.year
+  year: p.year,
+  bgmUrl: p.bgm_url || '',
+  bgmVolume: p.bgm_volume ?? 0.5,
+  bgmEnabled: p.bgm_enabled ?? true
 });
 
 const mapPrize = (pr: any): Prize => ({
@@ -94,6 +97,9 @@ export const supabaseService = {
         rules: details?.rules || DEFAULT_RULES,
         month: details?.month || new Date().getMonth() + 1,
         year: details?.year || new Date().getFullYear(),
+        bgm_url: details?.bgmUrl || '',
+        bgm_volume: details?.bgmVolume ?? 0.5,
+        bgm_enabled: details?.bgmEnabled ?? true,
         is_active: true
       })
       .select()
@@ -111,6 +117,9 @@ export const supabaseService = {
     if (updates.rules !== undefined) payload.rules = updates.rules;
     if (updates.month !== undefined) payload.month = updates.month;
     if (updates.year !== undefined) payload.year = updates.year;
+    if (updates.bgmUrl !== undefined) payload.bgm_url = updates.bgmUrl;
+    if (updates.bgmVolume !== undefined) payload.bgm_volume = updates.bgmVolume;
+    if (updates.bgmEnabled !== undefined) payload.bgm_enabled = updates.bgmEnabled;
     if (updates.isActive !== undefined) payload.is_active = updates.isActive;
 
     const { data, error } = await getSupabase()

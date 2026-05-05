@@ -5,7 +5,7 @@
 
 import React, { useState } from 'react';
 import { AppState, DrawProgram, Prize } from '../types';
-import { Plus, Trash2, Calendar, LayoutGrid, FileText, CheckCircle2, Copy, History, Image as ImageIcon, Trophy, Save, Music, Info, RefreshCcw } from 'lucide-react';
+import { Plus, Trash2, Calendar, LayoutGrid, FileText, CheckCircle2, Copy, History, Image as ImageIcon, Trophy, Save, Music, Info, RefreshCcw, Upload } from 'lucide-react';
 import { generateId, cn, formatDate, compressImage } from '../lib/utils';
 import { DEFAULT_RULES, INITIAL_PRIZES } from '../constants';
 import { useTranslation } from 'react-i18next';
@@ -65,7 +65,10 @@ export default function ProgramManager({ state, updateState }: { state: AppState
         thumbnail: template ? template.thumbnail : thumbnail,
         rules: template ? { ...template.rules } : { ...DEFAULT_RULES },
         month: month,
-        year: year
+        year: year,
+        bgmUrl: template ? template.bgmUrl : bgmUrl,
+        bgmVolume: template ? template.bgmVolume : bgmVolume,
+        bgmEnabled: template ? template.bgmEnabled : bgmEnabled
       });
 
       // If template, clone prizes
@@ -100,7 +103,10 @@ export default function ProgramManager({ state, updateState }: { state: AppState
         description,
         thumbnail,
         month,
-        year
+        year,
+        bgmUrl,
+        bgmVolume,
+        bgmEnabled
       });
       setEditingProgramId(null);
       setNewProgramName('');
@@ -121,6 +127,9 @@ export default function ProgramManager({ state, updateState }: { state: AppState
     setThumbnail(p.thumbnail);
     setMonth(p.month || new Date().getMonth() + 1);
     setYear(p.year || new Date().getFullYear());
+    setBgmUrl(p.bgmUrl || '');
+    setBgmVolume(p.bgmVolume ?? 0.5);
+    setBgmEnabled(p.bgmEnabled ?? true);
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
@@ -381,13 +390,37 @@ export default function ProgramManager({ state, updateState }: { state: AppState
 
                       <div className="space-y-2">
                         <label className="text-[10px] font-black uppercase text-slate-400">Audio URL (MP3/Link)</label>
-                        <input 
-                          type="text"
-                          value={bgmUrl}
-                          onChange={(e) => setBgmUrl(e.target.value)}
-                          placeholder="https://example.com/music.mp3"
-                          className="w-full px-4 py-3 bg-white border-2 border-slate-100 rounded-xl focus:border-indigo-500 font-bold outline-none text-xs"
-                        />
+                        <div className="flex gap-2">
+                          <input 
+                            type="text"
+                            value={bgmUrl}
+                            onChange={(e) => setBgmUrl(e.target.value)}
+                            placeholder="https://example.com/music.mp3"
+                            className="flex-1 px-4 py-3 bg-white border-2 border-slate-100 rounded-xl focus:border-indigo-500 font-bold outline-none text-xs"
+                          />
+                          <label className="cursor-pointer px-4 py-3 bg-slate-50 border-2 border-slate-100 rounded-xl hover:bg-slate-100 transition-colors flex items-center justify-center text-slate-600" title="Tải file lên">
+                            <Upload size={16} />
+                            <input 
+                              type="file" 
+                              className="hidden" 
+                              accept="audio/*" 
+                              onChange={async (e) => {
+                                const file = e.target.files?.[0];
+                                if (!file) return;
+                                try {
+                                  setIsSubmitting(true);
+                                  const path = `${Date.now()}_${file.name}`;
+                                  const url = await supabaseService.uploadFile('audio', path, file);
+                                  setBgmUrl(url);
+                                } catch (err: any) {
+                                  setError(err.message || "Failed to upload audio");
+                                } finally {
+                                  setIsSubmitting(false);
+                                }
+                              }} 
+                            />
+                          </label>
+                        </div>
                       </div>
                     </div>
 

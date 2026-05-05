@@ -14,6 +14,9 @@ CREATE TABLE IF NOT EXISTS programs (
   rules JSONB DEFAULT '{"maxWinsPerTicket": 1, "maxWinsPerPerson": 1, "preventDuplicatePrizeType": true, "fairnessRandom": true}'::jsonb,
   month INTEGER,
   year INTEGER,
+  bgm_url TEXT,
+  bgm_volume FLOAT DEFAULT 0.5,
+  bgm_enabled BOOLEAN DEFAULT true,
   is_active BOOLEAN DEFAULT true,
   created_at TIMESTAMPTZ DEFAULT now()
 );
@@ -167,3 +170,20 @@ CREATE POLICY "Users Can Update Their Own Objects" ON storage.objects
 
 CREATE POLICY "Users Can Delete Their Own Objects" ON storage.objects
   FOR DELETE USING (bucket_id = 'prizes' AND auth.uid() = owner);
+
+-- Thêm quyền cho bucket 'audio'
+INSERT INTO storage.buckets (id, name, public)
+VALUES ('audio', 'audio', true)
+ON CONFLICT (id) DO NOTHING;
+
+CREATE POLICY "Audio Public Access" ON storage.objects
+  FOR SELECT USING (bucket_id = 'audio');
+
+CREATE POLICY "Authenticated Users Can Upload Audio" ON storage.objects
+  FOR INSERT WITH CHECK (
+    bucket_id = 'audio' 
+    AND auth.role() = 'authenticated'
+  );
+
+CREATE POLICY "Users Can Manage Their Own Audio" ON storage.objects
+  FOR ALL USING (bucket_id = 'audio' AND auth.uid() = owner);
