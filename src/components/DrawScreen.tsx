@@ -4,8 +4,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import confetti from 'canvas-confetti';
 import { Trophy, RefreshCcw, LayoutGrid, ChevronRight, AlertTriangle, Power, Users, Ticket as TicketIcon, Play, Check, Info, X, Zap, Clock, Star, Gift, Music, Image as ImageIcon, Trash2, Maximize2, Minimize2 } from 'lucide-react';
 import { cn, generateId } from '../lib/utils';
-import { shuffleArray } from '../lib/engine';
-import { getAvailableParticipants, drawRandom } from '../utils/drawEngine';
+import { shuffleArray, pickWinner, getEligibleTickets } from '../lib/engine';
 import { sounds } from '../lib/sounds';
 import { useTranslation } from 'react-i18next';
 import { supabaseService } from '../services/supabaseService';
@@ -232,7 +231,7 @@ const DrawLayout = ({ children }: { children: React.ReactNode }) => (
 
 const DrawContent = ({ children }: { children: React.ReactNode }) => (
   <div className="flex-1 overflow-hidden w-full">
-    <div className="draw-content h-full w-full">
+    <div className="draw-content h-full w-full flex">
       {children}
     </div>
   </div>
@@ -264,13 +263,10 @@ const WinnerDisplay = ({
                 <Music className="text-indigo-600 animate-bounce" size={32} />
               </div>
             </div>
-            <div className="space-y-3">
-              <p className="text-3xl font-black text-indigo-600 tracking-tighter animate-pulse">ROLLING THE DRUMS...</p>
+            <div className="space-y-3 text-center">
+              <p className="text-5xl font-black text-indigo-600 tracking-tighter uppercase italic">Drawing...</p>
               <div className="flex flex-col items-center gap-1">
-                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.3em]">Drawing for</p>
-                <div className="px-3 py-1 bg-slate-100 rounded-full text-xs font-black text-slate-600 uppercase tracking-widest border border-slate-200">
-                  {activePrize?.name || 'Grand Prize'}
-                </div>
+                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.3em]">May the luck be with you</p>
               </div>
             </div>
           </motion.div>
@@ -291,9 +287,9 @@ const WinnerDisplay = ({
                 className="absolute -inset-2 border border-dashed border-slate-200 rounded-[2.5rem] pointer-events-none opacity-40"
               />
             </div>
-            <div className="space-y-4">
+            <div className="space-y-4 text-center">
               <div className="space-y-1">
-                <p className="text-4xl font-black tracking-tighter text-slate-300">READY TO DRAW</p>
+                <p className="text-4xl font-black tracking-tighter text-slate-300 uppercase">Ready to draw</p>
                 <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">Awaiting your command</p>
               </div>
               {activePrize && (
@@ -309,26 +305,26 @@ const WinnerDisplay = ({
             key="winner"
             initial={{ opacity: 0, scale: 0.8 }}
             animate={{ opacity: 1, scale: 1 }}
-            className="flex flex-col items-center w-full max-w-5xl mx-auto"
+            className="flex flex-col items-center w-full px-6 lg:px-12"
           >
-            <div className="mb-4">
+            <div className="mb-4 text-center">
                <motion.div 
                  initial={{ y: -20, opacity: 0 }}
                  animate={{ y: 0, opacity: 1 }}
-                 className="px-6 py-2 bg-amber-50 text-amber-600 border border-amber-200 rounded-full text-xs font-black uppercase tracking-[0.2em] shadow-sm flex items-center gap-2"
+                 className="px-6 py-2 bg-amber-50 text-amber-600 border border-amber-200 rounded-full text-xs font-black uppercase tracking-[0.2em] shadow-sm flex items-center gap-2 mx-auto"
                >
                  <Star size={14} fill="currentColor" /> We found a winner! <Star size={14} fill="currentColor" />
                </motion.div>
             </div>
             
-            <h2 className="winner-name text-7xl lg:text-9xl font-black text-slate-900 tracking-tighter mb-6 leading-[0.8] drop-shadow-md">
+            <h2 className="winner-name text-7xl lg:text-9xl font-black text-slate-900 tracking-tighter mb-6 leading-[0.8] drop-shadow-md text-center">
               {winner.name || 'Anonymous'}
             </h2>
             
-            <div className="mb-12">
+            <div className="mb-12 text-center">
                <div className="inline-flex items-center gap-3 px-6 py-3 bg-indigo-600 text-white rounded-2xl shadow-xl shadow-indigo-100 ring-4 ring-indigo-50 font-mono text-2xl font-black">
                   <span className="opacity-50">ID</span>
-                  <span>{winner.id}</span>
+                  <span>{winner.employeeId || winner.id}</span>
                </div>
             </div>
             
@@ -432,7 +428,8 @@ const DrawMainPanel = ({
   allPrizes,
   selectedPrizeId,
   onSelectPrize,
-  selectedPrizeObject
+  selectedPrizeObject,
+  eligibleCount
 }: { 
   currentWinner: Ticket | null,
   onDraw: () => void,
@@ -444,9 +441,10 @@ const DrawMainPanel = ({
   allPrizes: Prize[],
   selectedPrizeId: string | null,
   onSelectPrize: (id: string) => void,
-  selectedPrizeObject?: Prize
+  selectedPrizeObject?: Prize,
+  eligibleCount: number
 }) => (
-  <main className="draw-main-panel h-full flex flex-col bg-white overflow-hidden">
+  <main className="draw-main-panel flex-1 h-full flex flex-col bg-white overflow-hidden">
     <div className="flex-1 overflow-y-auto custom-scrollbar p-6 lg:p-8 xl:p-12">
       <PrizeSelector 
         prizes={allPrizes} 
@@ -463,16 +461,23 @@ const DrawMainPanel = ({
     </div>
 
     <div className="p-6 lg:px-8 lg:pb-8 border-t border-slate-100 bg-slate-50/30">
-      <div className="draw-controls bg-white p-4 lg:p-6 rounded-[2rem] border border-slate-100 shadow-lg max-w-4xl mx-auto w-full flex gap-4">
+      {!currentWinner && (
+        <div className="flex justify-center mb-4">
+           <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest bg-white px-4 py-2 rounded-full border border-slate-100 italic shadow-sm">
+             {eligibleCount} people eligible for this prize
+          </p>
+        </div>
+      )}
+      <div className="draw-controls bg-white p-4 lg:p-6 rounded-[2rem] border border-slate-100 shadow-lg w-full flex gap-4">
         {!currentWinner && (
           <button 
             onClick={onDraw} 
-            disabled={isDrawing || remaining === 0}
+            disabled={isDrawing || remaining === 0 || eligibleCount === 0}
             className={cn(
               "flex-1 py-5 rounded-2xl font-black text-xl uppercase tracking-[0.2em] transition-all shadow-xl flex items-center justify-center gap-3",
-              (isDrawing || remaining === 0)
+              (isDrawing || remaining === 0 || eligibleCount === 0)
                 ? "bg-slate-100 text-slate-300 cursor-not-allowed"
-                : "bg-indigo-600 text-white hover:bg-indigo-700 shadow-indigo-100"
+                : "bg-indigo-600 text-white hover:bg-indigo-700 shadow-indigo-100 active:scale-[0.98]"
             )}
           >
             {isDrawing ? (
@@ -519,7 +524,7 @@ const WinnerSidebar = ({
   onShowDetail: (w: Winner) => void 
 }) => {
   return (
-    <aside className="draw-sidebar border-l border-slate-200 bg-white flex flex-col min-h-0 overflow-hidden">
+    <aside className="draw-sidebar w-[400px] border-l border-slate-200 bg-white flex flex-col min-h-0 overflow-hidden">
        <div className="p-8 border-b border-slate-100 flex items-center justify-between">
           <div>
             <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Live Feed</h4>
@@ -592,7 +597,7 @@ export default function DrawScreen({ state, updateState, onNavigate }: { state: 
   const allPrizes = currentProgram?.prizes.filter(p => p.isActive).sort((a, b) => b.priority - a.priority) || [];
   const selectedPrize = allPrizes.find(p => p.id === selectedPrizeId) || allPrizes[0];
   const programWinners = state.winners.filter(w => w.programId === currentProgram?.id);
-  const availablePool = currentProgram ? getAvailableParticipants(participants, state.winners, currentProgram.id) : [];
+  const eligiblePool = (currentProgram && selectedPrize) ? getEligibleTickets(currentProgram, state.winners, selectedPrize) : [];
 
   const handleSelectPrize = (id: string) => {
     if (isDrawing) return;
@@ -613,7 +618,7 @@ export default function DrawScreen({ state, updateState, onNavigate }: { state: 
   };
 
   const handleDraw = () => {
-    if (isDrawing || currentWinner || !selectedPrize || availablePool.length === 0) return;
+    if (isDrawing || currentWinner || !selectedPrize || !currentProgram || eligiblePool.length === 0) return;
     
     setIsDrawing(true);
     setError(null);
@@ -621,14 +626,14 @@ export default function DrawScreen({ state, updateState, onNavigate }: { state: 
 
     // Simulate drawing animation
     let ticks = 0;
-    const maxTicks = 30;
+    const maxTicks = 40;
     
     const tick = () => {
       ticks++;
       if (ticks < maxTicks) {
-        animationRef.current = setTimeout(tick, 50 + ticks * 2);
+        animationRef.current = setTimeout(tick, 50 + ticks * 1.5);
       } else {
-        const winner = drawRandom(availablePool);
+        const winner = pickWinner(currentProgram, state.winners, selectedPrize);
         if (winner) {
           setCurrentWinner(winner);
           sounds.playSuccess();
@@ -708,6 +713,7 @@ export default function DrawScreen({ state, updateState, onNavigate }: { state: 
             selectedPrizeId={selectedPrizeId || (allPrizes.length > 0 ? allPrizes[0].id : null)}
             onSelectPrize={handleSelectPrize}
             selectedPrizeObject={selectedPrize}
+            eligibleCount={eligiblePool.length}
           />
 
           <WinnerSidebar 

@@ -21,12 +21,12 @@ const mapProgram = (p: any): DrawProgram => ({
 const mapPrize = (pr: any): Prize => ({
   id: pr.id,
   name: pr.name,
-  quantity: pr.quantity,
-  remaining: pr.remaining,
-  priority: pr.priority,
-  isActive: pr.is_active,
-  image: pr.image,
-  value: pr.value
+  quantity: pr.quantity || 0,
+  remaining: pr.remaining ?? pr.quantity ?? 0,
+  priority: pr.priority || 0,
+  isActive: pr.is_active ?? true,
+  image: pr.image || '',
+  value: pr.value || 0
 });
 
 const mapParticipant = (p: any): Ticket => ({
@@ -82,7 +82,8 @@ export const supabaseService = {
         thumbnail: details?.thumbnail || '',
         rules: details?.rules || DEFAULT_RULES,
         month: details?.month || new Date().getMonth() + 1,
-        year: details?.year || new Date().getFullYear()
+        year: details?.year || new Date().getFullYear(),
+        is_active: true
       })
       .select()
       .single();
@@ -131,7 +132,8 @@ export const supabaseService = {
     const { data, error } = await getSupabase()
       .from('participants')
       .select('*')
-      .eq('program_id', programId);
+      .eq('program_id', programId)
+      .limit(10000); // Increased limit for large events
 
     if (error) throw error;
     return data.map(mapParticipant);
@@ -161,13 +163,13 @@ export const supabaseService = {
   async createPrize(programId: string, prize: Partial<Prize>) {
     const { error } = await getSupabase().from('prizes').insert({
       program_id: programId,
-      name: prize.name,
-      quantity: prize.quantity,
-      remaining: prize.remaining,
-      priority: prize.priority,
-      is_active: prize.isActive,
-      image: prize.image,
-      value: prize.value
+      name: prize.name || 'New Prize',
+      quantity: prize.quantity || 1,
+      remaining: prize.remaining ?? prize.quantity ?? 1,
+      priority: prize.priority || 0,
+      is_active: prize.isActive ?? true,
+      image: prize.image || '',
+      value: prize.value || 0
     });
     if (error) throw error;
   },

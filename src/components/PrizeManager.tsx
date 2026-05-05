@@ -17,6 +17,9 @@ export default function PrizeManager({ state, updateState }: { state: AppState, 
   const currentProgram = state.programs.find(p => p.id === state.activeProgramId);
   const [isEditingPrize, setIsEditingPrize] = useState<Prize | null>(null);
 
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
   if (!currentProgram) return (
     <div className="bg-slate-50 p-12 rounded-[2.5rem] border-2 border-dashed border-slate-200 text-center space-y-4">
       <div className="w-16 h-16 bg-white rounded-2xl flex items-center justify-center mx-auto shadow-sm text-slate-300">
@@ -30,14 +33,18 @@ export default function PrizeManager({ state, updateState }: { state: AppState, 
     if (!isSupabaseConfigured()) return;
     const updatedRules = { ...currentProgram.rules, [key]: value };
     try {
+      setError(null);
       await supabaseService.updateProgramRules(currentProgram.id, updatedRules);
-    } catch (err) {
+    } catch (err: any) {
       console.error('Error updating rules:', err);
+      setError(err.message || 'Failed to update rules.');
     }
   };
 
   const handleAddPrize = async () => {
     if (!isSupabaseConfigured()) return;
+    setIsSubmitting(true);
+    setError(null);
     const newPrize: Partial<Prize> = {
       name: t('prizes.new_prize_name') || 'New Prize',
       quantity: 1,
@@ -50,25 +57,32 @@ export default function PrizeManager({ state, updateState }: { state: AppState, 
     
     try {
       await supabaseService.createPrize(currentProgram.id, newPrize);
-    } catch (err) {
+    } catch (err: any) {
       console.error('Error adding prize:', err);
+      setError(err.message || 'Failed to add prize.');
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
   const handleDeletePrize = async (id: string) => {
     if(!confirm(t('prizes.confirm_delete')) || !isSupabaseConfigured()) return;
     try {
+      setError(null);
       await supabaseService.deletePrize(id);
-    } catch (err) {
+    } catch (err: any) {
       console.error('Error deleting prize:', err);
+      setError(err.message || 'Failed to delete prize.');
     }
   };
 
   const updatePrize = async (prizeId: string, updates: Partial<Prize>) => {
     try {
+      setError(null);
       await supabaseService.updatePrize(prizeId, updates);
-    } catch (err) {
+    } catch (err: any) {
       console.error('Error updating prize:', err);
+      setError(err.message || 'Failed to update prize.');
     }
   };
 
@@ -158,15 +172,29 @@ export default function PrizeManager({ state, updateState }: { state: AppState, 
 
       {/* Prize List Section */}
       <section className="space-y-8">
+        {error && (
+          <div className="p-4 bg-red-50 text-red-600 rounded-2xl flex items-center gap-3 text-xs font-bold animate-in fade-in slide-in-from-top-2 border border-red-100">
+            <Info size={16} /> {error}
+            <button onClick={() => setError(null)} className="ml-auto hover:bg-red-100 p-1 rounded-lg transition-colors">
+              <X size={14} />
+            </button>
+          </div>
+        )}
         <div className="flex items-center justify-between">
           <h3 className="text-xl font-black tracking-tighter uppercase italic text-slate-800 flex items-center gap-3">
              {t('prizes.inventory')}
           </h3>
           <button 
             onClick={handleAddPrize}
-            className="flex items-center gap-3 px-8 py-4 bg-indigo-600 text-white rounded-2xl text-[10px] font-black uppercase tracking-[0.2em] hover:bg-indigo-700 shadow-xl shadow-indigo-600/30 transition-all active:scale-95"
+            disabled={isSubmitting}
+            className="flex items-center gap-3 px-8 py-4 bg-indigo-600 text-white rounded-2xl text-[10px] font-black uppercase tracking-[0.2em] hover:bg-indigo-700 shadow-xl shadow-indigo-600/30 transition-all active:scale-95 disabled:opacity-50"
           >
-            <Plus size={20} strokeWidth={3} /> {t('prizes.add_prize')}
+            {isSubmitting ? (
+              <RefreshCcw size={20} className="animate-spin" />
+            ) : (
+              <Plus size={20} strokeWidth={3} />
+            )}
+            {isSubmitting ? 'Adding...' : t('prizes.add_prize')}
           </button>
         </div>
 

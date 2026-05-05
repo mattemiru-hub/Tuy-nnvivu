@@ -157,10 +157,19 @@ export default function App() {
       })
       .subscribe();
 
+    const programsChannel = supabase
+      .channel('programs-changes')
+      .on('postgres_changes' as any, { event: '*', table: 'programs' }, async () => {
+        const programs = await supabaseService.getPrograms();
+        setState(prev => ({ ...prev, programs }));
+      })
+      .subscribe();
+
     return () => {
       supabase.removeChannel(winnersChannel);
       supabase.removeChannel(participantsChannel);
       supabase.removeChannel(prizesChannel);
+      supabase.removeChannel(programsChannel);
     };
   }, [state.activeProgramId]);
 

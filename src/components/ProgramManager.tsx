@@ -31,13 +31,22 @@ export default function ProgramManager({ state, updateState }: { state: AppState
   const [editingProgramId, setEditingProgramId] = useState<string | null>(null);
   const [prizes, setPrizes] = useState<Prize[]>([]);
 
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
+      setError(null);
       const reader = new FileReader();
       reader.onloadend = async () => {
-        const compressed = await compressImage(reader.result as string);
-        setThumbnail(compressed);
+        try {
+          const compressed = await compressImage(reader.result as string);
+          setThumbnail(compressed);
+        } catch (err) {
+          console.error('Image compression error:', err);
+          setError('Failed to process image');
+        }
       };
       reader.readAsDataURL(file);
     }
@@ -49,6 +58,8 @@ export default function ProgramManager({ state, updateState }: { state: AppState
     if (!name.trim()) return;
 
     try {
+      setIsSubmitting(true);
+      setError(null);
       const newProg = await supabaseService.createProgram(name, {
         description: template ? template.description : description,
         thumbnail: template ? template.thumbnail : thumbnail,
@@ -64,12 +75,17 @@ export default function ProgramManager({ state, updateState }: { state: AppState
         }
       }
 
-      setNewProgramName('');
-      setDescription('');
-      setThumbnail(undefined);
+      if (!template) {
+        setNewProgramName('');
+        setDescription('');
+        setThumbnail(undefined);
+      }
       setPrizes([]);
-    } catch (err) {
+    } catch (err: any) {
       console.error('Error creating program:', err);
+      setError(err.message || 'Failed to create program. Please check your permissions.');
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -77,6 +93,8 @@ export default function ProgramManager({ state, updateState }: { state: AppState
     if (!editingProgramId || !newProgramName.trim() || !isSupabaseConfigured()) return;
 
     try {
+      setIsSubmitting(true);
+      setError(null);
       await supabaseService.updateProgram(editingProgramId, {
         name: newProgramName,
         description,
@@ -88,8 +106,11 @@ export default function ProgramManager({ state, updateState }: { state: AppState
       setNewProgramName('');
       setDescription('');
       setThumbnail(undefined);
-    } catch (err) {
+    } catch (err: any) {
       console.error('Error updating program:', err);
+      setError(err.message || 'Failed to update program.');
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -399,14 +420,20 @@ export default function ProgramManager({ state, updateState }: { state: AppState
             </div>
           </div>
           <div className="flex flex-col justify-end gap-3">
+            {error && (
+              <div className="mb-4 p-4 bg-red-50 text-red-600 rounded-xl flex items-center gap-2 text-xs font-bold animate-in fade-in slide-in-from-top-1">
+                <Info size={14} /> {error}
+              </div>
+            )}
             {editingProgramId ? (
               <>
                 <button 
                   onClick={handleUpdateProgram}
-                  disabled={!newProgramName.trim()}
+                  disabled={!newProgramName.trim() || isSubmitting}
                   className="flex items-center justify-center gap-3 w-full py-5 bg-blue-600 text-white rounded-[1.5rem] font-black uppercase tracking-widest shadow-xl shadow-blue-600/30 hover:bg-blue-700 active:scale-95 transition-all disabled:opacity-50"
                 >
-                  <Save size={24} /> {t('setup.update_button')}
+                  {isSubmitting ? <RefreshCcw size={20} className="animate-spin" /> : <Save size={24} />} 
+                  {isSubmitting ? 'Updating...' : t('setup.update_button')}
                 </button>
                 <button 
                   onClick={() => {
@@ -414,6 +441,7 @@ export default function ProgramManager({ state, updateState }: { state: AppState
                     setNewProgramName('');
                     setDescription('');
                     setThumbnail(undefined);
+                    setError(null);
                   }}
                   className="w-full py-3 text-[10px] font-black uppercase text-slate-400 hover:text-slate-600 transition-colors"
                 >
@@ -423,10 +451,11 @@ export default function ProgramManager({ state, updateState }: { state: AppState
             ) : (
               <button 
                 onClick={() => handleCreateProgram()}
-                disabled={!newProgramName.trim()}
+                disabled={!newProgramName.trim() || isSubmitting}
                 className="flex items-center justify-center gap-3 w-full py-5 bg-indigo-600 text-white rounded-[1.5rem] font-black uppercase tracking-widest shadow-xl shadow-indigo-600/30 hover:bg-indigo-700 active:scale-95 transition-all disabled:opacity-50"
               >
-                <Plus size={24} strokeWidth={3} /> {t('setup.create_button')}
+                {isSubmitting ? <RefreshCcw size={20} className="animate-spin" /> : <Plus size={24} strokeWidth={3} />}
+                {isSubmitting ? 'Creating...' : t('setup.create_button')}
               </button>
             )}
           </div>

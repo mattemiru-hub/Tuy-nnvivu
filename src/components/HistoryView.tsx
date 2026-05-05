@@ -36,10 +36,11 @@ export default function HistoryView({ state, updateState }: { state: AppState, u
       "Thời gian": formatDate(w.drawTime),
       "Chương trình": w.programName,
       "Giải thưởng": w.prizeName,
-      "Mã số phiếu": w.ticketId,
       "Tên người trúng": w.ticketName || "-",
       "Mã nhân viên": w.employeeId || "-",
-      "Phòng ban": w.department || "-"
+      "UPI": w.upi || "-",
+      "Phòng ban": w.department || "-",
+      "Mã số phiếu (ID)": w.ticketId,
     }));
 
     const worksheet = XLSX.utils.json_to_sheet(data);
@@ -48,7 +49,7 @@ export default function HistoryView({ state, updateState }: { state: AppState, u
     
     // Auto-size columns
     const wscols = [
-      {wch: 20}, {wch: 25}, {wch: 25}, {wch: 15}, {wch: 20}, {wch: 15}, {wch: 15}
+      {wch: 20}, {wch: 25}, {wch: 25}, {wch: 20}, {wch: 15}, {wch: 15}, {wch: 20}, {wch: 15}
     ];
     worksheet['!cols'] = wscols;
 
@@ -208,7 +209,7 @@ export default function HistoryView({ state, updateState }: { state: AppState, u
                 </tr>
               )) : (
                 <tr>
-                  <td colSpan={5} className="px-8 py-24 text-center">
+                  <td colSpan={6} className="px-8 py-24 text-center">
                      <div className="max-w-xs mx-auto">
                         <div className="w-20 h-20 bg-slate-50 rounded-full flex items-center justify-center mx-auto mb-6">
                            <Trophy className="text-slate-200" size={40} />
