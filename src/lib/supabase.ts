@@ -1,11 +1,33 @@
 
-import { createClient } from '@supabase/supabase-js';
+import { createClient, SupabaseClient } from '@supabase/supabase-js';
 
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+let supabaseInstance: SupabaseClient | null = null;
 
-if (!supabaseUrl || !supabaseAnonKey) {
-  console.warn('Supabase URL or Anon Key is missing. Please check your .env file.');
+export function isSupabaseConfigured(): boolean {
+  const url = import.meta.env.VITE_SUPABASE_URL;
+  const key = import.meta.env.VITE_SUPABASE_ANON_KEY;
+  return !!(url && key && url.startsWith('http'));
 }
 
-export const supabase = createClient(supabaseUrl || '', supabaseAnonKey || '');
+export function getSupabase(): SupabaseClient {
+  if (supabaseInstance) return supabaseInstance;
+
+  const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+  const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+
+  if (!supabaseUrl || !supabaseAnonKey) {
+    throw new Error(
+      'Supabase configuration is missing. Please set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY in your environment variables.'
+    );
+  }
+
+  try {
+    // Basic validation before passing to createClient
+    new URL(supabaseUrl);
+  } catch (e) {
+    throw new Error(`Invalid VITE_SUPABASE_URL: "${supabaseUrl}". It must be a valid URL starting with http:// or https://`);
+  }
+
+  supabaseInstance = createClient(supabaseUrl, supabaseAnonKey);
+  return supabaseInstance;
+}

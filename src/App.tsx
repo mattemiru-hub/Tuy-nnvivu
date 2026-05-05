@@ -11,7 +11,8 @@ import { AppState, DrawProgram, Prize, Winner, Ticket } from './types';
 import { INITIAL_STATE } from './constants';
 import { cn } from './lib/utils';
 import { supabaseService } from './services/supabaseService';
-import { supabase } from './lib/supabase';
+import { getSupabase, isSupabaseConfigured } from './lib/supabase';
+import { Session } from '@supabase/supabase-js';
 
 // Views
 import Dashboard from './components/Dashboard';
@@ -21,16 +22,35 @@ import ParticipantManager from './components/ParticipantManager';
 import DrawScreen from './components/DrawScreen';
 import HistoryView from './components/HistoryView';
 import SystemSettings from './components/SystemSettings';
+import Login from './components/Login';
 
 export default function App() {
   const { t, i18n } = useTranslation();
   const [state, setState] = useState<AppState>(INITIAL_STATE);
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'setup' | 'prizes' | 'participants' | 'draw' | 'history' | 'settings'>('draw');
-  const [showSidebar, setShowSidebar] = useState(false);
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'setup' | 'prizes' | 'participants' | 'draw' | 'history' | 'settings'>('dashboard');
+  const [showSidebar, setShowSidebar] = useState(true);
   const [loading, setLoading] = useState(true);
+  const [session, setSession] = useState<Session | null>(null);
 
-  // Initial Data Fetch
+  // Initial Data Fetch & Auth Check
   useEffect(() => {
+    if (!isSupabaseConfigured()) {
+      setLoading(false);
+      return;
+    }
+
+    const supabase = getSupabase();
+
+    // Check current session
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setSession(session);
+    });
+
+    // Listen for auth changes
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setSession(session);
+    });
+
     const fetchData = async () => {
       try {
         setLoading(true);
@@ -38,7 +58,7 @@ export default function App() {
         const allWinners = await supabaseService.getAllWinners();
         
         if (programs.length > 0) {
-          const activeId = programs[0].id;
+          const activeId = localStorage.getItem('activeProgramId') || programs[0].id;
           const participants = await supabaseService.getParticipants(activeId);
           
           setState(prev => ({
@@ -58,9 +78,15 @@ export default function App() {
     };
 
     fetchData();
+
+    return () => subscription.unsubscribe();
   }, []);
 
   const refreshData = async () => {
+    if (!isSupabaseConfigured()) {
+      alert("Please configure Supabase first in the Settings menu.");
+      return;
+    }
     try {
       setLoading(true);
       const programs = await supabaseService.getPrograms();
@@ -85,11 +111,11 @@ export default function App() {
 
   // Sync active program data when it changes
   useEffect(() => {
-    if (!state.activeProgramId || loading) return;
+    if (!state.activeProgramId || loading || !session) return;
 
     const fetchProgramData = async () => {
       try {
-        const winners = await supabaseService.getAllWinners();
+        const winners = await supabaseService.getWinners(state.activeProgramId!);
         const participants = await supabaseService.getParticipants(state.activeProgramId!);
         
         setState(prev => ({
@@ -101,17 +127,27 @@ export default function App() {
           ),
           winners
         }));
+        
+        localStorage.setItem('activeProgramId', state.activeProgramId!);
       } catch (error) {
         console.error('Error fetching program data:', error);
       }
     };
 
     fetchProgramData();
-  }, [state.activeProgramId]);
+  }, [state.activeProgramId, session]);
 
   // Real-time Subscriptions
   useEffect(() => {
-    if (!state.activeProgramId) return;
+    if (!state.activeProgramId || !isSupabaseConfigured() || !session) return;
+
+    let supabase;
+    try {
+      supabase = getSupabase();
+    } catch (e) {
+      console.error(e);
+      return;
+    }
 
     const winnersChannel = supabase
       .channel('winners-changes')
@@ -144,19 +180,10 @@ export default function App() {
       })
       .subscribe();
 
-    const programsChannel = supabase
-      .channel('programs-changes')
-      .on('postgres_changes' as any, { event: '*', table: 'programs' }, async () => {
-        const programs = await supabaseService.getPrograms();
-        setState(prev => ({ ...prev, programs }));
-      })
-      .subscribe();
-
     return () => {
       supabase.removeChannel(winnersChannel);
       supabase.removeChannel(participantsChannel);
       supabase.removeChannel(prizesChannel);
-      supabase.removeChannel(programsChannel);
     };
   }, [state.activeProgramId]);
 
@@ -245,53 +272,59 @@ export default function App() {
       {/* Main Content */}
       <main className={cn(
         "flex-1 relative bg-transparent flex flex-col",
-        activeTab === 'draw' ? "bg-slate-900 overflow-hidden" : "bg-[#FFFDF0] overflow-y-auto"
+        activeTab === 'draw' ? "overflow-hidden" : "overflow-y-auto"
       )}>
-        {activeTab !== 'draw' && (
-          <header className="sticky top-0 z-10 bg-white/70 backdrop-blur-xl px-4 md:px-8 lg:px-12 py-3 md:py-6 flex justify-between items-center border-b border-gray-100/50 flex-shrink-0">
-            <div className="flex items-center gap-3 md:gap-4 overflow-hidden">
-              <button 
-                onClick={() => setShowSidebar(!showSidebar)}
-                className="w-9 h-9 md:w-10 md:h-10 flex-shrink-0 flex items-center justify-center bg-slate-100 hover:bg-slate-200 rounded-lg md:rounded-xl text-slate-500 transition-all"
-                title="Toggle Menu"
-              >
-                {showSidebar ? <PlusCircle className="rotate-45" size={18} /> : <LayoutGrid size={18} />}
-              </button>
-              <h2 className="text-lg md:text-2xl font-black tracking-tighter text-slate-900 uppercase italic truncate">
-                {navItems.find(i => i.id === activeTab)?.label}
-              </h2>
-            </div>
-            <div className="flex items-center gap-3 md:gap-6">
-               <div className="hidden md:flex items-center gap-3 bg-slate-100 p-1.5 rounded-2xl border border-slate-200">
-                 <span className="text-[9px] font-black uppercase text-slate-400 pl-2 tracking-widest">{t('nav.programs')}</span>
-                 <select 
-                  value={state.activeProgramId || ''} 
-                  onChange={(e) => setState(prev => ({ ...prev, activeProgramId: e.target.value }))}
-                  className="bg-white border-none rounded-xl px-4 py-2 font-black text-xs shadow-sm outline-none cursor-pointer focus:ring-2 focus:ring-indigo-500/20"
-                 >
-                   {state.programs.map(p => (
-                     <option key={p.id} value={p.id}>{p.name}</option>
-                   ))}
-                 </select>
-               </div>
-               <button 
-                onClick={toggleLanguage}
-                className="flex items-center gap-2 px-3 py-1.5 bg-slate-100 hover:bg-slate-200 rounded-xl transition-colors text-[10px] font-black uppercase tracking-widest text-slate-600"
+        <header className="sticky top-0 z-10 bg-white/70 backdrop-blur-xl px-4 md:px-8 lg:px-12 py-3 md:py-6 flex justify-between items-center border-b border-gray-100/50 flex-shrink-0">
+          <div className="flex items-center gap-3 md:gap-4 overflow-hidden">
+            <button 
+              onClick={() => setShowSidebar(!showSidebar)}
+              className="w-9 h-9 md:w-10 md:h-10 flex-shrink-0 flex items-center justify-center bg-slate-100 hover:bg-slate-200 rounded-lg md:rounded-xl text-slate-500 transition-all"
+              title="Toggle Menu"
+            >
+              {showSidebar ? <PlusCircle className="rotate-45" size={18} /> : <LayoutGrid size={18} />}
+            </button>
+            <h2 className="text-lg md:text-2xl font-black tracking-tighter text-slate-900 uppercase italic truncate">
+              {navItems.find(i => i.id === activeTab)?.label}
+            </h2>
+          </div>
+          <div className="flex items-center gap-3 md:gap-6">
+             <div className="hidden md:flex items-center gap-3 bg-slate-100 p-1.5 rounded-2xl border border-slate-200">
+               <span className="text-[9px] font-black uppercase text-slate-400 pl-2 tracking-widest">{t('nav.programs')}</span>
+               <select 
+                value={state.activeProgramId || ''} 
+                onChange={(e) => setState(prev => ({ ...prev, activeProgramId: e.target.value }))}
+                className="bg-white border-none rounded-xl px-4 py-2 font-black text-xs shadow-sm outline-none cursor-pointer focus:ring-2 focus:ring-indigo-500/20"
                >
-                 <Languages size={14} />
-                 {i18n.language === 'vi' ? 'English' : 'Tiếng Việt'}
-               </button>
+                 {state.programs.map(p => (
+                   <option key={p.id} value={p.id}>{p.name}</option>
+                 ))}
+               </select>
+             </div>
+             <button 
+              onClick={toggleLanguage}
+              className="flex items-center gap-2 px-3 py-1.5 bg-slate-100 hover:bg-slate-200 rounded-xl transition-colors text-[10px] font-black uppercase tracking-widest text-slate-600"
+             >
+               <Languages size={14} />
+               {i18n.language === 'vi' ? 'English' : 'Tiếng Việt'}
+             </button>
+             <button 
+              onClick={refreshData}
+              className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-blue-600 hover:text-blue-700 transition-colors"
+             >
+               <RotateCcw size={14} className={loading ? 'animate-spin' : ''} />
+               Cloud Sync
+             </button>
+             {session && (
                <button 
-                onClick={refreshData}
-                className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-blue-600 hover:text-blue-700 transition-colors"
+                 onClick={() => getSupabase().auth.signOut()}
+                 className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-slate-500 hover:text-red-600 transition-colors"
                >
-                 <RotateCcw size={14} className={loading ? 'animate-spin' : ''} />
-                 Cloud Sync
+                 Sign Out
                </button>
-               <div className="w-10 h-10 rounded-2xl bg-slate-100 border border-slate-200 flex items-center justify-center font-black text-xs">AI</div>
-            </div>
-          </header>
-        )}
+             )}
+             <div className="w-10 h-10 rounded-2xl bg-slate-100 border border-slate-200 flex items-center justify-center font-black text-xs">AI</div>
+          </div>
+        </header>
 
         <div className={cn(
           "max-w-6xl mx-auto w-full flex-1 min-h-0",
@@ -306,13 +339,38 @@ export default function App() {
               transition={{ duration: 0.2 }}
               className={activeTab === 'draw' ? "h-full" : ""}
             >
-              {activeTab === 'dashboard' && <Dashboard state={state} onSwitchProgram={(id) => updateState(s => ({ ...s, activeProgramId: id }))} />}
-              {activeTab === 'setup' && <ProgramManager state={state} updateState={updateState} />}
-              {activeTab === 'prizes' && <PrizeManager state={state} updateState={updateState} />}
-              {activeTab === 'participants' && <ParticipantManager state={state} updateState={updateState} />}
-              {activeTab === 'draw' && <DrawScreen state={state} updateState={updateState} onNavigate={setActiveTab} />}
-              {activeTab === 'history' && <HistoryView state={state} updateState={updateState} />}
-              {activeTab === 'settings' && <SystemSettings state={state} updateState={updateState} />}
+              {!isSupabaseConfigured() ? (
+                <div className="bg-amber-50 border border-amber-200 rounded-3xl p-8 text-center max-w-2xl mx-auto">
+                  <div className="w-16 h-16 bg-amber-100 text-amber-600 rounded-full flex items-center justify-center mx-auto mb-6">
+                    <Settings font-black size={32} />
+                  </div>
+                  <h3 className="text-xl font-black text-slate-900 mb-2 uppercase tracking-tighter italic">Supabase Connection Required</h3>
+                  <p className="text-slate-600 mb-8 leading-relaxed">
+                    To enable the cloud-synced Lucky Draw features, you need to connect your Supabase project. 
+                    Please set <code className="bg-amber-100 px-1.5 py-0.5 rounded text-amber-800">VITE_SUPABASE_URL</code> and 
+                    <code className="bg-amber-100 px-1.5 py-0.5 rounded text-amber-800">VITE_SUPABASE_ANON_KEY</code> in the 
+                    <strong className="mx-1">Settings</strong> menu of AI Studio.
+                  </p>
+                  <div className="flex flex-col items-center gap-4">
+                     <p className="text-xs text-slate-400 font-bold uppercase tracking-widest leading-loose">
+                       Need a Supabase project? <br/>
+                       <a href="https://supabase.com" target="_blank" rel="noreferrer" className="text-indigo-600 hover:underline">Sign up for free at supabase.com</a>
+                     </p>
+                  </div>
+                </div>
+              ) : !session ? (
+                <Login />
+              ) : (
+                <>
+                  {activeTab === 'dashboard' && <Dashboard state={state} onSwitchProgram={(id) => updateState(s => ({ ...s, activeProgramId: id }))} />}
+                  {activeTab === 'setup' && <ProgramManager state={state} updateState={updateState} />}
+                  {activeTab === 'prizes' && <PrizeManager state={state} updateState={updateState} />}
+                  {activeTab === 'participants' && <ParticipantManager state={state} updateState={updateState} />}
+                  {activeTab === 'draw' && <DrawScreen state={state} updateState={updateState} onNavigate={setActiveTab} />}
+                  {activeTab === 'history' && <HistoryView state={state} updateState={updateState} />}
+                  {activeTab === 'settings' && <SystemSettings state={state} updateState={updateState} />}
+                </>
+              )}
             </motion.div>
           </AnimatePresence>
         </div>

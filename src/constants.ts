@@ -56,10 +56,65 @@ export const DEFAULT_RULES = {
 };
 
 export const INITIAL_STATE: AppState = {
-  programs: [],
+  programs: [
+    {
+      id: "prog-demo",
+      name: "Tất Niên 2024 - Demo",
+      description: "Chương trình quay số demo cuối năm",
+      createdAt: Date.now(),
+      prizes: INITIAL_PRIZES,
+      rules: DEFAULT_RULES,
+      ticketPool: DEMO_TICKETS,
+      isActive: true,
+    },
+  ],
   winners: [],
-  activeProgramId: null,
+  activeProgramId: "prog-demo",
   settings: {
     currency: "VND"
   }
 };
+
+export function loadState(): AppState {
+  const stored = localStorage.getItem(STORAGE_KEY);
+  if (stored) {
+    try {
+      const parsed = JSON.parse(stored);
+      const programs = (parsed.programs || INITIAL_STATE.programs).map((p: any) => ({
+        ...DEFAULT_RULES,
+        ...p,
+        prizes: (p.prizes || []).map((prize: any) => ({
+          value: 0,
+          ...prize
+        })),
+        ticketPool: p.ticketPool || [],
+      }));
+
+      let activeProgramId = parsed.activeProgramId;
+      if (programs.length > 0 && (!activeProgramId || !programs.find((p: any) => p.id === activeProgramId))) {
+        activeProgramId = programs[0].id;
+      }
+
+      return {
+        ...INITIAL_STATE,
+        ...parsed,
+        programs,
+        activeProgramId,
+        winners: parsed.winners || [],
+        settings: parsed.settings || INITIAL_STATE.settings,
+      };
+    } catch (e) {
+      console.error("Failed to parse stored state", e);
+    }
+  }
+  return INITIAL_STATE;
+}
+
+export function saveState(state: AppState) {
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+  } catch (e) {
+    console.error("Failed to save state to localStorage. Storage might be full.", e);
+    // Optionally notify the user or handle the error gracefully
+  }
+}

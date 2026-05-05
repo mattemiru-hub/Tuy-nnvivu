@@ -9,8 +9,6 @@ import { INITIAL_STATE, STORAGE_KEY } from '../constants';
 import { Trash2, Download, Upload, ShieldAlert, Database, RotateCcw, Save, Settings } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
-import { supabaseService } from '../services/supabaseService';
-
 export default function SystemSettings({ state, updateState }: { state: AppState, updateState: (updater: (prev: AppState) => AppState) => void }) {
   const { t } = useTranslation();
 
@@ -43,27 +41,20 @@ export default function SystemSettings({ state, updateState }: { state: AppState
     reader.readAsText(file);
   };
 
-  const resetCurrentResults = async () => {
+  const resetCurrentResults = () => {
     if (!state.activeProgramId) return;
-    if (!confirm("This will clear all winners for the current active program in the database. Continue?")) return;
+    if (!confirm("This will clear all winners for the current active program. Continue?")) return;
 
-    try {
-      await supabaseService.resetProgramWinners(state.activeProgramId);
-      
-      updateState(prev => ({
-        ...prev,
-        winners: prev.winners.filter(w => w.programId !== state.activeProgramId),
-        programs: prev.programs.map(p => 
-          p.id === state.activeProgramId 
-            ? { ...p, prizes: p.prizes.map(pri => ({ ...pri, remaining: pri.quantity })) } 
-            : p
-        )
-      }));
-      alert("Results reset for current program successfully.");
-    } catch (err) {
-      console.error('Error resetting winners:', err);
-      alert("Failed to reset winners.");
-    }
+    updateState(prev => ({
+      ...prev,
+      winners: prev.winners.filter(w => w.programId !== prev.activeProgramId),
+      programs: prev.programs.map(p => 
+        p.id === prev.activeProgramId 
+          ? { ...p, prizes: p.prizes.map(pri => ({ ...pri, remaining: pri.quantity })) } 
+          : p
+      )
+    }));
+    alert("Results reset for current program.");
   };
 
   const purgeAll = () => {

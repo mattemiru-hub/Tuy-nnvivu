@@ -62,13 +62,7 @@ const resources = {
         "program_info": "Program Info",
         "total_prizes": "Total Prizes",
         "won": "Won",
-        "error_no_tickets": "No eligible tickets found for this prize.",
-        "confirm_winner": "CONFIRM WINNER",
-        "reroll": "RE-ROLL",
-        "continue": "CONTINUE DRAW",
-        "ready_status": "READY TO SPIN",
-        "drawing_status": "SPINNING...",
-        "result_status": "WINNER FOUND"
+        "error_no_tickets": "No eligible tickets found for this prize."
       },
       "setup": {
         "create_title": "Configure New Session",
@@ -180,13 +174,7 @@ const resources = {
         "program_info": "Thông tin chi tiết",
         "total_prizes": "Tổng số giải",
         "won": "Đã trúng",
-        "error_no_tickets": "Không tìm thấy phiếu hợp lệ cho giải này.",
-        "confirm_winner": "XÁC NHẬN TRÚNG GIẢI",
-        "reroll": "QUAY LẠI",
-        "continue": "TIẾP TỤC QUAY",
-        "ready_status": "SẴN SÀNG QUAY",
-        "drawing_status": "ĐANG QUAY...",
-        "result_status": "ĐÃ CÓ KẾT QUẢ"
+        "error_no_tickets": "Không tìm thấy phiếu hợp lệ cho giải này."
       },
       "setup": {
         "create_title": "Cấu hình chương trình mới",

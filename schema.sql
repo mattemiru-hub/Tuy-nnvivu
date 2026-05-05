@@ -8,6 +8,8 @@ CREATE TABLE IF NOT EXISTS programs (
   description TEXT,
   thumbnail TEXT,
   rules JSONB DEFAULT '{"maxWinsPerTicket": 1, "maxWinsPerPerson": 1, "preventDuplicatePrizeType": true, "fairnessRandom": true}'::jsonb,
+  month INTEGER,
+  year INTEGER,
   is_active BOOLEAN DEFAULT true,
   created_at TIMESTAMPTZ DEFAULT now()
 );
@@ -22,7 +24,6 @@ CREATE TABLE IF NOT EXISTS prizes (
   priority INTEGER DEFAULT 0,
   is_active BOOLEAN DEFAULT true,
   value NUMERIC DEFAULT 0,
-  config JSONB DEFAULT '{}'::jsonb,
   created_at TIMESTAMPTZ DEFAULT now()
 );
 
@@ -46,11 +47,6 @@ CREATE TABLE IF NOT EXISTS winners (
   participant_id UUID REFERENCES participants(id) ON DELETE CASCADE,
   program_id UUID REFERENCES programs(id) ON DELETE CASCADE,
   prize_id UUID REFERENCES prizes(id) ON DELETE CASCADE,
-  prize_name TEXT,
-  prize_image TEXT,
-  participant_name TEXT,
-  employee_id TEXT,
-  department TEXT,
   created_at TIMESTAMPTZ DEFAULT now()
 );
 
@@ -80,21 +76,12 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
--- 5. Views (Optional but helpful)
-CREATE OR REPLACE VIEW winner_details AS
-SELECT 
-  w.id,
-  w.created_at,
-  w.program_id,
-  pg.name as program_name,
-  w.prize_id,
-  pr.name as prize_name,
-  pr.image as prize_image,
-  w.participant_id,
-  pt.name as ticket_name,
-  pt.employee_id,
-  pt.department
-FROM winners w
-JOIN programs pg ON w.program_id = pg.id
-JOIN prizes pr ON w.prize_id = pr.id
-JOIN participants pt ON w.participant_id = pt.id;
+-- 5. MIGRATION GUIDE (Run these in SQL Editor if you see "column does not exist" errors)
+-- If 'config' is missing and you see 'rules', the code has been updated to use 'rules'.
+-- If 'remaining' or 'created_at' or 'month'/'year' are missing, run these:
+-- ALTER TABLE programs ADD COLUMN IF NOT EXISTS rules JSONB DEFAULT '{}'::jsonb;
+-- ALTER TABLE programs ADD COLUMN IF NOT EXISTS month INTEGER;
+-- ALTER TABLE programs ADD COLUMN IF NOT EXISTS year INTEGER;
+-- ALTER TABLE prizes ADD COLUMN IF NOT EXISTS remaining INTEGER DEFAULT 0;
+-- ALTER TABLE winners ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ DEFAULT now();
+-- UPDATE prizes SET remaining = quantity WHERE remaining IS NULL;
