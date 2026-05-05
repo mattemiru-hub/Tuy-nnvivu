@@ -424,7 +424,7 @@ export default function ParticipantManager({ state, updateState }: { state: AppS
                   </button>
                   <button 
                     onClick={handleApply}
-                    disabled={!mapping.id || !mapping.name || (isSplitMode && !mapping.programNameCol)}
+                    disabled={!mapping.ticket_number || !mapping.name || (isSplitMode && !mapping.programNameCol)}
                     className="flex-[2] px-8 py-4 bg-blue-600 text-white font-black uppercase tracking-widest text-xs rounded-2xl shadow-xl shadow-blue-600/20 hover:bg-blue-700 disabled:opacity-50 disabled:grayscale transition-all"
                   >
                     {t('upload.process')}
