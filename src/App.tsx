@@ -32,6 +32,41 @@ export default function App() {
   const [loading, setLoading] = useState(true);
   const [session, setSession] = useState<Session | null>(null);
 
+  const fetchData = async () => {
+    try {
+      setLoading(true);
+      const programs = await supabaseService.getPrograms();
+      const allWinners = await supabaseService.getAllWinners();
+      
+      let activeId = state.activeProgramId || localStorage.getItem('activeProgramId');
+      if (!activeId && programs.length > 0) activeId = programs[0].id;
+      
+      if (activeId) {
+        const participants = await supabaseService.getParticipants(activeId);
+        setState(prev => ({
+          ...prev,
+          programs: programs.map(p => p.id === activeId ? { ...p, ticketPool: participants } : p),
+          winners: allWinners,
+          activeProgramId: activeId
+        }));
+      } else {
+        setState(prev => ({ ...prev, programs, winners: allWinners }));
+      }
+    } catch (error) {
+      console.error('Error fetching initial data:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const refreshData = async () => {
+    if (!isSupabaseConfigured()) {
+      alert("Please configure Supabase first in the Settings menu.");
+      return;
+    }
+    await fetchData();
+  };
+
   // Initial Data Fetch & Auth Check
   useEffect(() => {
     if (!isSupabaseConfigured()) {
@@ -41,94 +76,36 @@ export default function App() {
 
     const supabase = getSupabase();
 
-    // Check current session
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
     });
 
-    // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       setSession(session);
     });
 
-    const fetchData = async () => {
-      try {
-        setLoading(true);
-        const programs = await supabaseService.getPrograms();
-        const allWinners = await supabaseService.getAllWinners();
-        
-        if (programs.length > 0) {
-          const activeId = localStorage.getItem('activeProgramId') || programs[0].id;
-          const participants = await supabaseService.getParticipants(activeId);
-          
-          setState(prev => ({
-            ...prev,
-            programs: programs.map(p => p.id === activeId ? { ...p, ticketPool: participants } : p),
-            winners: allWinners,
-            activeProgramId: activeId
-          }));
-        } else {
-          setState(prev => ({ ...prev, winners: allWinners }));
-        }
-      } catch (error) {
-        console.error('Error fetching initial data:', error);
-      } finally {
-        setLoading(false);
-      }
-    };
-
     fetchData();
 
     return () => subscription.unsubscribe();
-  }, []);
-
-  const refreshData = async () => {
-    if (!isSupabaseConfigured()) {
-      alert("Please configure Supabase first in the Settings menu.");
-      return;
-    }
-    try {
-      setLoading(true);
-      const programs = await supabaseService.getPrograms();
-      const allWinners = await supabaseService.getAllWinners();
-      
-      if (state.activeProgramId) {
-        const participants = await supabaseService.getParticipants(state.activeProgramId);
-        setState(prev => ({
-          ...prev,
-          programs: programs.map(p => p.id === state.activeProgramId ? { ...p, ticketPool: participants } : p),
-          winners: allWinners
-        }));
-      } else {
-        setState(prev => ({ ...prev, programs, winners: allWinners }));
-      }
-    } catch (e) {
-      console.error(e);
-    } finally {
-      setLoading(false);
-    }
-  };
+  }, [session === null]);
 
   // Sync active program data when it changes
   useEffect(() => {
     if (!state.activeProgramId || loading || !session) return;
 
+    localStorage.setItem('activeProgramId', state.activeProgramId);
+    
     const fetchProgramData = async () => {
       try {
-        const winners = await supabaseService.getWinners(state.activeProgramId!);
         const participants = await supabaseService.getParticipants(state.activeProgramId!);
-        
         setState(prev => ({
           ...prev,
           programs: prev.programs.map(p => 
             p.id === state.activeProgramId 
               ? { ...p, ticketPool: participants } 
               : p
-          ),
-          winners
+          )
         }));
-        
-        localStorage.setItem('activeProgramId', state.activeProgramId!);
       } catch (error) {
         console.error('Error fetching program data:', error);
       }

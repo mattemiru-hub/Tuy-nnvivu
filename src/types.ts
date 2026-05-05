@@ -4,9 +4,15 @@
  */
 
 export interface Ticket {
-  id: string; // "Phiếu"
-  name?: string;
+  id: string;
+  name: string;
+  channel?: string;
+  upi?: string;
+  location?: string;
+  region?: string;
+  lineManager?: string;
   department?: string;
+  position?: string;
   employeeId?: string;
   [key: string]: any;
 }
@@ -62,6 +68,7 @@ export interface Winner {
   ticketId: string;
   ticketName?: string;
   employeeId?: string;
+  upi?: string;
   department?: string;
   prizeRemainingAtDraw?: number;
 }

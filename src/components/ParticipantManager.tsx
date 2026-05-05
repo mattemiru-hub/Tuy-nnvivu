@@ -21,6 +21,11 @@ interface ColumnMapping {
   name: string;
   employeeId: string;
   department: string;
+  channel: string;
+  upi: string;
+  location: string;
+  region: string;
+  lineManager: string;
   programNameCol?: string;
   [key: string]: string | undefined;
 }
@@ -38,6 +43,11 @@ export default function ParticipantManager({ state, updateState }: { state: AppS
     name: '',
     employeeId: '',
     department: '',
+    channel: '',
+    upi: '',
+    location: '',
+    region: '',
+    lineManager: '',
     programNameCol: '',
   });
   const [isSplitMode, setIsSplitMode] = useState(false);
@@ -132,7 +142,9 @@ export default function ParticipantManager({ state, updateState }: { state: AppS
         
         // Auto-detect mappings
         const autoMap: ColumnMapping = { 
-          id: '', name: '', employeeId: '', department: '', programNameCol: ''
+          id: '', name: '', employeeId: '', department: '', 
+          channel: '', upi: '', location: '', region: '', lineManager: '',
+          programNameCol: ''
         };
         cols.forEach(col => {
           const l = col.toLowerCase();
@@ -141,6 +153,11 @@ export default function ParticipantManager({ state, updateState }: { state: AppS
           if (l.includes('mã') || l.includes('staff') || l.includes('emp') || l === 'upi') autoMap.employeeId = col;
           if (l.includes('phòng') || l.includes('dept')) autoMap.department = col;
           if (l.includes('ct') || l.includes('program')) autoMap.programNameCol = col;
+          if (l.includes('channel') || l.includes('kênh')) autoMap.channel = col;
+          if (l.includes('upi')) autoMap.upi = col;
+          if (l.includes('location') || l.includes('địa điểm')) autoMap.location = col;
+          if (l.includes('region') || l.includes('vùng')) autoMap.region = col;
+          if (l.includes('manager') || l.includes('quản lý')) autoMap.lineManager = col;
         });
         setMapping(autoMap);
 
@@ -180,6 +197,11 @@ export default function ParticipantManager({ state, updateState }: { state: AppS
       name: String(row[mapping.name] || "-"),
       employeeId: String(row[mapping.employeeId] || "-"),
       department: String(row[mapping.department] || "-"),
+      channel: String(row[mapping.channel] || ""),
+      upi: String(row[mapping.upi] || ""),
+      location: String(row[mapping.location] || ""),
+      region: String(row[mapping.region] || ""),
+      lineManager: String(row[mapping.lineManager] || ""),
       programName: isSplitMode && mapping.programNameCol ? String(row[mapping.programNameCol] || "General") : "",
     })));
 
@@ -321,8 +343,8 @@ export default function ParticipantManager({ state, updateState }: { state: AppS
                     <h4 className="flex items-center gap-2 font-black uppercase tracking-widest text-xs text-slate-400">
                       <TableIcon size={16} /> {t('upload.mapping')}
                     </h4>
-                    <div className="grid grid-cols-2 gap-4">
-                      {['id', 'name', 'employeeId', 'department'].map(field => (
+                    <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
+                      {['id', 'name', 'employeeId', 'department', 'channel', 'upi', 'location', 'region', 'lineManager'].map(field => (
                         <div key={field} className="space-y-1.5">
                           <label className="text-[10px] font-black uppercase text-slate-400 px-1">{field}</label>
                           <select 
@@ -578,8 +600,8 @@ export default function ParticipantManager({ state, updateState }: { state: AppS
                 </button>
               </div>
 
-              <form onSubmit={handleUpdateTicket} className="space-y-6">
-                <div className="space-y-2">
+              <form onSubmit={handleUpdateTicket} className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="space-y-2 col-span-full">
                   <label className="text-[10px] font-black uppercase text-slate-400 px-1">Candidate Name</label>
                   <input 
                     type="text"
@@ -589,28 +611,27 @@ export default function ParticipantManager({ state, updateState }: { state: AppS
                     required
                   />
                 </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2 text-left">
-                    <label className="text-[10px] font-black uppercase text-slate-400 px-1">Employee ID</label>
+                {[
+                  { label: 'Employee ID', key: 'employeeId' },
+                  { label: 'Department', key: 'department' },
+                  { label: 'Channel', key: 'channel' },
+                  { label: 'UPI', key: 'upi' },
+                  { label: 'Location', key: 'location' },
+                  { label: 'Region', key: 'region' },
+                  { label: 'Line Manager', key: 'lineManager' },
+                ].map(field => (
+                  <div key={field.key} className="space-y-2 text-left">
+                    <label className="text-[10px] font-black uppercase text-slate-400 px-1">{field.label}</label>
                     <input 
                       type="text"
-                      value={editingTicket.employeeId || ''}
-                      onChange={e => setEditingTicket({ ...editingTicket, employeeId: e.target.value })}
+                      value={(editingTicket as any)[field.key] || ''}
+                      onChange={e => setEditingTicket({ ...editingTicket, [field.key]: e.target.value })}
                       className="w-full px-4 py-3 bg-slate-50 border-2 border-slate-100 rounded-2xl focus:border-indigo-500 font-bold outline-none"
                     />
                   </div>
-                  <div className="space-y-2 text-left">
-                    <label className="text-[10px] font-black uppercase text-slate-400 px-1">Department</label>
-                    <input 
-                      type="text"
-                      value={editingTicket.department || ''}
-                      onChange={e => setEditingTicket({ ...editingTicket, department: e.target.value })}
-                      className="w-full px-4 py-3 bg-slate-50 border-2 border-slate-100 rounded-2xl focus:border-indigo-500 font-bold outline-none"
-                    />
-                  </div>
-                </div>
+                ))}
 
-                <div className="pt-6">
+                <div className="pt-6 col-span-full">
                   <button 
                     type="submit"
                     className="w-full py-5 bg-indigo-600 text-white rounded-2xl font-black uppercase tracking-widest shadow-xl shadow-indigo-600/20 hover:bg-indigo-700 active:scale-95 transition-all"

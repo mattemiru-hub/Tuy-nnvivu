@@ -333,25 +333,23 @@ const WinnerDisplay = ({
             </div>
             
             {/* Winner Details Grid */}
-            <div className="grid grid-cols-2 gap-4 w-full">
-              {winner.employeeId && (
-                <div key="detail-id" className="p-5 bg-white rounded-3xl border border-slate-100 flex flex-col items-start text-left shadow-sm">
-                  <div className="flex items-center gap-2 mb-2 text-indigo-400">
-                    <TicketIcon size={16} />
-                    <span className="text-[10px] font-black uppercase tracking-[0.1em]">Staff ID</span>
+            <div className="grid grid-cols-2 lg:grid-cols-3 gap-4 w-full">
+              {[
+                { label: 'Staff ID', value: winner.employeeId, icon: TicketIcon },
+                { label: 'Department', value: winner.department, icon: LayoutGrid },
+                { label: 'Channel', value: winner.channel, icon: Users },
+                { label: 'UPI', value: winner.upi, icon: Star },
+                { label: 'Location', value: winner.location, icon: Info },
+                { label: 'Line Manager', value: winner.lineManager, icon: Users },
+              ].map(field => field.value && (
+                <div key={field.label} className="p-4 bg-white rounded-2xl border border-slate-100 flex flex-col items-start text-left shadow-sm">
+                  <div className="flex items-center gap-2 mb-1 text-indigo-400">
+                    <field.icon size={14} />
+                    <span className="text-[9px] font-black uppercase tracking-[0.1em]">{field.label}</span>
                   </div>
-                  <p className="text-base font-black text-slate-800 truncate w-full">{winner.employeeId}</p>
+                  <p className="text-sm font-black text-slate-800 truncate w-full">{field.value}</p>
                 </div>
-              )}
-              {winner.department && (
-                <div key="detail-dept" className="p-5 bg-white rounded-3xl border border-slate-100 flex flex-col items-start text-left shadow-sm">
-                  <div className="flex items-center gap-2 mb-2 text-indigo-400">
-                    <LayoutGrid size={16} />
-                    <span className="text-[10px] font-black uppercase tracking-[0.1em]">Department</span>
-                  </div>
-                  <p className="text-base font-black text-slate-800 truncate w-full">{winner.department}</p>
-                </div>
-              )}
+              ))}
             </div>
           </motion.div>
         )}
@@ -572,57 +570,20 @@ const WinnerSidebar = ({
 export default function DrawScreen({ state, updateState, onNavigate }: { state: AppState, updateState: (updater: (prev: AppState) => AppState) => void, onNavigate: (tab: any) => void }) {
   const { t } = useTranslation();
   const currentProgram = state.programs.find(p => p.id === state.activeProgramId) || state.programs[0];
+  const participants = currentProgram?.ticketPool || [];
+  
   const [selectedPrizeId, setSelectedPrizeId] = useState<string | null>(null);
   const [isDrawing, setIsDrawing] = useState(false);
   const [currentWinner, setCurrentWinner] = useState<Ticket | null>(null);
-  const [visualPool, setVisualPool] = useState<Ticket[]>([]); 
-  const [countdown, setCountdown] = useState<number | null>(null);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [detailWinner, setDetailWinner] = useState<Winner | null>(null);
   
   const animationRef = useRef<NodeJS.Timeout | null>(null);
-  const audioRef = useRef<HTMLAudioElement | null>(null);
-
-  useEffect(() => {
-    if (currentProgram?.bgmEnabled && currentProgram?.bgmUrl) {
-      if (!audioRef.current) {
-        audioRef.current = new Audio(currentProgram.bgmUrl);
-        audioRef.current.loop = true;
-      } else if (audioRef.current.src !== currentProgram.bgmUrl) {
-        audioRef.current.src = currentProgram.bgmUrl;
-      }
-      
-      audioRef.current.volume = currentProgram.bgmVolume ?? 0.5;
-      
-      const playAudio = async () => {
-         try {
-            await audioRef.current?.play();
-         } catch (err) {
-            console.log("Audio autoplay blocked");
-         }
-      };
-      
-      playAudio();
-    } else {
-      audioRef.current?.pause();
-    }
-
-    return () => {
-      audioRef.current?.pause();
-    };
-  }, [currentProgram?.bgmEnabled, currentProgram?.bgmUrl, currentProgram?.bgmVolume]);
-
-  useEffect(() => {
-    if (state.programs.length > 0 && (!state.activeProgramId || !state.programs.find(p => p.id === state.activeProgramId))) {
-      updateState(prev => ({ ...prev, activeProgramId: state.programs[0].id }));
-    }
-  }, [state.programs.length, state.activeProgramId]);
 
   useEffect(() => {
     setCurrentWinner(null);
     setError(null);
-    setSelectedPrizeId(null);
     return () => {
       if (animationRef.current) clearTimeout(animationRef.current);
     };
@@ -630,9 +591,8 @@ export default function DrawScreen({ state, updateState, onNavigate }: { state: 
 
   const allPrizes = currentProgram?.prizes.filter(p => p.isActive).sort((a, b) => b.priority - a.priority) || [];
   const selectedPrize = allPrizes.find(p => p.id === selectedPrizeId) || allPrizes[0];
-  
   const programWinners = state.winners.filter(w => w.programId === currentProgram?.id);
-  const availablePool = currentProgram ? getAvailableParticipants(currentProgram.ticketPool, state.winners, currentProgram.id) : [];
+  const availablePool = currentProgram ? getAvailableParticipants(participants, state.winners, currentProgram.id) : [];
 
   const handleSelectPrize = (id: string) => {
     if (isDrawing) return;
@@ -657,62 +617,25 @@ export default function DrawScreen({ state, updateState, onNavigate }: { state: 
     
     setIsDrawing(true);
     setError(null);
-    
-    // Countdown 3-2-1
-    let cd = 3;
-    setCountdown(cd);
-    
-    const cdInterval = setInterval(() => {
-      cd--;
-      if (cd > 0) {
-        setCountdown(cd);
-        sounds.playSpinProgress(0.1);
-      } else {
-        clearInterval(cdInterval);
-        setCountdown(null);
-        startActualDraw();
-      }
-    }, 800);
-  };
-
-  const startActualDraw = () => {
     setCurrentWinner(null);
-    setError(null);
 
-    const winner = drawRandom(availablePool);
-    console.log("winner:", winner);
-
-    if (!winner) {
-      setError("No valid participants left.");
-      setIsDrawing(false);
-      return;
-    }
-
-    const poolTickets = currentProgram.ticketPool.length > 0 ? currentProgram.ticketPool : [];
-    let count = 0;
-    const maxTicks = 55;
-    const baseInterval = 35;
-
+    // Simulate drawing animation
+    let ticks = 0;
+    const maxTicks = 30;
+    
     const tick = () => {
-      try {
-        if (poolTickets.length > 0) {
-          setVisualPool(shuffleArray(poolTickets).slice(0, 5));
-        }
-        sounds.playSpinProgress(0.08);
-        count++;
-        if (count < maxTicks) {
-          const factor = count > (maxTicks * 0.7) ? Math.pow(count - (maxTicks * 0.7), 1.6) * 5 : 0;
-          animationRef.current = setTimeout(tick, baseInterval + factor);
+      ticks++;
+      if (ticks < maxTicks) {
+        animationRef.current = setTimeout(tick, 50 + ticks * 2);
+      } else {
+        const winner = drawRandom(availablePool);
+        if (winner) {
+          setCurrentWinner(winner);
+          sounds.playSuccess();
+          confetti({ particleCount: 150, spread: 70, origin: { y: 0.6 } });
         } else {
-          sounds.playDrumroll();
-          setTimeout(() => {
-            setCurrentWinner(winner);
-            setIsDrawing(false);
-            sounds.playSuccess();
-            fireConfetti();
-          }, 300);
+          setError("No valid participants left.");
         }
-      } catch (err) {
         setIsDrawing(false);
       }
     };
@@ -722,71 +645,19 @@ export default function DrawScreen({ state, updateState, onNavigate }: { state: 
   const confirmWinner = async () => {
     if (!currentWinner || !selectedPrize || !currentProgram) return;
     
-    if (!isSupabaseConfigured()) {
-      alert("Supabase is not configured. Please check your settings.");
-      return;
-    }
-    
     try {
-      const supabase = getSupabase();
-      // Check if this winner is already recorded
-      const alreadyRecorded = state.winners.some(w => w.ticketId === currentWinner.id && w.programId === currentProgram.id);
-      if (alreadyRecorded) return;
-
       await supabaseService.recordWinner(currentProgram.id, currentWinner.id, selectedPrize.id);
       await supabaseService.updatePrizeRemaining(selectedPrize.id, Math.max(0, selectedPrize.remaining - 1));
-      
-      // Clear current winner from display after confirmation
-      setTimeout(() => {
-         setCurrentWinner(null);
-      }, 1500);
+      setCurrentWinner(null);
     } catch (err) {
       console.error('Error confirming winner:', err);
-      alert('Lỗi khi ghi nhận người thắng cuộc vào Supabase.');
+      setError('Lỗi khi ghi nhận người thắng cuộc.');
     }
-  };
-
-  const handleReRoll = async () => {
-    if (failingValidation()) return;
-    
-    if (currentWinner) {
-      const winnerToRevoke = currentWinner;
-      const winnerRecord = state.winners.find(w => w.ticketId === winnerToRevoke.id && w.programId === currentProgram.id);
-      
-      if (winnerRecord) {
-        try {
-          await supabaseService.revokeWinner(winnerRecord.id);
-          const prize = currentProgram.prizes.find(pr => pr.id === winnerRecord.prizeId);
-          if (prize) {
-            await supabaseService.updatePrizeRemaining(prize.id, prize.remaining + 1);
-          }
-        } catch (err) {
-          console.error('Error revoking winner for re-roll:', err);
-        }
-      }
-      
-      setCurrentWinner(null);
-      handleDraw();
-    }
-  };
-
-  const failingValidation = () => {
-    if (!currentProgram) return true;
-    if (availablePool.length === 0) {
-      setError("No more available participants.");
-      return true;
-    }
-    return false;
-  };
-
-  const fireConfetti = () => {
-    confetti({ particleCount: 150, spread: 70, origin: { y: 0.6 }, colors: ['#6366f1', '#f59e0b', '#FFFFFF'] });
   };
 
   const resetResults = async () => {
     if (!currentProgram) return;
     if (!confirm("Reset all winners for this program?")) return;
-    
     try {
       await supabaseService.resetProgramWinners(currentProgram.id);
       setCurrentWinner(null);
@@ -795,25 +666,7 @@ export default function DrawScreen({ state, updateState, onNavigate }: { state: 
     }
   };
 
-  if (!currentProgram || currentProgram.ticketPool.length === 0 || currentProgram.prizes.length === 0) {
-    return (
-      <div className="flex-1 flex items-center justify-center p-8 bg-slate-50">
-        <div className="bg-white p-12 rounded-[3rem] text-center space-y-6 max-w-lg w-full shadow-2xl border border-slate-100">
-           <div className="w-24 h-24 bg-amber-50 text-amber-500 rounded-full flex items-center justify-center mx-auto mb-4">
-             <AlertTriangle size={48} />
-           </div>
-           <h3 className="text-3xl font-black text-slate-800 tracking-tight">Configuration Needed</h3>
-           <p className="text-slate-500 font-medium">Please ensure the program has both participants and prizes configured before starting.</p>
-           <button 
-             onClick={() => onNavigate('setup')}
-             className="w-full py-4 bg-slate-900 text-white rounded-2xl font-black uppercase tracking-widest hover:bg-slate-800 transition-all"
-           >
-             Go to Settings
-           </button>
-        </div>
-      </div>
-    );
-  }
+  const isValidConfig = currentProgram && participants.length > 0 && allPrizes.length > 0;
 
   return (
     <DrawLayout>
@@ -825,40 +678,45 @@ export default function DrawScreen({ state, updateState, onNavigate }: { state: 
         toggleFullscreen={toggleFullscreen}
       />
 
-      <DrawContent>
-        <DrawMainPanel 
-          currentWinner={currentWinner}
-          onDraw={handleDraw}
-          onConfirm={confirmWinner}
-          onReroll={handleReRoll}
-          isDrawing={isDrawing}
-          remaining={selectedPrize?.remaining || 0}
-          activePrizeName={selectedPrize?.name}
-          allPrizes={allPrizes}
-          selectedPrizeId={selectedPrizeId || (allPrizes.length > 0 ? allPrizes[0].id : null)}
-          onSelectPrize={handleSelectPrize}
-          selectedPrizeObject={selectedPrize}
-        />
+      {!isValidConfig ? (
+        <div className="flex-1 flex items-center justify-center p-8 bg-slate-50">
+          <div className="bg-white p-12 rounded-[3rem] text-center space-y-6 max-w-lg w-full shadow-2xl border border-slate-100">
+             <div className="w-24 h-24 bg-amber-50 text-amber-500 rounded-full flex items-center justify-center mx-auto mb-4">
+               <AlertTriangle size={48} />
+             </div>
+             <h3 className="text-3xl font-black text-slate-800 tracking-tight">Configuration Needed</h3>
+             <p className="text-slate-500 font-medium">Please ensure the program has both participants and prizes configured before starting.</p>
+             <button 
+               onClick={() => onNavigate('setup')}
+               className="w-full py-4 bg-slate-900 text-white rounded-2xl font-black uppercase tracking-widest hover:bg-slate-800 transition-all"
+             >
+               Go to Settings
+             </button>
+          </div>
+        </div>
+      ) : (
+        <DrawContent>
+          <DrawMainPanel 
+            currentWinner={currentWinner}
+            onDraw={handleDraw}
+            onConfirm={confirmWinner}
+            onReroll={() => { setCurrentWinner(null); handleDraw(); }}
+            isDrawing={isDrawing}
+            remaining={selectedPrize?.remaining || 0}
+            activePrizeName={selectedPrize?.name}
+            allPrizes={allPrizes}
+            selectedPrizeId={selectedPrizeId || (allPrizes.length > 0 ? allPrizes[0].id : null)}
+            onSelectPrize={handleSelectPrize}
+            selectedPrizeObject={selectedPrize}
+          />
 
-        <AnimatePresence>
-          {countdown !== null && (
-            <motion.div 
-              initial={{ scale: 2, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0.5, opacity: 0 }}
-              className="fixed inset-0 z-[150] flex items-center justify-center bg-white/40 backdrop-blur-md pointer-events-none"
-            >
-              <span className="text-[140px] lg:text-[240px] font-black text-indigo-600 italic tracking-tighter drop-shadow-2xl">{countdown}</span>
-            </motion.div>
-          )}
-        </AnimatePresence>
-
-        <WinnerSidebar 
-          programWinners={programWinners}
-          onReset={resetResults}
-          onShowDetail={(w) => setDetailWinner(w)}
-        />
-      </DrawContent>
+          <WinnerSidebar 
+            programWinners={programWinners}
+            onReset={resetResults}
+            onShowDetail={(w) => setDetailWinner(w)}
+          />
+        </DrawContent>
+      )}
 
       {/* Winner Detail Popup */}
       <AnimatePresence>

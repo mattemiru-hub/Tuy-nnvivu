@@ -19,14 +19,14 @@ export function getEligibleTickets(
 
     // Rule 2: Max wins per person
     const empId = ticket.employeeId && ticket.employeeId !== "-" ? ticket.employeeId : null;
-    const email = ticket.email && ticket.email !== "-" ? ticket.email : null;
+    const upi = ticket.upi && ticket.upi !== "-" ? ticket.upi : null;
     const name = ticket.name && ticket.name !== "-" ? ticket.name : null;
 
-    if (empId || email || name) {
+    if (empId || upi || name) {
       const personWins = winners.filter(w => 
         w.programId === program.id && 
         ((empId && w.employeeId === empId) || 
-         (email && w.email === email) || 
+         (upi && w.upi === upi) || 
          (name && w.ticketName === name))
       );
       if (personWins.length >= rules.maxWinsPerPerson) return false;

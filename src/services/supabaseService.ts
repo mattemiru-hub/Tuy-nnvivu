@@ -32,7 +32,14 @@ const mapPrize = (pr: any): Prize => ({
 const mapParticipant = (p: any): Ticket => ({
   ...p,
   id: p.id,
+  name: p.name,
+  channel: p.channel,
+  upi: p.upi,
+  location: p.location,
+  region: p.region,
+  lineManager: p.line_manager,
   employeeId: p.employee_id,
+  department: p.department,
 });
 
 const mapWinner = (w: any): Winner => ({
@@ -47,6 +54,7 @@ const mapWinner = (w: any): Winner => ({
   ticketName: w.participants?.name,
   department: w.participants?.department,
   employeeId: w.participants?.employee_id,
+  upi: w.participants?.upi,
 });
 
 export const supabaseService = {
@@ -133,8 +141,13 @@ export const supabaseService = {
     const records = participants.map(p => ({
       program_id: programId,
       name: p.name || 'Unknown',
-      department: p.department,
-      employee_id: p.employeeId,
+      channel: p.channel || '',
+      upi: p.upi || '',
+      location: p.location || '',
+      region: p.region || '',
+      line_manager: p.lineManager || '',
+      department: p.department || '',
+      employee_id: p.employeeId || '',
     }));
 
     const { error } = await getSupabase()
