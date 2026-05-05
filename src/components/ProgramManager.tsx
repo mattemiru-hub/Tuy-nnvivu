@@ -430,10 +430,10 @@ export default function ProgramManager({ state, updateState }: { state: AppState
                               const file = e.target.files?.[0];
                               if (!file) return;
 
-                              // Validate file size (100MB)
-                              const MAX_SIZE = 100 * 1024 * 1024;
+                              // Validate file size (200MB)
+                              const MAX_SIZE = 200 * 1024 * 1024;
                               if (file.size > MAX_SIZE) {
-                                setError("File nhạc quá lớn. Vui lòng chọn file dưới 100MB.");
+                                setError("File nhạc quá lớn. Vui lòng chọn file dưới 200MB.");
                                 return;
                               }
 

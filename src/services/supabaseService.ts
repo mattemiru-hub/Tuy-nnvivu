@@ -392,7 +392,7 @@ export const supabaseService = {
         throw new Error(`Chưa tìm thấy thư mục lưu trữ '${bucket}'. Vui lòng vào Supabase Dashboard -> Storage -> Tạo Bucket mới tên là '${bucket}' và để chế độ Public.`);
       }
       if (error.message.includes('exceeded the maximum allowed size')) {
-        throw new Error(`File quá lớn. Giới hạn tối đa của hệ thống hiện tại có thể thấp hơn file bạn chọn. Vui lòng thử file nhỏ hơn hoặc kiểm tra cấu hình Bucket trong Supabase.`);
+        throw new Error(`File quá lớn. Giới hạn của hệ thống Supabase (mặc định 50MB cho bản Free) đã bị vượt quá. Vui lòng nén file nhỏ hơn hoặc kiểm tra 'Max File Size' trong Supabase Dashboard -> Storage -> Settings.`);
       }
       throw error;
     }

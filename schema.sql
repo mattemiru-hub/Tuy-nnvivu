@@ -154,8 +154,8 @@ $$ LANGUAGE plpgsql;
 
 -- Tạo bucket nếu chưa có
 INSERT INTO storage.buckets (id, name, public, file_size_limit)
-VALUES ('prizes', 'prizes', true, 10485760) -- 10MB
-ON CONFLICT (id) DO UPDATE SET file_size_limit = EXCLUDED.file_size_limit;
+VALUES ('prizes', 'prizes', true, NULL) 
+ON CONFLICT (id) DO UPDATE SET file_size_limit = NULL;
 
 -- Cho phép mọi người xem ảnh (Read)
 DROP POLICY IF EXISTS "Public Access" ON storage.objects;
@@ -181,8 +181,8 @@ CREATE POLICY "Users Can Delete Their Own Objects" ON storage.objects
 
 -- Thêm quyền cho bucket 'audio'
 INSERT INTO storage.buckets (id, name, public, file_size_limit)
-VALUES ('audio', 'audio', true, 104857600) -- 100MB
-ON CONFLICT (id) DO UPDATE SET file_size_limit = EXCLUDED.file_size_limit;
+VALUES ('audio', 'audio', true, NULL) 
+ON CONFLICT (id) DO UPDATE SET file_size_limit = NULL;
 
 DROP POLICY IF EXISTS "Audio Public Access" ON storage.objects;
 CREATE POLICY "Audio Public Access" ON storage.objects

@@ -24,6 +24,8 @@ import HistoryView from './components/HistoryView';
 import SystemSettings from './components/SystemSettings';
 import Login from './components/Login';
 
+import BackgroundMusic from './components/BackgroundMusic';
+
 export default function App() {
   const { t, i18n } = useTranslation();
   const [state, setState] = useState<AppState>(INITIAL_STATE);
@@ -354,6 +356,13 @@ export default function App() {
           </AnimatePresence>
         </div>
       </main>
+
+      {/* Global Background Music */}
+      <BackgroundMusic 
+        url={currentProgram?.bgmUrl} 
+        volume={currentProgram?.bgmVolume} 
+        enabled={currentProgram?.bgmEnabled} 
+      />
     </div>
   );
 }

@@ -594,7 +594,6 @@ export default function DrawScreen({ state, updateState, onNavigate }: { state: 
     setError(null);
     return () => {
       if (animationRef.current) clearTimeout(animationRef.current);
-      sounds.stopBGM();
     };
   }, [state.activeProgramId]);
 
@@ -631,11 +630,6 @@ export default function DrawScreen({ state, updateState, onNavigate }: { state: 
     setError(null);
     setCurrentWinner(null);
 
-    // Start BGM if configured
-    if (currentProgram && currentProgram.bgmEnabled && currentProgram.bgmUrl) {
-      sounds.startBGM(currentProgram.bgmUrl, currentProgram.bgmVolume);
-    }
-
     // Simulate drawing animation
     let ticks = 0;
     const maxTicks = 40;
@@ -654,7 +648,6 @@ export default function DrawScreen({ state, updateState, onNavigate }: { state: 
           setError("No valid participants left.");
         }
         setIsDrawing(false);
-        sounds.stopBGM();
       }
     };
     tick();
