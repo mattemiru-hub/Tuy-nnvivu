@@ -72,9 +72,17 @@ export const supabaseService = {
 
   async createProgram(name: string, details?: Partial<DrawProgram>) {
     const supabase = getSupabase();
-    const { data: { user } } = await supabase.auth.getUser();
+    let { data: { user } } = await supabase.auth.getUser();
     
-    if (!user) throw new Error('User must be authenticated to create programs');
+    if (!user) {
+      const { data: { session } } = await supabase.auth.getSession();
+      user = session?.user || null;
+    }
+
+    if (!user) {
+      console.warn('Authentication missing when creating program');
+      throw new Error('Bạn cần đăng nhập để thực hiện thao tác này. Vui lòng tải lại trang.');
+    }
 
     const { data, error } = await supabase
       .from('programs')
@@ -155,12 +163,18 @@ export const supabaseService = {
 
   async uploadParticipants(programId: string, participants: Ticket[]): Promise<void> {
     const supabase = getSupabase();
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) throw new Error('User must be authenticated');
+    let { data: { user } } = await supabase.auth.getUser();
+    
+    if (!user) {
+      const { data: { session } } = await supabase.auth.getSession();
+      user = session?.user || null;
+    }
+
+    if (!user) throw new Error('Bạn cần đăng nhập để tải dữ liệu lên. Vui lòng tải lại trang.');
 
     const records = participants.map(p => ({
       program_id: programId,
-      user_id: user.id,
+      user_id: user?.id,
       name: p.name || 'Unknown',
       phone: p.phone || '',
       ticket_number: p.ticket_number || '',
@@ -181,12 +195,18 @@ export const supabaseService = {
   // Prizes
   async createPrize(programId: string, prize: Partial<Prize>) {
     const supabase = getSupabase();
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) throw new Error('User must be authenticated');
+    let { data: { user } } = await supabase.auth.getUser();
+    
+    if (!user) {
+      const { data: { session } } = await supabase.auth.getSession();
+      user = session?.user || null;
+    }
+
+    if (!user) throw new Error('Bạn cần đăng nhập để tạo giải thưởng.');
 
     const { error } = await supabase.from('prizes').insert({
       program_id: programId,
-      user_id: user.id,
+      user_id: user?.id,
       name: prize.name || 'New Prize',
       quantity: prize.quantity || 1,
       remaining: prize.remaining ?? prize.quantity ?? 1,
@@ -247,8 +267,14 @@ export const supabaseService = {
 
   async confirmWinner(participantId: string, programId: string, prizeId: string, currentRemaining: number) {
     const supabase = getSupabase();
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) throw new Error('User must be authenticated');
+    let { data: { user } } = await supabase.auth.getUser();
+    
+    if (!user) {
+      const { data: { session } } = await supabase.auth.getSession();
+      user = session?.user || null;
+    }
+
+    if (!user) throw new Error('Bạn cần đăng nhập để xác nhận người thắng cuộc.');
 
     // 1. Insert Winner
     const { error: winnerError } = await supabase
@@ -257,7 +283,7 @@ export const supabaseService = {
         participant_id: participantId,
         program_id: programId,
         prize_id: prizeId,
-        user_id: user.id
+        user_id: user?.id
       });
     if (winnerError) throw winnerError;
 
@@ -271,8 +297,14 @@ export const supabaseService = {
 
   async recordWinner(programId: string, participantId: string, prizeId: string): Promise<void> {
     const supabase = getSupabase();
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) throw new Error('User must be authenticated');
+    let { data: { user } } = await supabase.auth.getUser();
+    
+    if (!user) {
+      const { data: { session } } = await supabase.auth.getSession();
+      user = session?.user || null;
+    }
+
+    if (!user) throw new Error('Bạn cần đăng nhập để lưu người thắng cuộc.');
 
     const { error } = await supabase
       .from('winners')
@@ -280,7 +312,7 @@ export const supabaseService = {
         program_id: programId,
         participant_id: participantId,
         prize_id: prizeId,
-        user_id: user.id
+        user_id: user?.id
       });
 
     if (error) throw error;
