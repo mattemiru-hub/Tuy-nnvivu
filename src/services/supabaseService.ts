@@ -216,7 +216,7 @@ export const supabaseService = {
     }));
 
     // Split records into chunks
-    const CHUNK_SIZE = 200;
+    const CHUNK_SIZE = 500;
     const totalChunks = Math.ceil(records.length / CHUNK_SIZE);
 
     for (let i = 0; i < records.length; i += CHUNK_SIZE) {

@@ -267,13 +267,15 @@ const WinnerDisplay = ({
   isDrawing,
   activePrize,
   totalTickets,
-  eligibleCount
+  eligibleCount,
+  allParticipants = []
 }: { 
   winner: Ticket | null,
   isDrawing?: boolean,
   activePrize?: Prize,
   totalTickets: number,
-  eligibleCount: number
+  eligibleCount: number,
+  allParticipants?: Ticket[]
 }) => {
   return (
     <div className="winner-display relative min-h-[450px] flex flex-col justify-center transition-all duration-500">
@@ -407,8 +409,7 @@ const WinnerDisplay = ({
                     </div>
                   )}
                </div>
-               
-               <div className="space-y-4">
+                  <div className="space-y-4">
                   <div className="flex items-center justify-between group">
                      <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest group-hover:text-slate-600 transition-colors">Tổng người tham gia</span>
                      <span className="text-lg font-black text-slate-900 tabular-nums">
@@ -416,28 +417,32 @@ const WinnerDisplay = ({
                      </span>
                   </div>
                   
-                  {activePrize?.category && (
-                    <div className="flex items-center justify-between pt-4 border-t border-slate-200/50 group">
-                       <span className="text-[10px] font-black text-indigo-500 uppercase tracking-widest group-hover:text-indigo-700 transition-colors">
-                         Pool hợp lệ cho {activePrize.category}
-                       </span>
-                       <span className="text-2xl font-black text-indigo-600 tabular-nums">
-                         {eligibleCount.toLocaleString()}
+                  {activePrize?.category && activePrize.category.toLowerCase() !== 'all' && (
+                    <div className="flex items-center justify-between pt-2 group">
+                       <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest group-hover:text-slate-600 transition-colors">Khớp Đối tượng ({activePrize.category})</span>
+                       <span className="text-sm font-black text-slate-700 tabular-nums">
+                         {allParticipants.filter(p => {
+                           if (!p.category) return false;
+                           const pCat = p.category.trim().toLowerCase();
+                           const prizeCat = activePrize.category.trim().toLowerCase();
+                           const pCats = pCat.split(',').map(c => c.trim());
+                           const prizeCats = prizeCat.split(',').map(c => c.trim());
+                           return prizeCats.some(pc => pCats.includes(pc));
+                         }).length.toLocaleString()}
                        </span>
                     </div>
                   )}
 
-                  {!activePrize?.category && (
-                    <div className="flex items-center justify-between pt-4 border-t border-slate-200/50 group">
-                       <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest group-hover:text-slate-600 transition-colors">
-                         Pool hợp lệ (Tất cả)
-                       </span>
-                       <span className="text-2xl font-black text-slate-900 tabular-nums">
-                         {eligibleCount.toLocaleString()}
-                       </span>
-                    </div>
-                  )}
+                  <div className="flex items-center justify-between pt-4 border-t border-slate-200/50 group">
+                     <span className="text-[10px] font-black text-indigo-500 uppercase tracking-widest group-hover:text-indigo-700 transition-colors">
+                       Pool hợp lệ sau khi lọc quy tắc
+                     </span>
+                     <span className="text-2xl font-black text-indigo-600 tabular-nums">
+                       {eligibleCount.toLocaleString()}
+                     </span>
+                  </div>
                </div>
+
 
                <p className="mt-6 text-[9px] text-slate-400 italic px-2 leading-relaxed">
                  * Hệ thống tự động lọc người tham gia dựa trên "Đối tượng" của giải thưởng hiện tại.
@@ -591,10 +596,12 @@ const DrawMainPanel = ({
   activePrizeName,
   allPrizes,
   selectedPrizeId,
+  onDraw: onStartDraw, // Not used but keeping for props symmetry
   onSelectPrize,
   selectedPrizeObject,
   eligibleCount,
   totalTickets,
+  participants = [],
   availableCategories,
   filterCategory,
   onFilterChange
@@ -612,10 +619,13 @@ const DrawMainPanel = ({
   selectedPrizeObject?: Prize,
   eligibleCount: number,
   totalTickets: number,
+  participants?: Ticket[],
   availableCategories: string[],
   filterCategory: string,
   onFilterChange: (cat: string) => void
-}) => (
+}) => {
+  const { t } = useTranslation();
+  return (
   <main className="draw-main-panel flex-1 flex flex-col bg-white overflow-hidden min-h-[500px] lg:h-full">
     <div className="flex-1 overflow-y-auto custom-scrollbar p-6 lg:p-8 xl:p-12">
       <PrizeSelector 
@@ -634,6 +644,7 @@ const DrawMainPanel = ({
         activePrize={selectedPrizeObject}
         totalTickets={totalTickets}
         eligibleCount={eligibleCount}
+        allParticipants={participants}
       />
     </div>
 
@@ -659,11 +670,19 @@ const DrawMainPanel = ({
           >
             {isDrawing ? (
               <>
-                <div className="w-2 h-2 bg-white rounded-full animate-ping" /> DRAWING...
+                <div className="w-2 h-2 bg-white rounded-full animate-ping" /> {t('common.processing', 'DRAWING...')}
+              </>
+            ) : remaining === 0 ? (
+              <>
+                <X size={24} /> {t('draw.no_prizes', 'OUT OF PRIZES')}
+              </>
+            ) : eligibleCount === 0 ? (
+              <>
+                <Users size={24} className="opacity-50" /> {t('draw.no_eligible', 'NO ELIGIBLE PEOPLE')}
               </>
             ) : (
               <>
-                <Play size={24} fill="currentColor" /> DRAW
+                <Play size={24} fill="currentColor" /> {t('setup.select_button', 'DRAW')}
               </>
             )}
           </button>
@@ -689,6 +708,7 @@ const DrawMainPanel = ({
     </div>
   </main>
 );
+};
 
 
 const WinnerSidebar = ({ 
@@ -929,6 +949,7 @@ export default function DrawScreen({ state, updateState, onNavigate }: { state: 
             selectedPrizeObject={selectedPrize}
             eligibleCount={eligiblePool.length}
             totalTickets={participants.length}
+            participants={participants}
             availableCategories={categories}
             filterCategory={filterCategory}
             onFilterChange={setFilterCategory}

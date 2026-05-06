@@ -71,8 +71,16 @@ export default function App() {
         setState(prev => ({ ...prev, programs, isLoading: false }));
       }
     } catch (error: any) {
-      console.error('Error fetching initial data:', error);
-      setFetchError(error.message || 'Failed to connect to Supabase. Please check your network or configuration.');
+      console.error('Lỗi khi tải dữ liệu ban đầu:', error);
+      let errorMsg = error.message || 'Failed to connect to Supabase.';
+      
+      if (errorMsg.includes('fetch') || errorMsg.includes('Không thể tải')) {
+        errorMsg = i18n.language === 'vi' 
+          ? 'Không thể kết nối tới server Supabase. Vui lòng kiểm tra lại URL Supabase (phải bắt đầu bằng https://) và đảm bảo bạn đã cung cấp Anon Key chính xác trong phần Settings.'
+          : 'Failed to fetch from Supabase. Please check your Supabase URL (it must start with https://) and ensure your Anon Key is correct in the Settings.';
+      }
+      
+      setFetchError(errorMsg);
     } finally {
       setLoading(false);
     }

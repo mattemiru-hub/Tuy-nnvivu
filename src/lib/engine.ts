@@ -20,9 +20,17 @@ export function getEligibleTickets(
   // If targetPrize has a category, only include participants with the matching category.
   // If no category is set for prize, everyone is included.
   let pool = participants;
-  if (targetPrize.category && targetPrize.category.trim() !== '') {
-    const targetCat = targetPrize.category.trim().toLowerCase();
-    pool = participants.filter(p => p.category && p.category.trim().toLowerCase() === targetCat);
+  const prizeCat = targetPrize.category?.trim().toLowerCase();
+
+  if (prizeCat && prizeCat !== '' && prizeCat !== 'all') {
+    pool = participants.filter(p => {
+      if (!p.category) return false;
+      const pCat = p.category.trim().toLowerCase();
+      // Handle comma separated categories in either field
+      const pCats = pCat.split(',').map(c => c.trim());
+      const prizeCats = prizeCat.split(',').map(c => c.trim());
+      return prizeCats.some(pc => pCats.includes(pc));
+    });
   }
 
   return pool.filter(p => {
@@ -32,11 +40,12 @@ export function getEligibleTickets(
 
     // 2. Check maxWinsPerPerson
     // We identify a person by UPI first, then phone, employee_id, or name
-    const personKey = p.upi || p.phone || p.employee_id || p.name;
+    // Fallback to ticket ID to avoid grouping all people with missing fields as one person
+    const personKey = p.upi || p.phone || p.employee_id || p.name || `ticket-${p.id}`;
     const personWins = programWinners.filter(w => {
       const pw = w.participant;
       if (!pw) return false;
-      const pwKey = pw.upi || pw.phone || pw.employee_id || pw.name;
+      const pwKey = pw.upi || pw.phone || pw.employee_id || pw.name || `ticket-${pw.id}`;
       return pwKey === personKey;
     });
 
