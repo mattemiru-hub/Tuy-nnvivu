@@ -6,8 +6,8 @@ import { DEFAULT_RULES } from '../constants';
 // Network resilient helper
 async function withRetry<T>(
   operation: () => Promise<T>, 
-  maxRetries = 3, 
-  delay = 1000
+  maxRetries = 5, 
+  baseDelay = 1000
 ): Promise<T> {
   let lastError: any;
   for (let i = 0; i < maxRetries; i++) {
@@ -15,15 +15,21 @@ async function withRetry<T>(
       return await operation();
     } catch (err: any) {
       lastError = err;
+      const errorStr = err.toString();
+      const errorMsg = err.message || "";
+      
       const isNetworkError = 
-        err.message?.includes('fetch') || 
-        err.message?.includes('network') ||
-        err.toString().includes('TypeError: Failed to fetch') ||
-        err.message?.includes('connection') ||
-        err.message?.includes('timeout');
+        errorMsg.includes('fetch') || 
+        errorMsg.includes('network') ||
+        errorStr.includes('TypeError: Failed to fetch') ||
+        errorStr.includes('TypeError: NetworkError') ||
+        errorMsg.includes('connection') ||
+        errorMsg.includes('timeout') ||
+        errorMsg.includes('Load failed');
 
       if (isNetworkError && i < maxRetries - 1) {
-        const retryDelay = delay * (i + 1) + Math.random() * 500;
+        // Exponential backoff: 1s, 2s, 4s, 8s... + jitter
+        const retryDelay = Math.min(baseDelay * Math.pow(2, i), 15000) + Math.random() * 1000;
         console.warn(`Database operation failed (Attempt ${i + 1}/${maxRetries}). Retrying in ${Math.round(retryDelay)}ms...`, err);
         await new Promise(r => setTimeout(r, retryDelay));
         continue;
@@ -276,19 +282,22 @@ export const supabaseService = {
             .from('participants')
             .insert(chunk);
           if (error) throw error;
-        }, 5, 1000); // More retries for uploads
+        }, 10, 1500); // 10 retries for uploads with 1.5s base delay
       } catch (lastError: any) {
         console.error(`Error uploading chunk ${chunkCount}/${totalChunks} after retries:`, lastError);
         let msg = lastError?.message || 'Lỗi mạng không xác định';
-        if (msg.includes('Failed to fetch')) {
-          msg = 'Lỗi kết nối (Failed to fetch). Vui lòng kiểm tra URL Supabase phải bắt đầu bằng https:// và đảm bảo mạng ổn định.';
+        const isFetchError = msg.includes('fetch') || lastError.toString().includes('fetch');
+        if (isFetchError) {
+          msg = 'Lỗi kết nối nghiêm trọng (Failed to fetch). Hệ thống đã thử lại 10 lần nhưng không thành công. Vui lòng kiểm tra lại mạng hoặc thử tắt VPN/tường lửa.';
         }
         throw new Error(`Không thể tải lên một phần dữ liệu (từ dòng ${i + 1} đến ${i + chunk.length}). Lỗi: ${msg}`);
       }
       
-      // Small pause between chunks
-      if (records.length > CHUNK_SIZE) {
-        await new Promise(resolve => setTimeout(resolve, i % 1000 === 0 ? 200 : 50));
+      // Increased pause between chunks to let the connection "breathe"
+      if (i + CHUNK_SIZE < records.length) {
+        // Longer pause every 1000 records
+        const isMajorChunk = (i + CHUNK_SIZE) % 1000 === 0;
+        await new Promise(resolve => setTimeout(resolve, isMajorChunk ? 500 : 150));
       }
     }
     
