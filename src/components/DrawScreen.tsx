@@ -265,11 +265,15 @@ const DrawContent = ({ children }: { children: React.ReactNode }) => (
 const WinnerDisplay = ({ 
   winner, 
   isDrawing,
-  activePrize
+  activePrize,
+  totalTickets,
+  eligibleCount
 }: { 
   winner: Ticket | null,
   isDrawing?: boolean,
-  activePrize?: Prize
+  activePrize?: Prize,
+  totalTickets: number,
+  eligibleCount: number
 }) => {
   return (
     <div className="winner-display relative min-h-[450px] flex flex-col justify-center transition-all duration-500">
@@ -408,7 +412,7 @@ const WinnerDisplay = ({
                   <div className="flex items-center justify-between group">
                      <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest group-hover:text-slate-600 transition-colors">Tổng người tham gia</span>
                      <span className="text-lg font-black text-slate-900 tabular-nums">
-                       {state.tickets.length.toLocaleString()}
+                       {totalTickets.toLocaleString()}
                      </span>
                   </div>
                   
@@ -418,7 +422,7 @@ const WinnerDisplay = ({
                          Pool hợp lệ cho {activePrize.category}
                        </span>
                        <span className="text-2xl font-black text-indigo-600 tabular-nums">
-                         {state.tickets.filter(t => t.category?.trim().toLowerCase() === activePrize.category?.trim().toLowerCase()).length.toLocaleString()}
+                         {eligibleCount.toLocaleString()}
                        </span>
                     </div>
                   )}
@@ -429,7 +433,7 @@ const WinnerDisplay = ({
                          Pool hợp lệ (Tất cả)
                        </span>
                        <span className="text-2xl font-black text-slate-900 tabular-nums">
-                         {state.tickets.length.toLocaleString()}
+                         {eligibleCount.toLocaleString()}
                        </span>
                     </div>
                   )}
@@ -450,23 +454,72 @@ const PrizeSelector = ({
   prizes, 
   selectedPrizeId, 
   onSelect,
-  isDrawing
+  isDrawing,
+  availableCategories,
+  filterCategory,
+  onFilterChange
 }: { 
   prizes: Prize[], 
   selectedPrizeId: string | null, 
   onSelect: (id: string) => void,
-  isDrawing?: boolean
+  isDrawing?: boolean,
+  availableCategories: string[],
+  filterCategory: string,
+  onFilterChange: (cat: string) => void
 }) => {
   return (
     <div className={cn("mb-10 transition-opacity", isDrawing && "opacity-30 pointer-events-none")}>
-      <div className="flex items-center justify-between mb-4">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-8 p-6 bg-slate-50 border border-slate-100 rounded-[2.5rem]">
+        <div className="space-y-4 flex-1">
+          <div className="flex items-center gap-3">
+             <div className="w-10 h-10 bg-indigo-600 rounded-xl flex items-center justify-center text-white shadow-lg shadow-indigo-200">
+               <Users size={18} />
+             </div>
+             <div>
+               <h4 className="text-xs font-black text-slate-900 uppercase tracking-widest leading-none">Đối tượng quay thưởng</h4>
+               <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">Chọn nhóm đối tượng để lọc giải thưởng</p>
+             </div>
+          </div>
+          
+          <div className="flex flex-wrap gap-2">
+             <button 
+               onClick={() => onFilterChange('ALL')}
+               className={cn(
+                 "px-5 py-2.5 text-[10px] font-black rounded-2xl shadow-sm transition-all uppercase tracking-widest border",
+                 filterCategory === 'ALL' 
+                   ? "bg-indigo-600 text-white shadow-indigo-200 border-indigo-600 scale-105" 
+                   : "bg-white text-slate-700 border-slate-200 hover:border-indigo-400"
+               )}
+             >
+               TẤT CẢ
+             </button>
+             {availableCategories.map(cat => (
+               <button 
+                 key={cat}
+                 onClick={() => onFilterChange(cat)}
+                 className={cn(
+                   "px-5 py-2.5 text-[10px] font-black rounded-2xl transition-all uppercase tracking-widest shadow-sm border",
+                   filterCategory === cat
+                     ? "bg-amber-500 text-white shadow-amber-200 border-amber-500 scale-105"
+                     : "bg-white text-slate-700 border-slate-200 hover:border-amber-400 hover:text-amber-600"
+                 )}
+               >
+                 {cat}
+               </button>
+             ))}
+          </div>
+        </div>
+
+        <div className="h-px md:h-12 w-full md:w-px bg-slate-200 hidden md:block" />
+
         <div className="flex items-center gap-2">
-          <Gift size={16} className="text-indigo-600" />
-          <h4 className="text-xs font-black text-slate-900 uppercase tracking-widest">Active Prize Categories</h4>
+          <Gift size={20} className="text-indigo-600" />
+          <h4 className="text-xs font-black text-slate-900 uppercase tracking-widest leading-none">Giải thưởng tương ứng</h4>
         </div>
       </div>
+
       <div className="flex flex-wrap gap-3">
-        {prizes.map((prize) => (
+        {prizes.length > 0 ? prizes.map((prize) => (
           <button
             key={prize.id}
             onClick={() => onSelect(prize.id)}
@@ -517,7 +570,12 @@ const PrizeSelector = ({
                 </div>
             </div>
           </button>
-        ))}
+        )) : (
+          <div className="w-full py-10 flex flex-col items-center justify-center bg-slate-50 rounded-[2rem] border-2 border-dashed border-slate-200 text-slate-300 gap-2">
+            <Gift size={32} strokeWidth={1} />
+            <span className="text-[10px] font-black uppercase tracking-widest">Không có giải thưởng cho đối tượng này</span>
+          </div>
+        )}
       </div>
     </div>
   );
@@ -535,7 +593,11 @@ const DrawMainPanel = ({
   selectedPrizeId,
   onSelectPrize,
   selectedPrizeObject,
-  eligibleCount
+  eligibleCount,
+  totalTickets,
+  availableCategories,
+  filterCategory,
+  onFilterChange
 }: { 
   currentWinner: Ticket | null,
   onDraw: () => void,
@@ -548,7 +610,11 @@ const DrawMainPanel = ({
   selectedPrizeId: string | null,
   onSelectPrize: (id: string) => void,
   selectedPrizeObject?: Prize,
-  eligibleCount: number
+  eligibleCount: number,
+  totalTickets: number,
+  availableCategories: string[],
+  filterCategory: string,
+  onFilterChange: (cat: string) => void
 }) => (
   <main className="draw-main-panel flex-1 flex flex-col bg-white overflow-hidden min-h-[500px] lg:h-full">
     <div className="flex-1 overflow-y-auto custom-scrollbar p-6 lg:p-8 xl:p-12">
@@ -557,12 +623,17 @@ const DrawMainPanel = ({
         selectedPrizeId={selectedPrizeId} 
         onSelect={onSelectPrize} 
         isDrawing={isDrawing}
+        availableCategories={availableCategories}
+        filterCategory={filterCategory}
+        onFilterChange={onFilterChange}
       />
 
       <WinnerDisplay 
         winner={currentWinner} 
         isDrawing={isDrawing} 
         activePrize={selectedPrizeObject}
+        totalTickets={totalTickets}
+        eligibleCount={eligibleCount}
       />
     </div>
 
@@ -684,6 +755,7 @@ export default function DrawScreen({ state, updateState, onNavigate }: { state: 
   const participants = state.participants;
   
   const [selectedPrizeId, setSelectedPrizeId] = useState<string | null>(null);
+  const [filterCategory, setFilterCategory] = useState<string>('ALL');
   const [isDrawing, setIsDrawing] = useState(false);
   const [currentWinner, setCurrentWinner] = useState<Ticket | null>(null);
   const [isFullscreen, setIsFullscreen] = useState(false);
@@ -704,7 +776,13 @@ export default function DrawScreen({ state, updateState, onNavigate }: { state: 
     .filter(p => (p as any).is_active !== false)
     .sort((a, b) => (b.priority || 0) - (a.priority || 0)) || [];
   
-  const selectedPrize = allPrizes.find(p => p.id === selectedPrizeId) || allPrizes[0];
+  const categories = currentProgram?.categories ? currentProgram.categories.split(',').map(c => c.trim()).filter(Boolean) : [];
+  
+  const displayedPrizes = allPrizes.filter(p => 
+    filterCategory === 'ALL' || (p.category?.trim().toLowerCase() === filterCategory.toLowerCase())
+  );
+
+  const selectedPrize = allPrizes.find(p => p.id === selectedPrizeId) || (displayedPrizes.length > 0 ? displayedPrizes[0] : allPrizes[0]);
   const programWinners = state.winners.filter(w => w.program_id === currentProgram?.id);
   const eligiblePool = (currentProgram && selectedPrize) ? getEligibleTickets(state.participants, state.winners, currentProgram, selectedPrize) : [];
 
@@ -760,6 +838,34 @@ export default function DrawScreen({ state, updateState, onNavigate }: { state: 
     if (!currentWinner || !selectedPrize || !currentProgram) return;
     
     try {
+      // 1. Priority 1 Upgrade Rule: If person wins priority 1, revoke their previous lower wins
+      if (selectedPrize.priority === 1 && currentProgram.rules?.enablePriorityOneUpgrade) {
+          const personKey = currentWinner.upi || currentWinner.phone || currentWinner.employee_id || currentWinner.name;
+          const programWinners = state.winners.filter(w => w.program_id === currentProgram.id);
+          const personWins = programWinners.filter(w => {
+            const pw = w.participant;
+            if (!pw) return false;
+            const pwKey = pw.upi || pw.phone || pw.employee_id || pw.name;
+            return pwKey === personKey;
+          });
+
+          if (personWins.length > 0) {
+            const revocableList = currentProgram.rules?.revocablePriorities || [];
+            for (const win of personWins) {
+              // ONLY REVOKE IF win.prize.priority is in revocableList
+              // or if the revocableList is empty/null (fallback to old behavior: revoke all)
+              if (revocableList.length === 0 || revocableList.includes(win.prize?.priority || 0)) {
+                await supabaseService.revokeWinner(win.id);
+                // Prize remaining needs to be restored
+                const prize = state.prizes.find(p => p.id === win.prize_id);
+                if (prize) {
+                  await supabaseService.updatePrizeRemaining(win.prize_id, (prize.remaining || 0) + 1);
+                }
+              }
+            }
+          }
+      }
+
       await supabaseService.confirmWinner(currentWinner.id, currentProgram.id, selectedPrize.id, selectedPrize.remaining);
       setCurrentWinner(null);
     } catch (err) {
@@ -817,11 +923,15 @@ export default function DrawScreen({ state, updateState, onNavigate }: { state: 
             isDrawing={isDrawing}
             remaining={selectedPrize?.remaining || 0}
             activePrizeName={selectedPrize?.name}
-            allPrizes={allPrizes}
-            selectedPrizeId={selectedPrizeId || (allPrizes.length > 0 ? allPrizes[0].id : null)}
+            allPrizes={displayedPrizes}
+            selectedPrizeId={selectedPrizeId || (displayedPrizes.length > 0 ? displayedPrizes[0].id : null)}
             onSelectPrize={handleSelectPrize}
             selectedPrizeObject={selectedPrize}
             eligibleCount={eligiblePool.length}
+            totalTickets={participants.length}
+            availableCategories={categories}
+            filterCategory={filterCategory}
+            onFilterChange={setFilterCategory}
           />
 
           <WinnerSidebar 

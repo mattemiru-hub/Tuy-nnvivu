@@ -4,8 +4,8 @@
  */
 
 import React, { useState } from 'react';
-import { AppState, DrawProgram, Prize } from '../types';
-import { Plus, Trash2, Calendar, LayoutGrid, FileText, CheckCircle2, Copy, History, Image as ImageIcon, Trophy, Save, Music, Info, RefreshCcw, Upload } from 'lucide-react';
+import { AppState, DrawProgram, Prize, RuleConfig } from '../types';
+import { Plus, Trash2, Calendar, LayoutGrid, FileText, CheckCircle2, Copy, History, Image as ImageIcon, Trophy, Save, Music, Info, RefreshCcw, Upload, ShieldCheck } from 'lucide-react';
 import { generateId, cn, formatDate, compressImage } from '../lib/utils';
 import { DEFAULT_RULES, INITIAL_PRIZES } from '../constants';
 import { useTranslation } from 'react-i18next';
@@ -29,6 +29,7 @@ export default function ProgramManager({ state, updateState }: { state: AppState
   const [month, setMonth] = useState<number>(new Date().getMonth() + 1);
   const [year, setYear] = useState<number>(new Date().getFullYear());
   const [categories, setCategories] = useState<string>('');
+  const [rules, setRules] = useState<RuleConfig>(DEFAULT_RULES);
   const [editingProgramId, setEditingProgramId] = useState<string | null>(null);
   const [prizes, setPrizes] = useState<Prize[]>([]);
 
@@ -72,7 +73,7 @@ export default function ProgramManager({ state, updateState }: { state: AppState
       const newProg = await supabaseService.createProgram(name, {
         description: template ? template.description : description,
         thumbnail: template ? template.thumbnail : thumbnail,
-        rules: template ? { ...template.rules } : { ...DEFAULT_RULES },
+        rules: template ? { ...template.rules } : { ...rules },
         month: month,
         year: year,
         categories: template ? template.categories : categories,
@@ -127,7 +128,8 @@ export default function ProgramManager({ state, updateState }: { state: AppState
         theatreSubtitle,
         bannerHeight,
         bannerPosition,
-        bannerFit
+        bannerFit,
+        rules
       });
       setEditingProgramId(null);
       setNewProgramName('');
@@ -149,6 +151,7 @@ export default function ProgramManager({ state, updateState }: { state: AppState
     setMonth(p.month || new Date().getMonth() + 1);
     setYear(p.year || new Date().getFullYear());
     setCategories(p.categories || '');
+    setRules(p.rules || DEFAULT_RULES);
     setBgmUrl(p.bgmUrl || '');
     setBgmVolume(p.bgmVolume ?? 0.5);
     setBgmEnabled(p.bgmEnabled ?? true);
@@ -397,27 +400,105 @@ export default function ProgramManager({ state, updateState }: { state: AppState
                   </div>
                </div>
 
-               <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
                   <div className="space-y-2">
-                    <label className="text-[10px] font-black uppercase text-slate-400 px-1">Display Badge (e.g., Year End Party)</label>
+                    <label className="text-[10px] font-black uppercase text-slate-400 px-1 flex items-center gap-1.5">
+                      <Trophy size={10} className="text-amber-500" />
+                      {t('setup.theatre_badge')}
+                    </label>
                     <input 
                       type="text"
                       value={theatreBadge}
                       onChange={(e) => setTheatreBadge(e.target.value)}
-                      placeholder="LUCKY DRAW"
-                      className="w-full px-4 py-3 bg-white border-2 border-slate-100 rounded-xl focus:border-indigo-500 font-bold outline-none"
+                      placeholder="e.g. YEAR END PARTY 2024"
+                      className="w-full px-4 py-3 bg-white border-2 border-slate-100 rounded-xl focus:border-indigo-500 font-bold outline-none text-xs"
                     />
                   </div>
                   <div className="space-y-2">
-                    <label className="text-[10px] font-black uppercase text-slate-400 px-1">Theatre Subtitle</label>
+                    <label className="text-[10px] font-black uppercase text-slate-400 px-1 flex items-center gap-1.5">
+                      <FileText size={10} className="text-indigo-400" />
+                      {t('setup.theatre_subtitle')}
+                    </label>
                     <input 
                       type="text"
                       value={theatreSubtitle}
                       onChange={(e) => setTheatreSubtitle(e.target.value)}
-                      placeholder="Welcome to our live event"
-                      className="w-full px-4 py-3 bg-white border-2 border-slate-100 rounded-xl focus:border-indigo-500 font-bold outline-none"
+                      placeholder="e.g. Welcome to our Grand Lucky Draw"
+                      className="w-full px-4 py-3 bg-white border-2 border-slate-100 rounded-xl focus:border-indigo-500 font-bold outline-none text-xs"
                     />
                   </div>
+               </div>
+
+               {/* Rules Section */}
+               <div className="mt-8 pt-8 border-t border-slate-100 space-y-6">
+                <div className="flex items-center gap-3">
+                  <div className="w-8 h-8 bg-slate-900 rounded-lg flex items-center justify-center text-white font-bold text-xs shadow-lg">
+                    <ShieldCheck size={16} />
+                  </div>
+                  <h4 className="font-black italic uppercase tracking-tight text-slate-800">{t('setup.rules_title')}</h4>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                  <div className="p-4 bg-slate-50 border-2 border-slate-100 rounded-2xl space-y-3">
+                    <p className="text-[9px] font-black uppercase text-slate-400 tracking-widest">{t('setup.max_wins_ticket')}</p>
+                    <input 
+                      type="number"
+                      value={rules.maxWinsPerTicket}
+                      onChange={(e) => setRules({ ...rules, maxWinsPerTicket: parseInt(e.target.value) || 1 })}
+                      className="w-full px-4 py-2 bg-white border-2 border-slate-100 rounded-xl focus:border-indigo-500 font-bold outline-none text-sm"
+                    />
+                  </div>
+
+                  <div className="p-4 bg-slate-50 border-2 border-slate-100 rounded-2xl space-y-3">
+                    <p className="text-[9px] font-black uppercase text-slate-400 tracking-widest">{t('setup.max_wins_person')}</p>
+                    <input 
+                      type="number"
+                      value={rules.maxWinsPerPerson}
+                      onChange={(e) => setRules({ ...rules, maxWinsPerPerson: parseInt(e.target.value) || 1 })}
+                      className="w-full px-4 py-2 bg-white border-2 border-slate-100 rounded-xl focus:border-indigo-500 font-bold outline-none text-sm"
+                    />
+                  </div>
+
+                  <div 
+                    className={cn(
+                      "p-4 border-2 rounded-2xl transition-all cursor-pointer flex flex-col justify-between",
+                      rules.enablePriorityOneUpgrade ? "bg-indigo-50 border-indigo-200" : "bg-slate-50 border-slate-100"
+                    )}
+                    onClick={() => setRules({ ...rules, enablePriorityOneUpgrade: !rules.enablePriorityOneUpgrade })}
+                  >
+                    <div className="flex items-center justify-between pointer-events-none">
+                      <p className={cn("text-[8px] font-black uppercase tracking-widest", rules.enablePriorityOneUpgrade ? "text-indigo-600" : "text-slate-400")}>
+                        {t('setup.priority_upgrade')}
+                      </p>
+                      <div className={cn(
+                        "w-8 h-4 rounded-full relative transition-colors",
+                        rules.enablePriorityOneUpgrade ? "bg-indigo-600" : "bg-slate-300"
+                      )}>
+                        <div className={cn(
+                          "absolute top-0.5 w-3 h-3 bg-white rounded-full transition-all",
+                          rules.enablePriorityOneUpgrade ? "right-1" : "left-1"
+                        )} />
+                      </div>
+                    </div>
+                    <p className="text-[8px] text-slate-500 leading-tight mt-2 font-medium italic">{t('setup.priority_upgrade_desc')}</p>
+                  </div>
+                </div>
+
+                {rules.enablePriorityOneUpgrade && (
+                  <div className="p-4 bg-indigo-50 border-2 border-indigo-100 rounded-2xl space-y-3 animate-in fade-in slide-in-from-top-1">
+                    <p className="text-[9px] font-black uppercase text-indigo-600 tracking-widest">{t('setup.revocable_ranks')}</p>
+                    <input 
+                      type="text"
+                      placeholder="e.g. 5, 6"
+                      value={rules.revocablePriorities?.join(', ') || ''}
+                      onChange={(e) => {
+                        const vals = e.target.value.split(',').map(v => parseInt(v.trim())).filter(v => !isNaN(v));
+                        setRules({ ...rules, revocablePriorities: vals });
+                      }}
+                      className="w-full px-4 py-2 bg-white border-2 border-indigo-100 rounded-xl focus:border-indigo-500 font-bold outline-none text-sm"
+                    />
+                  </div>
+                )}
                </div>
 
                <div className="mt-8 pt-8 border-t border-slate-100">

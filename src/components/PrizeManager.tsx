@@ -159,6 +159,70 @@ export default function PrizeManager({ state, updateState }: { state: AppState, 
         </div>
       </div>
 
+      {/* Rules Configuration */}
+      <section className="space-y-6">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 bg-slate-900 rounded-xl flex items-center justify-center text-white shadow-lg">
+            <ShieldCheck size={20} />
+          </div>
+          <div>
+            <h3 className="text-xl font-black tracking-tighter uppercase italic text-slate-900">{t('setup.rules_title')}</h3>
+            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{t('setup.rules_subtitle')}</p>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div className="p-6 bg-white border-2 border-slate-100 rounded-3xl space-y-4">
+            <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest">{t('setup.max_wins_ticket')}</p>
+            <div className="flex items-center gap-4">
+              <input 
+                type="number"
+                value={currentProgram.rules.maxWinsPerTicket}
+                onChange={(e) => handleUpdateRule('maxWinsPerTicket', parseInt(e.target.value) || 1)}
+                className="w-full px-4 py-3 bg-slate-50 border-2 border-slate-100 rounded-xl focus:border-indigo-500 font-bold outline-none"
+              />
+            </div>
+            <p className="text-[9px] text-slate-400 italic">{t('setup.max_wins_desc')}</p>
+          </div>
+
+          <div className="p-6 bg-white border-2 border-slate-100 rounded-3xl space-y-4">
+            <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest">{t('setup.max_wins_person')}</p>
+            <div className="flex items-center gap-4">
+              <input 
+                type="number"
+                value={currentProgram.rules.maxWinsPerPerson}
+                onChange={(e) => handleUpdateRule('maxWinsPerPerson', parseInt(e.target.value) || 1)}
+                className="w-full px-4 py-3 bg-slate-50 border-2 border-slate-100 rounded-xl focus:border-indigo-500 font-bold outline-none"
+              />
+            </div>
+            <p className="text-[9px] text-slate-400 italic">Dựa trên UPI, Phone hoặc Email</p>
+          </div>
+
+          <div className={cn(
+            "p-6 border-2 rounded-3xl transition-all cursor-pointer flex flex-col justify-between",
+            currentProgram.rules.enablePriorityOneUpgrade 
+              ? "bg-indigo-50 border-indigo-200" 
+              : "bg-white border-slate-100"
+          )} onClick={() => handleUpdateRule('enablePriorityOneUpgrade', !currentProgram.rules.enablePriorityOneUpgrade)}>
+            <div className="flex items-center justify-between">
+              <p className={cn("text-[10px] font-black uppercase tracking-widest", currentProgram.rules.enablePriorityOneUpgrade ? "text-indigo-600" : "text-slate-400")}>
+                {t('setup.priority_upgrade')}
+              </p>
+              <div className={cn(
+                "w-10 h-6 rounded-full relative transition-colors",
+                currentProgram.rules.enablePriorityOneUpgrade ? "bg-indigo-600" : "bg-slate-200"
+              )}>
+                <div className={cn(
+                  "absolute top-1 w-4 h-4 bg-white rounded-full transition-all",
+                  currentProgram.rules.enablePriorityOneUpgrade ? "left-5" : "left-1"
+                )} />
+              </div>
+            </div>
+            <p className="text-[9px] text-slate-500 leading-relaxed mt-2">{t('setup.priority_upgrade_desc')}</p>
+          </div>
+        </div>
+      </section>
+
       {/* Prize Selection & Filtering */}
       <section className="space-y-6">
         <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6">

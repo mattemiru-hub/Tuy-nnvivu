@@ -39,6 +39,8 @@ export interface RuleConfig {
   maxWinsPerPerson: number;
   preventDuplicatePrizeType: boolean;
   fairnessRandom: boolean;
+  enablePriorityOneUpgrade?: boolean;
+  revocablePriorities?: number[];
 }
 
 export interface DrawProgram {

@@ -16,6 +16,8 @@ export const DEFAULT_RULES = {
   maxWinsPerPerson: 1,
   preventDuplicatePrizeType: true,
   fairnessRandom: true,
+  enablePriorityOneUpgrade: true,
+  revocablePriorities: [],
 };
 
 export const INITIAL_STATE: AppState = {
