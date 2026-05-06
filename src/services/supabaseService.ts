@@ -216,7 +216,7 @@ export const supabaseService = {
     }));
 
     // Split records into chunks
-    const CHUNK_SIZE = 500;
+    const CHUNK_SIZE = 200;
     const totalChunks = Math.ceil(records.length / CHUNK_SIZE);
 
     for (let i = 0; i < records.length; i += CHUNK_SIZE) {
@@ -227,7 +227,7 @@ export const supabaseService = {
       const chunk = records.slice(i, i + CHUNK_SIZE);
       
       // Retry logic for each chunk
-      let retries = 3;
+      let retries = 5;
       let success = false;
       let lastError: any = null;
 
@@ -240,19 +240,38 @@ export const supabaseService = {
           if (error) {
             lastError = error;
             // If it's a transient error, retry
-            if (error.message.includes('fetch') || error.message.includes('connection')) {
+            const isTransient = 
+              error.message.includes('fetch') || 
+              error.message.includes('connection') || 
+              error.message.includes('timeout') ||
+              error.message.includes('network');
+
+            if (isTransient) {
               retries--;
-              if (retries > 0) await new Promise(r => setTimeout(r, 1000));
-              continue;
+              if (retries > 0) {
+                const delay = (5 - retries) * 1000 + Math.random() * 500;
+                await new Promise(r => setTimeout(r, delay));
+                continue;
+              }
             }
             throw error;
           }
           success = true;
         } catch (err: any) {
           lastError = err;
-          if (err.message?.includes('fetch') || err.message?.includes('network')) {
+          const isNetworkError = 
+            err.message?.includes('fetch') || 
+            err.message?.includes('network') ||
+            err.toString().includes('TypeError: Failed to fetch');
+
+          if (isNetworkError) {
             retries--;
-            if (retries > 0) await new Promise(r => setTimeout(r, 1000));
+            if (retries > 0) {
+              const delay = (5 - retries) * 1000 + Math.random() * 500;
+              await new Promise(r => setTimeout(r, delay));
+            } else {
+              throw err;
+            }
           } else {
             throw err;
           }
@@ -261,12 +280,16 @@ export const supabaseService = {
 
       if (!success) {
         console.error(`Error uploading chunk ${chunkCount}/${totalChunks} after retries:`, lastError);
-        throw new Error(`Không thể tải lên một phần dữ liệu (từ dòng ${i + 1} đến ${i + chunk.length}). Lỗi: ${lastError?.message || 'Lỗi mạng'}`);
+        let msg = lastError?.message || 'Lỗi mạng không xác định';
+        if (msg.includes('Failed to fetch')) {
+          msg = 'Lỗi kết nối (Failed to fetch). Vui lòng kiểm tra URL Supabase phải bắt đầu bằng https:// và đảm bảo mạng ổn định.';
+        }
+        throw new Error(`Không thể tải lên một phần dữ liệu (từ dòng ${i + 1} đến ${i + chunk.length}). Lỗi: ${msg}`);
       }
       
       // Small pause between chunks
       if (records.length > CHUNK_SIZE) {
-        await new Promise(resolve => setTimeout(resolve, 50));
+        await new Promise(resolve => setTimeout(resolve, i % 1000 === 0 ? 200 : 50));
       }
     }
     

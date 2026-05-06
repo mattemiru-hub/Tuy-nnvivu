@@ -30,7 +30,7 @@ interface ColumnMapping {
 }
 
 export default function ParticipantManager({ state, updateState }: { state: AppState, updateState: (updater: (prev: AppState) => AppState) => void }) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const [activeSubTab, setActiveSubTab] = useState<'upload' | 'list'>('upload');
   const [isProcessing, setIsProcessing] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
@@ -268,12 +268,14 @@ export default function ParticipantManager({ state, updateState }: { state: AppS
       }
       setRawData([]);
       setUploadProgress(100);
-      alert("Đã xử lý dữ liệu và nạp vào hệ thống!");
+      alert(i18n.language === 'vi' ? "Đã nạp dữ liệu thành công!" : "Data uploaded successfully!");
     } catch (err: any) {
       console.error('Error uploading participants:', err);
-      // Hiển thị chi tiết lỗi để dễ chẩn đoán trên Vercel
-      const errorMsg = err.message || err.details || "Unknown error";
-      alert(`Lỗi khi tải dữ liệu lên Supabase: ${errorMsg}\nVui lòng kiểm tra RLS Policies và kết nối mạng.`);
+      const errorMsg = err.message || "Unknown error";
+      setError(errorMsg);
+      alert(i18n.language === 'vi' 
+        ? `Lỗi khi tải dữ liệu: ${errorMsg}\nHệ thống đã tự động thử lại 5 lần cho mỗi phần dữ liệu nhưng vẫn thất bại. Vui lòng kiểm tra lại kết nối mạng hoặc thử chia nhỏ file hơn nữa.`
+        : `Error uploading data: ${errorMsg}\nThe system retried 5 times for each chunk but still failed. Please check your connection or try uploading in smaller batches.`);
     } finally {
       setIsProcessing(false);
       setUploadProgress(0);
