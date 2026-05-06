@@ -24,7 +24,13 @@ export default function Login() {
 
       if (error) throw error;
     } catch (err: any) {
-      setError(err.message || 'Failed to sign in');
+      let msg = err.message || 'Failed to sign in';
+      if (msg.includes('fetch') || err.toString().includes('Failed to fetch')) {
+        msg = i18n.language === 'vi'
+          ? 'Lỗi kết nối tới Supabase. Vui lòng kiểm tra lại URL trong phần Settings (phải bắt đầu bằng https://).'
+          : 'Connection error. Please check your Supabase URL in Settings (must start with https://).';
+      }
+      setError(msg);
       console.error('Login error:', err);
     } finally {
       setLoading(false);

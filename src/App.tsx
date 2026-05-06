@@ -74,10 +74,18 @@ export default function App() {
       console.error('Lỗi khi tải dữ liệu ban đầu:', error);
       let errorMsg = error.message || 'Failed to connect to Supabase.';
       
-      if (errorMsg.includes('fetch') || errorMsg.includes('Không thể tải')) {
+      // Better detection for "Failed to fetch" which is often network/CORS or config related
+      const isNetworkError = 
+        errorMsg.includes('fetch') || 
+        errorMsg.includes('network') || 
+        errorMsg.includes('load') ||
+        error.toString().includes('TypeError: Failed to fetch') ||
+        errorMsg.includes('Không tìm nạp được');
+
+      if (isNetworkError) {
         errorMsg = i18n.language === 'vi' 
-          ? 'Không thể kết nối tới server Supabase. Vui lòng kiểm tra lại URL Supabase (phải bắt đầu bằng https://) và đảm bảo bạn đã cung cấp Anon Key chính xác trong phần Settings.'
-          : 'Failed to fetch from Supabase. Please check your Supabase URL (it must start with https://) and ensure your Anon Key is correct in the Settings.';
+          ? 'Không thể kết nối (Failed to fetch). Vui lòng: 1. Kiểm tra URL Supabase và Anon Key trong Settings. 2. Đảm bảo URL bắt đầu bằng https://. 3. Kiểm tra kết nối mạng hoặc VPN.'
+          : 'Failed to fetch from Supabase. Please: 1. Check your Supabase URL and Anon Key in Settings. 2. Ensure the URL starts with https://. 3. Check your network connection or VPN.';
       }
       
       setFetchError(errorMsg);
