@@ -16,7 +16,16 @@ export function getEligibleTickets(
   // Winners for this program
   const programWinners = allWinners.filter(w => w.program_id === program.id);
 
-  return participants.filter(p => {
+  // 0. Filter by Prize Category (Object)
+  // If targetPrize has a category, only include participants with the matching category.
+  // If no category is set for prize, everyone is included.
+  let pool = participants;
+  if (targetPrize.category && targetPrize.category.trim() !== '') {
+    const targetCat = targetPrize.category.trim().toLowerCase();
+    pool = participants.filter(p => p.category && p.category.trim().toLowerCase() === targetCat);
+  }
+
+  return pool.filter(p => {
     // 1. Check maxWinsPerTicket
     const ticketWins = programWinners.filter(w => w.participant_id === p.id).length;
     if (ticketWins >= (rules.maxWinsPerTicket || 1)) return false;

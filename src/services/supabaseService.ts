@@ -19,6 +19,7 @@ const mapProgram = (p: any): DrawProgram => ({
   bgmUrl: p.bgm_url || '',
   bgmVolume: p.bgm_volume ?? 0.5,
   bgmEnabled: p.bgm_enabled ?? true,
+  categories: p.categories || '',
   theatreBadge: p.theatre_badge || 'LUCKY DRAW',
   theatreSubtitle: p.theatre_subtitle || '',
   bannerHeight: p.banner_height ?? 20,
@@ -35,7 +36,8 @@ const mapPrize = (pr: any): Prize => ({
   priority: pr.priority || 0,
   image: pr.image || '',
   value: pr.value || 0,
-  isActive: pr.is_active ?? true
+  isActive: pr.is_active ?? true,
+  category: pr.category || ''
 });
 
 const mapParticipant = (p: any): Ticket => ({
@@ -49,6 +51,7 @@ const mapParticipant = (p: any): Ticket => ({
   location: p.location || '',
   region: p.region || '',
   line_manager: p.line_manager || '',
+  category: p.category || '',
   created_at: p.created_at || new Date().toISOString()
 });
 
@@ -105,6 +108,7 @@ export const supabaseService = {
         bgm_url: details?.bgmUrl || '',
         bgm_volume: details?.bgmVolume ?? 0.5,
         bgm_enabled: details?.bgmEnabled ?? true,
+        categories: details?.categories || '',
         theatre_badge: details?.theatreBadge || 'LUCKY DRAW',
         theatre_subtitle: details?.theatreSubtitle || '',
         banner_height: details?.bannerHeight ?? 20,
@@ -130,6 +134,7 @@ export const supabaseService = {
     if (updates.bgmUrl !== undefined) payload.bgm_url = updates.bgmUrl;
     if (updates.bgmVolume !== undefined) payload.bgm_volume = updates.bgmVolume;
     if (updates.bgmEnabled !== undefined) payload.bgm_enabled = updates.bgmEnabled;
+    if (updates.categories !== undefined) payload.categories = updates.categories;
     if (updates.theatreBadge !== undefined) payload.theatre_badge = updates.theatreBadge;
     if (updates.theatreSubtitle !== undefined) payload.theatre_subtitle = updates.theatreSubtitle;
     if (updates.bannerHeight !== undefined) payload.banner_height = updates.bannerHeight;
@@ -185,7 +190,7 @@ export const supabaseService = {
     return data.map(mapPrize);
   },
 
-  async uploadParticipants(programId: string, participants: Ticket[]): Promise<void> {
+  async uploadParticipants(programId: string, participants: Ticket[], onProgress?: (percent: number) => void): Promise<void> {
     const supabase = getSupabase();
     let { data: { user } } = await supabase.auth.getUser();
     
@@ -207,26 +212,65 @@ export const supabaseService = {
       location: p.location || '',
       region: p.region || '',
       line_manager: p.line_manager || '',
+      category: p.category || '',
     }));
 
-    // Split records into chunks of 200 to avoid request size limits and use sequential processing
+    // Split records into chunks
     const CHUNK_SIZE = 200;
+    const totalChunks = Math.ceil(records.length / CHUNK_SIZE);
+
     for (let i = 0; i < records.length; i += CHUNK_SIZE) {
+      const chunkCount = Math.floor(i / CHUNK_SIZE) + 1;
+      const percent = Math.round((chunkCount / totalChunks) * 100);
+      if (onProgress) onProgress(percent);
+
       const chunk = records.slice(i, i + CHUNK_SIZE);
-      const { error } = await supabase
-        .from('participants')
-        .insert(chunk);
       
-      if (error) {
-        console.error(`Error uploading chunk ${i / CHUNK_SIZE}:`, error);
-        throw error;
+      // Retry logic for each chunk
+      let retries = 3;
+      let success = false;
+      let lastError: any = null;
+
+      while (retries > 0 && !success) {
+        try {
+          const { error } = await supabase
+            .from('participants')
+            .insert(chunk);
+          
+          if (error) {
+            lastError = error;
+            // If it's a transient error, retry
+            if (error.message.includes('fetch') || error.message.includes('connection')) {
+              retries--;
+              if (retries > 0) await new Promise(r => setTimeout(r, 1000));
+              continue;
+            }
+            throw error;
+          }
+          success = true;
+        } catch (err: any) {
+          lastError = err;
+          if (err.message?.includes('fetch') || err.message?.includes('network')) {
+            retries--;
+            if (retries > 0) await new Promise(r => setTimeout(r, 1000));
+          } else {
+            throw err;
+          }
+        }
+      }
+
+      if (!success) {
+        console.error(`Error uploading chunk ${chunkCount}/${totalChunks} after retries:`, lastError);
+        throw new Error(`Không thể tải lên một phần dữ liệu (từ dòng ${i + 1} đến ${i + chunk.length}). Lỗi: ${lastError?.message || 'Lỗi mạng'}`);
       }
       
-      // Small pause between chunks to let the connection breathe
+      // Small pause between chunks
       if (records.length > CHUNK_SIZE) {
         await new Promise(resolve => setTimeout(resolve, 50));
       }
     }
+    
+    if (onProgress) onProgress(100);
   },
 
   // Prizes
@@ -250,7 +294,8 @@ export const supabaseService = {
       priority: prize.priority || 0,
       is_active: prize.isActive ?? true,
       image: prize.image || '',
-      value: prize.value || 0
+      value: prize.value || 0,
+      category: prize.category || ''
     });
     if (error) throw error;
   },
@@ -264,6 +309,7 @@ export const supabaseService = {
     if (updates.isActive !== undefined) payload.is_active = updates.isActive;
     if (updates.image !== undefined) payload.image = updates.image;
     if (updates.value !== undefined) payload.value = updates.value;
+    if (updates.category !== undefined) payload.category = updates.category;
 
     const { error } = await getSupabase()
       .from('prizes')
@@ -405,24 +451,62 @@ export const supabaseService = {
   async uploadFile(bucket: string, path: string, file: File): Promise<string> {
     const supabase = getSupabase();
     
-    // Attempt to ensure bucket exists, but check specifically for the upload
-    const { data, error } = await supabase.storage
-      .from(bucket)
-      .upload(path, file, { upsert: true });
+    let retries = 2;
+    let uploadData = null;
+    let uploadError = null;
 
-    if (error) {
-      if (error.message.includes('Bucket not found')) {
+    while (retries >= 0) {
+      try {
+        const { data, error } = await supabase.storage
+          .from(bucket)
+          .upload(path, file, { upsert: true });
+        
+        if (!error) {
+          uploadData = data;
+          break;
+        }
+        
+        uploadError = error;
+        // If it's a network error, retry
+        if (error.message.includes('fetch') || error.message.includes('network')) {
+          retries--;
+          if (retries >= 0) {
+            console.log(`Retrying upload to ${bucket}/${path}... (${retries} left)`);
+            await new Promise(r => setTimeout(r, 2000));
+            continue;
+          }
+        }
+        break; // Non-network error or no retries left
+      } catch (err: any) {
+        uploadError = err;
+        if (err.message?.includes('fetch') || err.message?.includes('network')) {
+          retries--;
+          if (retries >= 0) {
+            await new Promise(r => setTimeout(r, 2000));
+            continue;
+          }
+        }
+        break;
+      }
+    }
+
+    if (uploadError || !uploadData) {
+      const error = uploadError as any;
+      if (error?.message?.includes('Bucket not found')) {
         throw new Error(`Chưa tìm thấy thư mục lưu trữ '${bucket}'. Vui lòng vào Supabase Dashboard -> Storage -> Tạo Bucket mới tên là '${bucket}' và để chế độ Public.`);
       }
-      if (error.message.includes('exceeded the maximum allowed size')) {
+      if (error?.message?.includes('exceeded the maximum allowed size')) {
         throw new Error(`File quá lớn. Giới hạn của hệ thống Supabase (mặc định 50MB cho bản Free) đã bị vượt quá. Vui lòng nén file nhỏ hơn hoặc kiểm tra 'Max File Size' trong Supabase Dashboard -> Storage -> Settings.`);
       }
-      throw error;
+      if (error?.message?.includes('fetch')) {
+        throw new Error(`Lỗi kết nối mạng (Failed to fetch). File có thể quá lớn so với đường truyền hiện tại hoặc server đã ngắt kết nối. Vui lòng thử lại với file nhỏ hơn (< 50MB) hoặc kiểm tra lại mạng.`);
+      }
+      throw error || new Error('Lỗi upload file không xác định');
     }
 
     const { data: { publicUrl } } = supabase.storage
       .from(bucket)
-      .getPublicUrl(data.path);
+      .getPublicUrl(uploadData.path);
 
     return publicUrl;
   }

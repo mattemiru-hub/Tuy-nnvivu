@@ -317,12 +317,19 @@ const WinnerDisplay = ({
                 <p className="text-4xl font-black tracking-tighter text-slate-300 uppercase">Ready to draw</p>
                 <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">Awaiting your command</p>
               </div>
-              {activePrize && (
-                <div className="inline-flex items-center gap-2 px-4 py-2 bg-indigo-50 text-indigo-600 rounded-2xl border border-indigo-100 scale-110">
-                   <Gift size={16} />
-                   <span className="text-xs font-black uppercase tracking-widest">Active: {activePrize.name}</span>
+          {activePrize && (
+            <div className="flex flex-col items-center gap-2">
+              <div className="inline-flex items-center gap-2 px-4 py-2 bg-indigo-50 text-indigo-600 rounded-2xl border border-indigo-100 scale-110">
+                 <Gift size={16} />
+                 <span className="text-xs font-black uppercase tracking-widest">Active: {activePrize.name}</span>
+              </div>
+              {activePrize.category && (
+                <div className="px-3 py-1 bg-amber-50 text-amber-600 rounded-xl text-[9px] font-black uppercase tracking-widest border border-amber-100 italic">
+                  Drawing for: {activePrize.category}
                 </div>
               )}
+            </div>
+          )}
             </div>
           </motion.div>
         ) : (
@@ -419,21 +426,28 @@ const PrizeSelector = ({
               {prize.image ? <img src={prize.image} className="w-full h-full object-cover rounded-xl" /> : <Trophy size={18} />}
             </div>
             <div>
-              <p className={cn(
-                "text-sm font-black tracking-tight leading-none mb-1",
-                selectedPrizeId === prize.id ? "text-white" : "text-slate-800"
-              )}>
-                {prize.name}
-              </p>
-              <div className="flex items-center gap-2 mt-0.5">
                 <p className={cn(
-                  "text-[10px] font-bold uppercase tracking-widest",
-                  selectedPrizeId === prize.id ? "text-indigo-100" : "text-slate-400"
+                  "text-sm font-black tracking-tight leading-none mb-1 truncate max-w-[120px]",
+                  selectedPrizeId === prize.id ? "text-white" : "text-slate-800"
                 )}>
-                  {prize.remaining} / {prize.quantity} Left
+                  {prize.name}
                 </p>
-                {prize.remaining === 0 && <span className="w-1.5 h-1.5 rounded-full bg-red-400" />}
-              </div>
+                <div className="flex flex-col gap-0.5">
+                  <p className={cn(
+                    "text-[10px] font-bold uppercase tracking-widest",
+                    selectedPrizeId === prize.id ? "text-indigo-100" : "text-slate-400"
+                  )}>
+                    {prize.remaining} / {prize.quantity} Left
+                  </p>
+                  {prize.category && (
+                    <p className={cn(
+                      "text-[8px] font-black uppercase tracking-tighter truncate max-w-[100px]",
+                      selectedPrizeId === prize.id ? "text-indigo-200" : "text-indigo-500"
+                    )}>
+                      Target: {prize.category}
+                    </p>
+                  )}
+                </div>
             </div>
           </button>
         ))}

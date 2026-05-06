@@ -28,6 +28,7 @@ export default function ProgramManager({ state, updateState }: { state: AppState
   const [bgmEnabled, setBgmEnabled] = useState<boolean>(true);
   const [month, setMonth] = useState<number>(new Date().getMonth() + 1);
   const [year, setYear] = useState<number>(new Date().getFullYear());
+  const [categories, setCategories] = useState<string>('');
   const [editingProgramId, setEditingProgramId] = useState<string | null>(null);
   const [prizes, setPrizes] = useState<Prize[]>([]);
 
@@ -74,6 +75,7 @@ export default function ProgramManager({ state, updateState }: { state: AppState
         rules: template ? { ...template.rules } : { ...DEFAULT_RULES },
         month: month,
         year: year,
+        categories: template ? template.categories : categories,
         bgmUrl: template ? template.bgmUrl : bgmUrl,
         bgmVolume: template ? template.bgmVolume : bgmVolume,
         bgmEnabled: template ? template.bgmEnabled : bgmEnabled,
@@ -117,6 +119,7 @@ export default function ProgramManager({ state, updateState }: { state: AppState
         thumbnail,
         month,
         year,
+        categories,
         bgmUrl,
         bgmVolume,
         bgmEnabled,
@@ -145,6 +148,7 @@ export default function ProgramManager({ state, updateState }: { state: AppState
     setThumbnail(p.thumbnail);
     setMonth(p.month || new Date().getMonth() + 1);
     setYear(p.year || new Date().getFullYear());
+    setCategories(p.categories || '');
     setBgmUrl(p.bgmUrl || '');
     setBgmVolume(p.bgmVolume ?? 0.5);
     setBgmEnabled(p.bgmEnabled ?? true);
@@ -285,6 +289,22 @@ export default function ProgramManager({ state, updateState }: { state: AppState
                     </select>
                  </div>
               </div>
+            </div>
+
+            <div className="space-y-3">
+              <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] pl-1">
+                Đối tượng tham gia (Categories) - Phân cách bằng dấu phẩy
+              </label>
+              <input 
+                type="text" 
+                placeholder="e.g. ENGINEERS, SALES, STAFF (Nếu trống sẽ áp dụng cho tất cả)"
+                value={categories}
+                onChange={(e) => setCategories(e.target.value)}
+                className="w-full px-6 py-4 bg-slate-50 border-2 border-slate-100 rounded-2xl focus:border-indigo-500 focus:bg-white outline-none font-bold text-sm transition-all"
+              />
+              <p className="text-[9px] text-slate-400 italic px-2">
+                * Các từ khóa này sẽ dùng để lọc người tham gia cho từng loại giải thưởng tương ứng.
+              </p>
             </div>
 
             <div className="space-y-3">

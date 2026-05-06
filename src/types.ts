@@ -17,6 +17,7 @@ export interface Ticket {
   employee_id?: string;
   department?: string;
   position?: string;
+  category?: string;
   created_at: string;
 }
 
@@ -30,6 +31,7 @@ export interface Prize {
   image?: string;
   value?: number;
   isActive?: boolean;
+  category?: string;
 }
 
 export interface RuleConfig {
@@ -57,6 +59,7 @@ export interface DrawProgram {
   bgmUrl?: string;
   bgmVolume?: number;
   bgmEnabled?: boolean;
+  categories?: string;
   month?: number;
   year?: number;
 }

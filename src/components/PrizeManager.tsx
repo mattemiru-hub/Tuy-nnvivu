@@ -411,13 +411,27 @@ export default function PrizeManager({ state, updateState }: { state: AppState, 
 
                 <div className="grid grid-cols-2 gap-6">
                   <div className="space-y-2">
-                    <label className="text-[10px] font-black uppercase text-slate-400 px-1">Giá trị (VNĐ)</label>
-                    <input 
-                      type="number"
-                      value={isEditingPrize.value}
-                      onChange={e => setIsEditingPrize({ ...isEditingPrize, value: parseInt(e.target.value) || 0 })}
-                      className="w-full px-4 py-3 bg-slate-50 border-2 border-slate-100 rounded-2xl focus:border-indigo-500 font-bold outline-none"
-                    />
+                    <label className="text-[10px] font-black uppercase text-slate-400 px-1">Đối tượng (Category)</label>
+                    {currentProgram.categories ? (
+                      <select 
+                        value={isEditingPrize.category || ''}
+                        onChange={e => setIsEditingPrize({ ...isEditingPrize, category: e.target.value })}
+                        className="w-full px-4 py-3 bg-slate-50 border-2 border-slate-100 rounded-2xl focus:border-indigo-500 font-bold outline-none"
+                      >
+                         <option value="">-- Apply to All --</option>
+                         {currentProgram.categories.split(',').map(cat => (
+                           <option key={cat.trim()} value={cat.trim()}>{cat.trim()}</option>
+                         ))}
+                      </select>
+                    ) : (
+                      <input 
+                        type="text"
+                        value={isEditingPrize.category || ''}
+                        onChange={e => setIsEditingPrize({ ...isEditingPrize, category: e.target.value })}
+                        className="w-full px-4 py-3 bg-slate-50 border-2 border-slate-100 rounded-2xl focus:border-indigo-500 font-bold outline-none"
+                        placeholder="e.g. ENGINEERS"
+                      />
+                    )}
                   </div>
                   <div className="space-y-2">
                     <label className="text-[10px] font-black uppercase text-slate-400 px-1">Thứ tự ưu tiên</label>
@@ -428,6 +442,16 @@ export default function PrizeManager({ state, updateState }: { state: AppState, 
                       className="w-full px-4 py-3 bg-slate-50 border-2 border-slate-100 rounded-2xl focus:border-indigo-500 font-bold outline-none"
                     />
                   </div>
+                </div>
+
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black uppercase text-slate-400 px-1">Giá trị (VNĐ)</label>
+                  <input 
+                    type="number"
+                    value={isEditingPrize.value}
+                    onChange={e => setIsEditingPrize({ ...isEditingPrize, value: parseInt(e.target.value) || 0 })}
+                    className="w-full px-4 py-3 bg-slate-50 border-2 border-slate-100 rounded-2xl focus:border-indigo-500 font-bold outline-none"
+                  />
                 </div>
 
                 <div className="pt-6">

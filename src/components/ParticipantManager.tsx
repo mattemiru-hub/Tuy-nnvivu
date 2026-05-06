@@ -24,6 +24,7 @@ interface ColumnMapping {
   location: string;
   region: string;
   line_manager: string;
+  category: string;
   programNameCol?: string;
   [key: string]: string | undefined;
 }
@@ -32,6 +33,7 @@ export default function ParticipantManager({ state, updateState }: { state: AppS
   const { t } = useTranslation();
   const [activeSubTab, setActiveSubTab] = useState<'upload' | 'list'>('upload');
   const [isProcessing, setIsProcessing] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
   const [error, setError] = useState<string | null>(null);
   const [warning, setWarning] = useState<string | null>(null);
   const [rawData, setRawData] = useState<any[]>([]);
@@ -44,6 +46,7 @@ export default function ParticipantManager({ state, updateState }: { state: AppS
     location: '',
     region: '',
     line_manager: '',
+    category: '',
     programNameCol: '',
   });
   const [isSplitMode, setIsSplitMode] = useState(false);
@@ -88,6 +91,7 @@ export default function ParticipantManager({ state, updateState }: { state: AppS
         location: editingTicket.location,
         region: editingTicket.region,
         line_manager: editingTicket.line_manager,
+        category: editingTicket.category,
       }).eq('id', editingTicket.id);
       
       if (error) throw error;
@@ -143,6 +147,7 @@ export default function ParticipantManager({ state, updateState }: { state: AppS
         // Auto-detect mappings
         const autoMap: ColumnMapping = { 
           ticket_number: '', name: '', channel: '', upi: '', location: '', region: '', line_manager: '',
+          category: '',
           programNameCol: ''
         };
         cols.forEach(col => {
@@ -150,6 +155,7 @@ export default function ParticipantManager({ state, updateState }: { state: AppS
           if (l.includes('phiếu') || l.includes('stt') || l.includes('ticket')) autoMap.ticket_number = col;
           if (l.includes('tên') || l.includes('name')) autoMap.name = col;
           if (l.includes('ct') || l.includes('program')) autoMap.programNameCol = col;
+          if (l.includes('category') || l.includes('đối tượng') || l.includes('loại')) autoMap.category = col;
           if (l.includes('channel') || l.includes('kênh')) autoMap.channel = col;
           if (l.includes('upi')) autoMap.upi = col;
           if (l.includes('location') || l.includes('địa điểm')) autoMap.location = col;
@@ -216,6 +222,7 @@ export default function ParticipantManager({ state, updateState }: { state: AppS
         location: String(row[mapping.location] || ""),
         region: String(row[mapping.region] || ""),
         line_manager: String(row[mapping.line_manager] || ""),
+        category: String(row[mapping.category] || ""),
         programName: isSplitMode && mapping.programNameCol ? String(row[mapping.programNameCol] || "General") : "",
         created_at: new Date().toISOString()
       }));
@@ -227,6 +234,7 @@ export default function ParticipantManager({ state, updateState }: { state: AppS
 
     try {
       setIsProcessing(true);
+      setUploadProgress(0);
       if (isSplitMode && mapping.programNameCol) {
         const programGroups: Record<string, Ticket[]> = {};
         processedData.forEach(item => {
@@ -235,20 +243,31 @@ export default function ParticipantManager({ state, updateState }: { state: AppS
           programGroups[pName].push(item);
         });
 
+        const totalPrograms = Object.keys(programGroups).length;
+        let completedPrograms = 0;
+
         for (const [name, tickets] of Object.entries(programGroups)) {
           let targetProgram = state.programs.find(p => p.name === name);
           if (!targetProgram) {
             targetProgram = await supabaseService.createProgram(name);
           }
-          await supabaseService.uploadParticipants(targetProgram.id, tickets);
+          await supabaseService.uploadParticipants(targetProgram.id, tickets, (p) => {
+            // Intra-program progress combined with overall program count
+            const overallP = Math.round(((completedPrograms + (p/100)) / totalPrograms) * 100);
+            setUploadProgress(overallP);
+          });
+          completedPrograms++;
         }
       } else {
         const activeId = state.activeProgramId;
         if (activeId) {
-          await supabaseService.uploadParticipants(activeId, processedData);
+          await supabaseService.uploadParticipants(activeId, processedData, (p) => {
+            setUploadProgress(p);
+          });
         }
       }
       setRawData([]);
+      setUploadProgress(100);
       alert("Đã xử lý dữ liệu và nạp vào hệ thống!");
     } catch (err: any) {
       console.error('Error uploading participants:', err);
@@ -257,6 +276,7 @@ export default function ParticipantManager({ state, updateState }: { state: AppS
       alert(`Lỗi khi tải dữ liệu lên Supabase: ${errorMsg}\nVui lòng kiểm tra RLS Policies và kết nối mạng.`);
     } finally {
       setIsProcessing(false);
+      setUploadProgress(0);
     }
   };
 
@@ -350,9 +370,34 @@ export default function ParticipantManager({ state, updateState }: { state: AppS
                   <p className="text-sm text-slate-400 mt-2 font-medium">Supports .xlsx, .xls, .csv</p>
                 </div>
                 {isProcessing && (
-                  <div className="absolute inset-0 bg-white/80 backdrop-blur-sm flex items-center justify-center flex-col gap-4">
-                    <RefreshCcw className="animate-spin text-blue-600" size={40} />
-                    <p className="font-black uppercase tracking-widest text-sm">Processing Data...</p>
+                  <div className="absolute inset-0 bg-white/90 backdrop-blur-sm flex items-center justify-center flex-col gap-6 p-10 text-center">
+                    <div className="relative">
+                      <RefreshCcw className="animate-spin text-blue-600" size={64} />
+                      {uploadProgress > 0 && (
+                        <div className="absolute inset-0 flex items-center justify-center">
+                           <span className="text-[10px] font-black text-blue-600">{uploadProgress}%</span>
+                        </div>
+                      )}
+                    </div>
+                    <div>
+                      <p className="font-black uppercase tracking-widest text-sm text-slate-900">
+                        {uploadProgress > 0 ? `Uploading Data... ${uploadProgress}%` : 'Processing Data...'}
+                      </p>
+                      <p className="text-xs text-slate-400 mt-2 font-medium max-w-xs mx-auto">
+                        Please do not close this tab until the process is complete.
+                      </p>
+                    </div>
+                    
+                    {uploadProgress > 0 && (
+                      <div className="w-full max-w-xs bg-slate-100 h-2 rounded-full overflow-hidden">
+                        <motion.div 
+                          className="bg-blue-600 h-full"
+                          initial={{ width: 0 }}
+                          animate={{ width: `${uploadProgress}%` }}
+                          transition={{ type: "spring", bounce: 0, duration: 0.5 }}
+                        />
+                      </div>
+                    )}
                   </div>
                 )}
               </div>
@@ -363,8 +408,8 @@ export default function ParticipantManager({ state, updateState }: { state: AppS
                     <h4 className="flex items-center gap-2 font-black uppercase tracking-widest text-xs text-slate-400">
                       <TableIcon size={16} /> {t('upload.mapping')}
                     </h4>
-                    <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
-                      {['ticket_number', 'name', 'channel', 'upi', 'location', 'region', 'line_manager'].map(field => (
+                    <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                      {['ticket_number', 'name', 'category', 'channel', 'upi', 'location', 'region', 'line_manager'].map(field => (
                         <div key={field} className="space-y-1.5">
                           <label className="text-[10px] font-black uppercase text-slate-400 px-1">{field}</label>
                           <select 
@@ -633,6 +678,7 @@ export default function ParticipantManager({ state, updateState }: { state: AppS
                 </div>
                 {[
                   { label: 'Ticket #', key: 'ticket_number' },
+                  { label: 'Category (Object)', key: 'category' },
                   { label: 'Channel', key: 'channel' },
                   { label: 'UPI', key: 'upi' },
                   { label: 'Location', key: 'location' },

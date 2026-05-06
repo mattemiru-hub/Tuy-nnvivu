@@ -89,6 +89,9 @@ ALTER TABLE programs ADD COLUMN IF NOT EXISTS theatre_subtitle TEXT;
 ALTER TABLE programs ADD COLUMN IF NOT EXISTS banner_height INTEGER DEFAULT 20;
 ALTER TABLE programs ADD COLUMN IF NOT EXISTS banner_position INTEGER DEFAULT 50;
 ALTER TABLE programs ADD COLUMN IF NOT EXISTS banner_fit TEXT DEFAULT 'cover';
+ALTER TABLE programs ADD COLUMN IF NOT EXISTS categories TEXT;
+ALTER TABLE participants ADD COLUMN IF NOT EXISTS category TEXT;
+ALTER TABLE prizes ADD COLUMN IF NOT EXISTS category TEXT;
 ALTER TABLE prizes ADD COLUMN IF NOT EXISTS remaining INTEGER DEFAULT 0;
 
 -- Cập nhật giá trị còn lại nếu đang bị null
