@@ -572,7 +572,7 @@ export default function ParticipantManager({ state, updateState }: { state: AppS
                        <tr className="bg-slate-50/50 border-b border-slate-100">
                           <th className="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest">Ticket #</th>
                           <th className="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest">Full Name</th>
-                          <th className="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest">Channel</th>
+                          <th className="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest">Đối tượng (Category)</th>
                           <th className="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest">Region</th>
                           <th className="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right">Actions</th>
                        </tr>
@@ -585,7 +585,15 @@ export default function ParticipantManager({ state, updateState }: { state: AppS
                                 <span className="font-mono text-xs font-bold text-indigo-600 bg-indigo-50 px-2 py-1 rounded">{ticket.ticket_number}</span>
                              </td>
                              <td className="px-8 py-4 font-bold text-slate-700">{ticket.name}</td>
-                             <td className="px-8 py-4 text-sm text-slate-400 font-bold">{ticket.channel}</td>
+                             <td className="px-8 py-4">
+                                {ticket.category ? (
+                                  <span className="text-[10px] font-black uppercase text-amber-600 bg-amber-50 border border-amber-100 px-3 py-1 rounded-full whitespace-nowrap">
+                                    {ticket.category}
+                                  </span>
+                                ) : (
+                                  <span className="text-[9px] font-bold text-slate-300 uppercase tracking-tighter">None</span>
+                                )}
+                             </td>
                              <td className="px-8 py-4">
                                 <span className="text-[10px] font-black uppercase text-slate-500 bg-slate-100 px-3 py-1 rounded-full whitespace-nowrap">
                                   {ticket.region}
@@ -676,9 +684,43 @@ export default function ParticipantManager({ state, updateState }: { state: AppS
                     required
                   />
                 </div>
+                {[{ label: 'Ticket #', key: 'ticket_number' }].map(field => (
+                   <div key={field.key} className="space-y-2 text-left">
+                     <label className="text-[10px] font-black uppercase text-slate-400 px-1">{field.label}</label>
+                     <input 
+                       type="text"
+                       value={(editingTicket as any)[field.key] || ''}
+                       onChange={e => setEditingTicket({ ...editingTicket, [field.key]: e.target.value })}
+                       className="w-full px-4 py-3 bg-slate-50 border-2 border-slate-100 rounded-2xl focus:border-indigo-500 font-bold outline-none"
+                     />
+                   </div>
+                ))}
+                
+                <div className="space-y-2 text-left">
+                  <label className="text-[10px] font-black uppercase text-slate-400 px-1">Đối tượng (Category)</label>
+                  {currentProgram?.categories ? (
+                    <select 
+                      value={editingTicket.category || ''}
+                      onChange={e => setEditingTicket({ ...editingTicket, category: e.target.value })}
+                      className="w-full px-4 py-3 bg-slate-50 border-2 border-slate-100 rounded-2xl focus:border-indigo-500 font-bold outline-none"
+                    >
+                      <option value="">-- Apply to All --</option>
+                      {currentProgram.categories.split(',').map(cat => (
+                        <option key={cat.trim()} value={cat.trim()}>{cat.trim()}</option>
+                      ))}
+                    </select>
+                  ) : (
+                    <input 
+                      type="text"
+                      value={editingTicket.category || ''}
+                      onChange={e => setEditingTicket({ ...editingTicket, category: e.target.value })}
+                      className="w-full px-4 py-3 bg-slate-50 border-2 border-slate-100 rounded-2xl focus:border-indigo-500 font-bold outline-none"
+                      placeholder="VD: VIP"
+                    />
+                  )}
+                </div>
+
                 {[
-                  { label: 'Ticket #', key: 'ticket_number' },
-                  { label: 'Category (Object)', key: 'category' },
                   { label: 'Channel', key: 'channel' },
                   { label: 'UPI', key: 'upi' },
                   { label: 'Location', key: 'location' },

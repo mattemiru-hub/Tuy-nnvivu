@@ -291,20 +291,35 @@ export default function ProgramManager({ state, updateState }: { state: AppState
               </div>
             </div>
 
-            <div className="space-y-3">
-              <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] pl-1">
-                Đối tượng tham gia (Categories) - Phân cách bằng dấu phẩy
-              </label>
+            <div className="space-y-4 p-8 bg-indigo-50/50 rounded-[2.5rem] border-2 border-indigo-100/50 shadow-sm">
+              <div className="flex items-center gap-3 mb-2">
+                <div className="w-8 h-8 bg-indigo-600 rounded-lg flex items-center justify-center text-white font-bold text-xs shadow-lg shadow-indigo-200">
+                  1
+                </div>
+                <label className="text-xs font-black text-slate-800 uppercase tracking-widest">
+                  Định nghĩa Đối tượng tham gia (Categories)
+                </label>
+              </div>
+              <p className="text-[10px] text-slate-500 font-medium px-1 leading-relaxed">
+                Nhập danh sách các nhóm đối tượng (ví dụ: ENGINEER, SALE, STAFF). 
+                Sau đó bạn có thể gán từng giải thưởng cho riêng từng nhóm này.
+              </p>
               <input 
                 type="text" 
-                placeholder="e.g. ENGINEERS, SALES, STAFF (Nếu trống sẽ áp dụng cho tất cả)"
+                placeholder="VD: VIP, STAFF, GUEST (Phân cách bằng dấu phẩy)"
                 value={categories}
                 onChange={(e) => setCategories(e.target.value)}
-                className="w-full px-6 py-4 bg-slate-50 border-2 border-slate-100 rounded-2xl focus:border-indigo-500 focus:bg-white outline-none font-bold text-sm transition-all"
+                className="w-full px-6 py-4 bg-white border-2 border-slate-100 rounded-2xl focus:border-indigo-500 outline-none font-bold text-sm transition-all shadow-sm"
               />
-              <p className="text-[9px] text-slate-400 italic px-2">
-                * Các từ khóa này sẽ dùng để lọc người tham gia cho từng loại giải thưởng tương ứng.
-              </p>
+              {categories && (
+                <div className="flex flex-wrap gap-2 pt-2">
+                   {categories.split(',').map((cat, idx) => cat.trim() && (
+                     <span key={idx} className="px-3 py-1 bg-white text-[10px] font-black text-indigo-600 rounded-full border border-indigo-100 shadow-sm uppercase tracking-tighter">
+                       {cat.trim()}
+                     </span>
+                   ))}
+                </div>
+              )}
             </div>
 
             <div className="space-y-3">
@@ -620,7 +635,21 @@ export default function ProgramManager({ state, updateState }: { state: AppState
                      </div>
                   </div>
 
-                  <div className="absolute bottom-4 right-5 z-20">
+                  <div className="absolute bottom-4 right-5 z-20 flex flex-col items-end gap-2">
+                     {p.categories && (
+                        <div className="flex flex-wrap gap-1 max-w-[150px] justify-end">
+                           {p.categories.split(',').slice(0, 2).map(cat => (
+                             <span key={cat} className="px-2 py-0.5 bg-amber-500/90 text-[7px] font-black text-white rounded uppercase tracking-tighter shadow-sm border border-white/20">
+                               {cat.trim()}
+                             </span>
+                           ))}
+                           {p.categories.split(',').length > 2 && (
+                             <span className="px-2 py-0.5 bg-slate-800/80 text-[7px] font-black text-white rounded uppercase tracking-tighter">
+                               +{p.categories.split(',').length - 2}
+                             </span>
+                           )}
+                        </div>
+                      )}
                      {p.month && (
                        <div className="px-3 py-1 bg-white/90 backdrop-blur-md rounded-full text-[9px] font-black uppercase tracking-widest shadow-xl text-indigo-600 border border-white">
                          {p.month}/{p.year}

@@ -317,19 +317,27 @@ const WinnerDisplay = ({
                 <p className="text-4xl font-black tracking-tighter text-slate-300 uppercase">Ready to draw</p>
                 <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">Awaiting your command</p>
               </div>
-          {activePrize && (
-            <div className="flex flex-col items-center gap-2">
-              <div className="inline-flex items-center gap-2 px-4 py-2 bg-indigo-50 text-indigo-600 rounded-2xl border border-indigo-100 scale-110">
-                 <Gift size={16} />
-                 <span className="text-xs font-black uppercase tracking-widest">Active: {activePrize.name}</span>
-              </div>
-              {activePrize.category && (
-                <div className="px-3 py-1 bg-amber-50 text-amber-600 rounded-xl text-[9px] font-black uppercase tracking-widest border border-amber-100 italic">
-                  Drawing for: {activePrize.category}
+              {activePrize && (
+                <div className="flex flex-col items-center gap-3">
+                  <div className="inline-flex items-center gap-2 px-6 py-3 bg-white shadow-xl shadow-indigo-100 rounded-3xl border-2 border-indigo-50 scale-110">
+                     <Gift className="text-indigo-600" size={20} />
+                     <span className="text-sm font-black uppercase tracking-widest text-slate-800">{activePrize.name}</span>
+                  </div>
+                  {activePrize.category ? (
+                    <motion.div 
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      className="px-4 py-1.5 bg-amber-500 text-white rounded-full text-[10px] font-black uppercase tracking-[0.2em] shadow-lg shadow-amber-200 border-2 border-white"
+                    >
+                      Dành riêng cho: {activePrize.category}
+                    </motion.div>
+                  ) : (
+                    <div className="px-4 py-1.5 bg-slate-100 text-slate-500 rounded-full text-[10px] font-black uppercase tracking-[0.2em]">
+                      Giải thưởng cho tất cả
+                    </div>
+                  )}
                 </div>
               )}
-            </div>
-          )}
             </div>
           </motion.div>
         ) : (
@@ -378,6 +386,58 @@ const WinnerDisplay = ({
                   <p className="text-sm font-black text-slate-800 truncate w-full">{field.value}</p>
                 </div>
               ))}
+            </div>
+
+            {/* Pool Statistics */}
+            <div className="mt-8 p-6 bg-slate-50 border border-slate-100 rounded-[2.5rem]">
+               <div className="flex items-center justify-between mb-6">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 bg-indigo-600 rounded-xl flex items-center justify-center text-white shadow-lg shadow-indigo-200">
+                      <Users size={18} />
+                    </div>
+                    <span className="text-xs font-black uppercase tracking-[0.2em] text-slate-800">Thông tin Pool (Pool info)</span>
+                  </div>
+                  {activePrize?.category && (
+                    <div className="px-3 py-1 bg-amber-500 text-[9px] font-bold text-white rounded-full uppercase tracking-widest animate-pulse border-2 border-white shadow-sm">
+                      Lọc: {activePrize.category}
+                    </div>
+                  )}
+               </div>
+               
+               <div className="space-y-4">
+                  <div className="flex items-center justify-between group">
+                     <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest group-hover:text-slate-600 transition-colors">Tổng người tham gia</span>
+                     <span className="text-lg font-black text-slate-900 tabular-nums">
+                       {state.tickets.length.toLocaleString()}
+                     </span>
+                  </div>
+                  
+                  {activePrize?.category && (
+                    <div className="flex items-center justify-between pt-4 border-t border-slate-200/50 group">
+                       <span className="text-[10px] font-black text-indigo-500 uppercase tracking-widest group-hover:text-indigo-700 transition-colors">
+                         Pool hợp lệ cho {activePrize.category}
+                       </span>
+                       <span className="text-2xl font-black text-indigo-600 tabular-nums">
+                         {state.tickets.filter(t => t.category?.trim().toLowerCase() === activePrize.category?.trim().toLowerCase()).length.toLocaleString()}
+                       </span>
+                    </div>
+                  )}
+
+                  {!activePrize?.category && (
+                    <div className="flex items-center justify-between pt-4 border-t border-slate-200/50 group">
+                       <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest group-hover:text-slate-600 transition-colors">
+                         Pool hợp lệ (Tất cả)
+                       </span>
+                       <span className="text-2xl font-black text-slate-900 tabular-nums">
+                         {state.tickets.length.toLocaleString()}
+                       </span>
+                    </div>
+                  )}
+               </div>
+
+               <p className="mt-6 text-[9px] text-slate-400 italic px-2 leading-relaxed">
+                 * Hệ thống tự động lọc người tham gia dựa trên "Đối tượng" của giải thưởng hiện tại.
+               </p>
             </div>
           </motion.div>
         )}
@@ -439,14 +499,21 @@ const PrizeSelector = ({
                   )}>
                     {prize.remaining} / {prize.quantity} Left
                   </p>
-                  {prize.category && (
+                  {prize.category ? (
                     <p className={cn(
-                      "text-[8px] font-black uppercase tracking-tighter truncate max-w-[100px]",
-                      selectedPrizeId === prize.id ? "text-indigo-200" : "text-indigo-500"
+                      "text-[9px] font-black uppercase tracking-tighter truncate max-w-[120px] px-2 py-0.5 rounded-md mt-1",
+                      selectedPrizeId === prize.id ? "bg-white/20 text-white" : "bg-amber-100 text-amber-700"
                     )}>
                       Target: {prize.category}
                     </p>
-                  )}
+                  ) : (
+                    <p className={cn(
+                      "text-[9px] font-black uppercase tracking-tighter opacity-50",
+                      selectedPrizeId === prize.id ? "text-indigo-200" : "text-slate-300"
+                    )}>
+                      Target: All
+                    </p>
+                   )}
                 </div>
             </div>
           </button>

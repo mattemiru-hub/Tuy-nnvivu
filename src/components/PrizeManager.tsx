@@ -111,218 +111,247 @@ export default function PrizeManager({ state, updateState }: { state: AppState, 
     }
   };
 
+  const [filterCategory, setFilterCategory] = useState<string>('ALL');
+
   return (
     <div className="space-y-10 pb-20">
       {/* Context Header */}
-      <div className="bg-gradient-to-r from-indigo-600 to-violet-700 p-6 md:p-8 rounded-[1.5rem] md:rounded-[2.5rem] text-white shadow-xl">
-        <p className="text-[10px] font-black uppercase tracking-[0.3em] opacity-60 mb-2">Current Context</p>
-        <h2 className="text-xl md:text-3xl font-black tracking-tighter uppercase italic drop-shadow-sm truncate">{currentProgram.name}</h2>
-        <div className="flex flex-wrap gap-3 md:gap-4 mt-4 md:mt-6">
-          <div className="px-4 py-2 bg-white/10 rounded-xl backdrop-blur-sm border border-white/10">
-            <p className="text-[9px] font-black uppercase tracking-widest opacity-60">Total Pool</p>
-            <p className="font-black text-sm">{state.participants.length} Tickets</p>
+      <div className="bg-slate-900 p-6 md:p-10 rounded-[2rem] md:rounded-[3rem] text-white shadow-2xl relative overflow-hidden">
+        <div className="absolute top-0 right-0 w-64 h-64 bg-indigo-600/20 blur-[100px] -mr-32 -mt-32"></div>
+        <div className="absolute bottom-0 left-0 w-64 h-64 bg-violet-600/10 blur-[100px] -ml-32 -mb-32"></div>
+        
+        <div className="relative z-10">
+          <div className="flex items-center gap-3 mb-4">
+            <div className="w-12 h-12 bg-white/10 backdrop-blur-md rounded-2xl flex items-center justify-center border border-white/10">
+              <Settings2 size={24} className="text-indigo-400" />
+            </div>
+            <div>
+              <p className="text-[10px] font-black uppercase tracking-[0.4em] text-indigo-400">Thiết lập chương trình</p>
+              <h2 className="text-2xl md:text-4xl font-black tracking-tighter uppercase italic drop-shadow-sm truncate">{currentProgram.name}</h2>
+            </div>
           </div>
-          <div className="px-4 py-2 bg-white/10 rounded-xl backdrop-blur-sm border border-white/10">
-            <p className="text-[9px] font-black uppercase tracking-widest opacity-60">Prize Tiers</p>
-            <p className="font-black text-sm">{state.prizes.length} Levels</p>
+          
+          <div className="flex flex-wrap gap-3 md:gap-6 mt-8">
+            <div className="px-6 py-3 bg-white/5 rounded-2xl backdrop-blur-sm border border-white/5 group hover:bg-white/10 transition-colors">
+              <p className="text-[9px] font-black uppercase tracking-widest text-slate-500 mb-1">Tổng người tham gia</p>
+              <div className="flex items-baseline gap-2">
+                <span className="text-2xl font-black text-white">{state.participants.length}</span>
+                <span className="text-[10px] font-bold text-slate-400">Vé (Tickets)</span>
+              </div>
+            </div>
+            <div className="px-6 py-3 bg-white/5 rounded-2xl backdrop-blur-sm border border-white/5 group hover:bg-white/10 transition-colors">
+              <p className="text-[9px] font-black uppercase tracking-widest text-slate-500 mb-1">Cấp độ giải thưởng</p>
+              <div className="flex items-baseline gap-2">
+                <span className="text-2xl font-black text-indigo-400">{state.prizes.length}</span>
+                <span className="text-[10px] font-bold text-slate-400">Loại (Tiers)</span>
+              </div>
+            </div>
+            {currentProgram.categories && (
+              <div className="px-6 py-3 bg-amber-500/10 rounded-2xl backdrop-blur-sm border border-amber-500/20 group hover:bg-amber-500/20 transition-colors">
+                <p className="text-[9px] font-black uppercase tracking-widest text-amber-500/60 mb-1">Đối tượng phân loại</p>
+                <div className="flex items-baseline gap-2">
+                  <span className="text-2xl font-black text-amber-500">{currentProgram.categories.split(',').length}</span>
+                  <span className="text-[10px] font-bold text-amber-500/60">Nhóm (Groups)</span>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       </div>
 
-      {/* Rule Engine Section */}
-      <section className="bg-white p-6 md:p-10 rounded-[1.5rem] md:rounded-[2.5rem] border border-slate-100 shadow-xl shadow-slate-200/40">
-        <div className="flex items-center gap-3 mb-6 md:mb-8 border-b-4 border-indigo-600 inline-flex pb-1">
-          <Settings2 size={24} className="text-indigo-600" />
-          <h3 className="text-lg md:text-2xl font-black tracking-tighter uppercase italic text-slate-800">{t('prizes.rules_title')}</h3>
-        </div>
-        
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
-          <div className="space-y-3">
-            <label className="flex items-center gap-2 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">
-               <ShieldCheck size={14} className="text-indigo-500" /> {t('prizes.max_wins_ticket')}
-            </label>
-            <input 
-              type="number" 
-              value={currentProgram.rules.maxWinsPerTicket}
-              onChange={(e) => handleUpdateRule('maxWinsPerTicket', parseInt(e.target.value) || 1)}
-              className="w-full px-6 py-4 bg-slate-50 border-2 border-slate-50 rounded-2xl focus:border-indigo-500 focus:bg-white outline-none font-bold text-lg transition-all"
-            />
+      {/* Prize Selection & Filtering */}
+      <section className="space-y-6">
+        <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
+          <div className="space-y-1">
+            <h3 className="text-2xl font-black tracking-tighter uppercase italic text-slate-900 flex items-center gap-3">
+               <Shuffle size={24} className="text-indigo-600" /> {t('prizes.inventory')}
+            </h3>
+            <p className="text-xs font-bold text-slate-400 uppercase tracking-widest pl-1">Danh sách giải thưởng đang có</p>
           </div>
-
-          <div className="space-y-3">
-            <label className="flex items-center gap-2 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">
-               <UserCheck size={14} className="text-indigo-500" /> {t('prizes.max_wins_person')}
-            </label>
-            <input 
-              type="number" 
-              value={currentProgram.rules.maxWinsPerPerson}
-              onChange={(e) => handleUpdateRule('maxWinsPerPerson', parseInt(e.target.value) || 1)}
-              className="w-full px-6 py-4 bg-slate-50 border-2 border-slate-50 rounded-2xl focus:border-indigo-500 focus:bg-white outline-none font-bold text-lg transition-all"
-            />
-          </div>
-
-          <div className="flex flex-col justify-end pb-2">
-            <label className="flex items-center gap-4 cursor-pointer select-none group">
-              <div className="relative">
-                <input 
-                  type="checkbox"
-                  checked={currentProgram.rules.preventDuplicatePrizeType}
-                  onChange={(e) => handleUpdateRule('preventDuplicatePrizeType', e.target.checked)}
-                  className="sr-only peer"
-                />
-                <div className="w-12 h-6 bg-slate-200 rounded-full peer peer-checked:bg-indigo-600 transition-colors"></div>
-                <div className="absolute top-1 left-1 w-4 h-4 bg-white rounded-full peer-checked:translate-x-6 transition-transform"></div>
-              </div>
-              <span className="text-sm font-black text-slate-700 uppercase tracking-tight">{t('prizes.block_duplicates')}</span>
-            </label>
-          </div>
-
-          <div className="flex flex-col justify-end pb-2">
-            <label className="flex items-center gap-4 cursor-pointer select-none group">
-               <div className="relative">
-                <input 
-                  type="checkbox"
-                  checked={currentProgram.rules.fairnessRandom}
-                  onChange={(e) => handleUpdateRule('fairnessRandom', e.target.checked)}
-                  className="sr-only peer"
-                />
-                <div className="w-12 h-6 bg-slate-200 rounded-full peer peer-checked:bg-indigo-600 transition-colors"></div>
-                <div className="absolute top-1 left-1 w-4 h-4 bg-white rounded-full peer-checked:translate-x-6 transition-transform"></div>
-              </div>
-              <span className="text-sm font-black text-slate-700 uppercase tracking-tight flex items-center gap-2">{t('prizes.entropy_mode')} <Shuffle size={14} className="text-indigo-400" /></span>
-            </label>
-          </div>
-        </div>
-      </section>
-
-      {/* Prize List Section */}
-      <section className="space-y-8">
-        {error && (
-          <div className="p-4 bg-red-50 text-red-600 rounded-2xl flex items-center gap-3 text-xs font-bold animate-in fade-in slide-in-from-top-2 border border-red-100">
-            <Info size={16} /> {error}
-            <button onClick={() => setError(null)} className="ml-auto hover:bg-red-100 p-1 rounded-lg transition-colors">
-              <X size={14} />
+          
+          <div className="flex items-center gap-3 self-end">
+            <button 
+              onClick={handleAddPrize}
+              disabled={isSubmitting}
+              className="flex items-center gap-3 px-8 py-4 bg-indigo-600 text-white rounded-2xl text-[10px] font-black uppercase tracking-[0.2em] hover:bg-indigo-700 shadow-xl shadow-indigo-600/30 transition-all active:scale-95 disabled:opacity-50"
+            >
+              {isSubmitting ? (
+                <RefreshCcw size={20} className="animate-spin" />
+              ) : (
+                <Plus size={20} strokeWidth={3} />
+              )}
+              {isSubmitting ? 'Adding...' : t('prizes.add_prize')}
             </button>
           </div>
-        )}
-        <div className="flex items-center justify-between">
-          <h3 className="text-xl font-black tracking-tighter uppercase italic text-slate-800 flex items-center gap-3">
-             {t('prizes.inventory')}
-          </h3>
-          <button 
-            onClick={handleAddPrize}
-            disabled={isSubmitting}
-            className="flex items-center gap-3 px-8 py-4 bg-indigo-600 text-white rounded-2xl text-[10px] font-black uppercase tracking-[0.2em] hover:bg-indigo-700 shadow-xl shadow-indigo-600/30 transition-all active:scale-95 disabled:opacity-50"
-          >
-            {isSubmitting ? (
-              <RefreshCcw size={20} className="animate-spin" />
-            ) : (
-              <Plus size={20} strokeWidth={3} />
-            )}
-            {isSubmitting ? 'Adding...' : t('prizes.add_prize')}
-          </button>
         </div>
 
+        {/* Improved Category Display & Helper */}
+        {currentProgram.categories && (
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <div className="md:col-span-3 p-8 bg-indigo-50/50 border-2 border-indigo-100/50 rounded-[2.5rem] flex flex-col gap-6">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 bg-indigo-600 rounded-xl flex items-center justify-center text-white shadow-lg shadow-indigo-200">
+                  <UserCheck size={20} />
+                </div>
+                <div>
+                  <span className="text-xs font-black uppercase tracking-widest text-slate-800">Cơ cấu theo Đối tượng</span>
+                  <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Lọc danh sách quay thưởng bên dưới</p>
+                </div>
+              </div>
+              
+              <div className="flex flex-wrap gap-2">
+                <button 
+                  onClick={() => setFilterCategory('ALL')}
+                  className={cn(
+                    "px-5 py-2.5 text-[10px] font-black rounded-2xl shadow-lg transition-all uppercase tracking-widest border",
+                    filterCategory === 'ALL' 
+                      ? "bg-indigo-600 text-white shadow-indigo-200 border-indigo-600 scale-105" 
+                      : "bg-white text-slate-700 border-slate-200 hover:border-indigo-400"
+                  )}
+                >
+                  TẤT CẢ ({state.prizes.length})
+                </button>
+                {currentProgram.categories.split(',').map(cat => {
+                   const c = cat.trim();
+                   const count = state.prizes.filter(p => p.category === c).length;
+                   return (
+                     <button 
+                       key={c} 
+                       onClick={() => setFilterCategory(c)}
+                       className={cn(
+                        "px-5 py-2.5 text-[10px] font-black rounded-2xl transition-all uppercase tracking-widest shadow-sm border",
+                        filterCategory === c
+                          ? "bg-amber-500 text-white shadow-amber-200 border-amber-500 scale-105"
+                          : "bg-white text-slate-700 border-slate-200 hover:border-amber-400 hover:text-amber-600"
+                       )}
+                     >
+                       {c} ({count})
+                     </button>
+                   );
+                })}
+              </div>
+            </div>
+            
+            <div className="p-8 bg-amber-50 border-2 border-amber-100 rounded-[2.5rem] flex flex-col justify-center gap-2">
+               <div className="flex items-center gap-2 text-amber-600 mb-2">
+                 <Info size={18} />
+                 <span className="text-[10px] font-black uppercase tracking-widest">Gợi ý</span>
+               </div>
+               <p className="text-[10px] text-amber-700 leading-relaxed font-bold">
+                 Hệ thống sẽ chỉ quay vé của những người có <span className="underline decoration-amber-400 underline-offset-2">Đối tượng</span> tương ứng với giải thưởng.
+               </p>
+            </div>
+          </div>
+        )}
+
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-          {state.prizes.sort((a, b) => (a.priority || 0) - (b.priority || 0)).map((prize) => (
+          {state.prizes
+            .filter(p => filterCategory === 'ALL' || p.category === filterCategory)
+            .sort((a, b) => (a.priority || 0) - (b.priority || 0))
+            .map((prize) => (
             <div key={prize.id} className="bg-white border-2 border-slate-100 rounded-[2.5rem] overflow-hidden group hover:border-indigo-400 hover:shadow-2xl hover:shadow-indigo-600/10 transition-all duration-300">
                <div className="h-56 bg-slate-50 relative overflow-hidden">
                  {prize.image ? (
-                   <img src={prize.image} alt={prize.name} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" />
+                   <img src={prize.image} alt={prize.name} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700 opacity-90 group-hover:opacity-100" />
                  ) : (
                    <div className="w-full h-full flex flex-col items-center justify-center text-slate-300 gap-3">
-                     <ImageIcon size={48} />
+                     <ImageIcon size={48} className="animate-pulse" />
                    </div>
                  )}
-                 <div className="absolute top-6 left-6 bg-indigo-600 shadow-xl text-white text-[9px] font-black tracking-[0.3em] px-4 py-1.5 rounded-full uppercase">
-                   RANK {prize.priority}
+                 
+                 {/* Visual Badges Layer */}
+                 <div className="absolute top-6 left-6 flex flex-col gap-2 z-10">
+                   <div className="bg-indigo-600 shadow-xl text-white text-[10px] font-black tracking-[0.3em] px-5 py-2 rounded-full uppercase border-2 border-white/20">
+                     RANK #{prize.priority}
+                   </div>
+                   {prize.category ? (
+                     <div className="bg-amber-500 shadow-lg text-white text-[9px] font-black tracking-[0.2em] px-4 py-1.5 rounded-full uppercase border-2 border-white/30 backdrop-blur-sm">
+                       {prize.category}
+                     </div>
+                   ) : (
+                     <div className="bg-slate-800/80 shadow-lg text-white text-[9px] font-black tracking-[0.2em] px-4 py-1.5 rounded-full uppercase border-2 border-white/20 backdrop-blur-sm">
+                       ALL ACCESS
+                     </div>
+                   )}
                  </div>
+                 
+                 <div className="absolute top-6 right-6 z-10">
+                    <button 
+                      onClick={() => updatePrize(prize.id, { isActive: !prize.isActive })}
+                      className={cn(
+                        "w-12 h-12 flex items-center justify-center rounded-2xl shadow-xl transition-all border-2",
+                        prize.isActive 
+                          ? "bg-emerald-500 text-white border-emerald-400 rotate-0" 
+                          : "bg-slate-800 text-slate-400 border-slate-700 rotate-12"
+                      )}
+                    >
+                      <ShieldCheck size={20} />
+                    </button>
+                 </div>
+
+                 {/* Gradient Overlay */}
+                 <div className="absolute inset-x-0 bottom-0 h-24 bg-gradient-to-t from-black/50 to-transparent"></div>
                </div>
                
-               <div className="p-6 md:p-8 -mt-4 relative bg-white rounded-t-[2.5rem]">
-                    <div className="flex items-start justify-between gap-4 mb-2 group/title">
-                      <input 
-                        type="text" 
-                        value={prize.name}
-                        onChange={(e) => updatePrize(prize.id, { name: e.target.value })}
-                        className="flex-1 font-black text-xl italic uppercase tracking-tighter text-slate-900 focus:outline-none focus:text-indigo-600 bg-transparent py-1 px-2 rounded-lg border border-transparent hover:border-slate-100 focus:border-indigo-200 transition-all w-full"
-                        placeholder="Tên giải thưởng"
-                      />
-                     <div className="flex items-center gap-2 opacity-0 group-hover/title:opacity-100 transition-opacity">
-                       <button 
-                         onClick={() => setIsEditingPrize(prize)}
-                         className="w-10 h-10 flex items-center justify-center text-slate-400 hover:text-indigo-600 hover:bg-white rounded-xl transition-all shadow-sm bg-slate-50"
-                       >
-                         <Edit3 size={20} />
-                       </button>
-                       <button 
-                        onClick={() => handleDeletePrize(prize.id)}
-                        className="w-10 h-10 flex items-center justify-center text-slate-400 hover:text-red-500 hover:bg-white rounded-xl transition-all shadow-sm bg-slate-50"
-                       >
-                         <Trash2 size={20} />
-                       </button>
-                     </div>
-                   </div>
+               <div className="p-6 md:p-10 -mt-6 relative bg-white rounded-t-[3rem] border-t border-slate-50">
+                    <div className="flex flex-col gap-4 mb-8">
+                       <div className="flex items-center justify-between group/title">
+                        <input 
+                          type="text" 
+                          value={prize.name}
+                          onChange={(e) => updatePrize(prize.id, { name: e.target.value })}
+                          className="font-black text-2xl italic uppercase tracking-tighter text-slate-900 focus:outline-none focus:text-indigo-600 bg-transparent py-1 px-2 rounded-lg border border-transparent hover:border-slate-100 focus:border-indigo-200 transition-all flex-1"
+                          placeholder="Tên giải thưởng"
+                        />
+                       </div>
 
-                 <div className="mt-6 flex flex-col gap-4 bg-slate-50 p-6 rounded-3xl border border-slate-100">
-                    <div className="flex items-center justify-between">
-                      <div className="space-y-3">
-                        <p className="text-[9px] uppercase font-black text-slate-400 tracking-widest">{t('draw.total_prizes')}</p>
-                        <div className="flex items-center gap-4">
+                       <div className="flex items-center gap-3">
+                          <button 
+                            onClick={() => setIsEditingPrize(prize)}
+                            className="flex-1 px-5 py-3 flex items-center justify-center gap-3 text-indigo-600 bg-indigo-50 hover:bg-indigo-600 hover:text-white rounded-2xl transition-all shadow-sm font-black text-[10px] uppercase tracking-widest border-2 border-indigo-100/50"
+                          >
+                            <Edit3 size={16} /> CHỈNH SỬA CHI TIẾT
+                          </button>
+                          <button 
+                           onClick={() => handleDeletePrize(prize.id)}
+                           className="w-12 h-12 flex items-center justify-center text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-2xl transition-all border-2 border-slate-100"
+                          >
+                            <Trash2 size={20} />
+                          </button>
+                       </div>
+                    </div>
+
+                  {/* Quick Stats Panel */}
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="bg-slate-50 p-4 rounded-3xl border border-slate-100 flex flex-col items-center">
+                       <p className="text-[9px] uppercase font-black text-slate-400 tracking-widest mb-2">{t('draw.total_prizes')}</p>
+                       <div className="flex items-center gap-4">
                           <button 
                             onClick={() => updatePrize(prize.id, { quantity: Math.max(1, prize.quantity - 1), remaining: Math.max(0, prize.remaining - 1) })}
-                            className="w-8 h-8 flex items-center justify-center bg-white border-2 border-slate-200 rounded-xl hover:border-indigo-500 hover:text-indigo-600 transition-colors shadow-sm"
+                            className="w-8 h-8 flex items-center justify-center bg-white border-2 border-slate-200 rounded-xl hover:border-indigo-500 hover:text-indigo-600 transition-colors shadow-sm font-bold"
                           >-</button>
-                          <span className="font-black text-xl text-slate-900 min-w-[1rem] text-center">{prize.quantity}</span>
+                          <span className="font-black text-xl text-slate-900 min-w-[1.5rem] text-center">{prize.quantity}</span>
                           <button 
                             onClick={() => updatePrize(prize.id, { quantity: prize.quantity + 1, remaining: prize.remaining + 1 })}
-                            className="w-8 h-8 flex items-center justify-center bg-white border-2 border-slate-200 rounded-xl hover:border-indigo-500 hover:text-indigo-600 transition-colors shadow-sm"
+                            className="w-8 h-8 flex items-center justify-center bg-white border-2 border-slate-200 rounded-xl hover:border-indigo-500 hover:text-indigo-600 transition-colors shadow-sm font-bold"
                           >+</button>
-                        </div>
-                      </div>
-                      <div className="text-right space-y-1">
-                        <p className="text-[9px] uppercase font-black text-slate-400 tracking-widest">{t('prizes.remaining')}</p>
-                        <p className="font-black text-3xl text-indigo-600 tracking-tighter">{prize.remaining}</p>
-                      </div>
+                       </div>
                     </div>
-                    
-                    <div className="pt-4 border-t border-slate-200/50 space-y-2">
-                       <p className="text-[9px] uppercase font-black text-slate-400 tracking-widest pl-1">Monetary Value ({state.settings.currency})</p>
-                       <input 
-                        type="number"
-                        value={prize.value || 0}
-                        onChange={(e) => updatePrize(prize.id, { value: parseInt(e.target.value) || 0 })}
-                        className="w-full bg-white border-2 border-slate-100 rounded-xl px-4 py-3 font-bold text-slate-700 focus:outline-none focus:border-indigo-400"
-                        placeholder="0"
-                       />
-                    </div>
-                 </div>
 
-                 <div className="mt-8 grid grid-cols-2 gap-4">
-                   <label className="flex items-center justify-center gap-2 py-4 text-[10px] font-black uppercase tracking-widest text-slate-500 bg-white border-2 border-slate-100 rounded-2xl hover:border-indigo-500 hover:text-indigo-600 transition-all active:scale-95 shadow-sm cursor-pointer">
-                     <ImageIcon size={14} /> {t('prizes.edit_image')}
-                     <input 
-                       type="file" 
-                       className="hidden" 
-                       accept="image/*"
-                       onChange={(e) => {
-                         const file = e.target.files?.[0];
-                         if (file) handleImageUpload(prize.id, file);
-                       }}
-                     />
-                   </label>
-                   <button 
-                    onClick={() => updatePrize(prize.id, { isActive: !prize.isActive })}
-                    className={cn(
-                      "py-4 text-[10px] font-black uppercase tracking-widest rounded-2xl shadow-lg transition-all active:scale-95",
-                      prize.isActive 
-                        ? "bg-indigo-600 text-white shadow-indigo-600/20" 
-                        : "bg-slate-100 text-slate-400 shadow-none border-2 border-slate-100"
-                    )}
-                   >
-                     {prize.isActive ? "ONLINE" : "OFFLINE"}
-                   </button>
-                 </div>
+                    <div className="bg-indigo-600 p-4 rounded-3xl shadow-lg shadow-indigo-600/20 flex flex-col items-center justify-center text-white">
+                       <p className="text-[9px] uppercase font-black text-indigo-300 tracking-widest mb-1">{t('prizes.remaining')}</p>
+                       <p className="font-black text-3xl tracking-tighter tabular-nums">{prize.remaining}</p>
+                    </div>
+                  </div>
+
+                  {prize.value > 0 && (
+                     <div className="mt-4 px-6 py-3 bg-slate-50 border border-slate-100 rounded-2xl flex items-center justify-between">
+                       <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Giá trị ước tính:</span>
+                       <span className="text-xs font-black text-slate-900">
+                         {new Intl.NumberFormat().format(prize.value)} <span className="text-[10px] text-slate-500">{state.settings.currency}</span>
+                       </span>
+                     </div>
+                  )}
                </div>
             </div>
           ))}
@@ -409,39 +438,46 @@ export default function PrizeManager({ state, updateState }: { state: AppState, 
                   </div>
                 </div>
 
-                <div className="grid grid-cols-2 gap-6">
-                  <div className="space-y-2">
-                    <label className="text-[10px] font-black uppercase text-slate-400 px-1">Đối tượng (Category)</label>
-                    {currentProgram.categories ? (
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black uppercase text-slate-400 px-1">Đối tượng (Category)</label>
+                  {currentProgram.categories ? (
+                    <div className="relative">
                       <select 
                         value={isEditingPrize.category || ''}
                         onChange={e => setIsEditingPrize({ ...isEditingPrize, category: e.target.value })}
-                        className="w-full px-4 py-3 bg-slate-50 border-2 border-slate-100 rounded-2xl focus:border-indigo-500 font-bold outline-none"
+                        className="w-full px-4 py-3 bg-white border-2 border-slate-100 rounded-2xl focus:border-indigo-500 font-bold outline-none appearance-none"
                       >
-                         <option value="">-- Apply to All --</option>
+                         <option value="">-- Tất cả đối tượng (Apply to All) --</option>
                          {currentProgram.categories.split(',').map(cat => (
                            <option key={cat.trim()} value={cat.trim()}>{cat.trim()}</option>
                          ))}
                       </select>
-                    ) : (
-                      <input 
-                        type="text"
-                        value={isEditingPrize.category || ''}
-                        onChange={e => setIsEditingPrize({ ...isEditingPrize, category: e.target.value })}
-                        className="w-full px-4 py-3 bg-slate-50 border-2 border-slate-100 rounded-2xl focus:border-indigo-500 font-bold outline-none"
-                        placeholder="e.g. ENGINEERS"
-                      />
-                    )}
-                  </div>
-                  <div className="space-y-2">
-                    <label className="text-[10px] font-black uppercase text-slate-400 px-1">Thứ tự ưu tiên</label>
+                      <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400 font-bold">
+                        ↓
+                      </div>
+                    </div>
+                  ) : (
                     <input 
-                      type="number"
-                      value={isEditingPrize.priority}
-                      onChange={e => setIsEditingPrize({ ...isEditingPrize, priority: parseInt(e.target.value) || 0 })}
+                      type="text"
+                      value={isEditingPrize.category || ''}
+                      onChange={e => setIsEditingPrize({ ...isEditingPrize, category: e.target.value })}
                       className="w-full px-4 py-3 bg-slate-50 border-2 border-slate-100 rounded-2xl focus:border-indigo-500 font-bold outline-none"
+                      placeholder="VD: ENGINEER (Cần định nghĩa trong cài đặt chương trình)"
                     />
-                  </div>
+                  )}
+                  <p className="text-[9px] text-slate-400 italic px-1">
+                    * Chỉ những người có Category khớp với giá trị này mới được tham gia quay giải này.
+                  </p>
+                </div>
+
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black uppercase text-slate-400 px-1">Thứ tự ưu tiên</label>
+                  <input 
+                    type="number"
+                    value={isEditingPrize.priority}
+                    onChange={e => setIsEditingPrize({ ...isEditingPrize, priority: parseInt(e.target.value) || 0 })}
+                    className="w-full px-4 py-3 bg-slate-50 border-2 border-slate-100 rounded-2xl focus:border-indigo-500 font-bold outline-none"
+                  />
                 </div>
 
                 <div className="space-y-2">
