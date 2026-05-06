@@ -265,6 +265,7 @@ const DrawContent = ({ children }: { children: React.ReactNode }) => (
 const WinnerDisplay = ({ 
   winner, 
   isDrawing,
+  spinningTicket,
   activePrize,
   totalTickets,
   eligibleCount,
@@ -272,6 +273,7 @@ const WinnerDisplay = ({
 }: { 
   winner: Ticket | null,
   isDrawing?: boolean,
+  spinningTicket?: Ticket | null,
   activePrize?: Prize,
   totalTickets: number,
   eligibleCount: number,
@@ -289,15 +291,46 @@ const WinnerDisplay = ({
             className="winner-empty flex flex-col items-center justify-center gap-6"
           >
             <div className="relative">
-              <div className="w-24 h-24 border-4 border-indigo-600/20 border-t-indigo-600 rounded-full animate-spin" />
+              <div className="w-32 h-32 border-4 border-indigo-600/20 border-t-indigo-600 rounded-full animate-spin" />
               <div className="absolute inset-0 flex items-center justify-center">
-                <Music className="text-indigo-600 animate-bounce" size={32} />
+                <Music className="text-indigo-600 animate-bounce" size={40} />
               </div>
             </div>
-            <div className="space-y-3 text-center">
-              <p className="text-5xl font-black text-indigo-600 tracking-tighter uppercase italic">Drawing...</p>
-              <div className="flex flex-col items-center gap-1">
-                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.3em]">May the luck be with you</p>
+            <div className="space-y-6 text-center">
+              <div className="flex flex-col items-center gap-2">
+                <p className="text-xs font-black text-slate-400 uppercase tracking-[0.3em]">Drawing for {activePrize?.name}</p>
+                <div className="h-1 w-24 bg-indigo-100 rounded-full overflow-hidden">
+                  <motion.div 
+                    initial={{ x: "-100%" }}
+                    animate={{ x: "100%" }}
+                    transition={{ repeat: Infinity, duration: 1, ease: "linear" }}
+                    className="h-full w-1/2 bg-indigo-600"
+                  />
+                </div>
+              </div>
+              
+              <div className="min-h-[120px] flex items-center justify-center">
+                {spinningTicket ? (
+                  <motion.div
+                    key={spinningTicket.id}
+                    initial={{ y: 20, opacity: 0 }}
+                    animate={{ y: 0, opacity: 1 }}
+                    exit={{ y: -20, opacity: 0 }}
+                    transition={{ duration: 0.1 }}
+                    className="flex flex-col items-center gap-4"
+                  >
+                    <div className="px-8 py-4 bg-white shadow-2xl shadow-indigo-100 border-2 border-indigo-50 rounded-[2rem] font-mono text-6xl font-black text-indigo-600 tracking-tighter">
+                      {spinningTicket.ticket_number}
+                    </div>
+                    <p className="text-xl font-black text-slate-400 uppercase tracking-widest truncate max-w-[300px]">
+                      {spinningTicket.name}
+                    </p>
+                  </motion.div>
+                ) : (
+                  <p className="text-5xl font-black text-indigo-600 tracking-tighter uppercase italic animate-pulse">
+                    Rolling...
+                  </p>
+                )}
               </div>
             </div>
           </motion.div>
@@ -592,6 +625,7 @@ const DrawMainPanel = ({
   onReroll,
   onConfirm,
   isDrawing,
+  spinningTicket,
   remaining,
   activePrizeName,
   allPrizes,
@@ -611,6 +645,7 @@ const DrawMainPanel = ({
   onReroll: () => void,
   onConfirm: () => void,
   isDrawing: boolean,
+  spinningTicket: Ticket | null,
   remaining: number,
   activePrizeName?: string,
   allPrizes: Prize[],
@@ -641,6 +676,7 @@ const DrawMainPanel = ({
       <WinnerDisplay 
         winner={currentWinner} 
         isDrawing={isDrawing} 
+        spinningTicket={spinningTicket}
         activePrize={selectedPrizeObject}
         totalTickets={totalTickets}
         eligibleCount={eligibleCount}
@@ -778,6 +814,7 @@ export default function DrawScreen({ state, updateState, onNavigate }: { state: 
   const [filterCategory, setFilterCategory] = useState<string>('ALL');
   const [isDrawing, setIsDrawing] = useState(false);
   const [currentWinner, setCurrentWinner] = useState<Ticket | null>(null);
+  const [spinningTicket, setSpinningTicket] = useState<Ticket | null>(null);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [detailWinner, setDetailWinner] = useState<Winner | null>(null);
@@ -830,19 +867,29 @@ export default function DrawScreen({ state, updateState, onNavigate }: { state: 
     setIsDrawing(true);
     setError(null);
     setCurrentWinner(null);
+    setSpinningTicket(null);
 
     // Simulate drawing animation
     let ticks = 0;
-    const maxTicks = 40;
+    const maxTicks = 60; // Slightly more ticks for better effect
     
     const tick = () => {
       ticks++;
       if (ticks < maxTicks) {
-        animationRef.current = setTimeout(tick, 50 + ticks * 1.5);
+        // Pick a random ticket from eligible pool for animation
+        if (eligiblePool.length > 0) {
+          const randomIndex = Math.floor(Math.random() * eligiblePool.length);
+          setSpinningTicket(eligiblePool[randomIndex]);
+        }
+        
+        // Dynamic delay for "slowing down" feel
+        const delay = ticks < 40 ? 40 : 40 + (ticks - 40) * 15;
+        animationRef.current = setTimeout(tick, delay);
       } else {
         const winner = pickWinner(state.participants, state.winners, currentProgram, selectedPrize);
         if (winner) {
           setCurrentWinner(winner);
+          setSpinningTicket(null);
           sounds.playSuccess();
           confetti({ particleCount: 150, spread: 70, origin: { y: 0.6 } });
         } else {
@@ -941,6 +988,7 @@ export default function DrawScreen({ state, updateState, onNavigate }: { state: 
             onConfirm={confirmWinner}
             onReroll={() => { setCurrentWinner(null); handleDraw(); }}
             isDrawing={isDrawing}
+            spinningTicket={spinningTicket}
             remaining={selectedPrize?.remaining || 0}
             activePrizeName={selectedPrize?.name}
             allPrizes={displayedPrizes}
