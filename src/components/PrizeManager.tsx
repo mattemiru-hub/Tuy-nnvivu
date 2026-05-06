@@ -310,80 +310,119 @@ export default function PrizeManager({ state, updateState }: { state: AppState, 
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
           {state.prizes
-            .filter(p => filterCategory === 'ALL' || p.category === filterCategory)
             .sort((a, b) => (a.priority || 0) - (b.priority || 0))
-            .map((prize) => (
-            <div key={prize.id} className="bg-white border-2 border-slate-100 rounded-[2.5rem] overflow-hidden group hover:border-indigo-400 hover:shadow-2xl hover:shadow-indigo-600/10 transition-all duration-300">
-               <div className="h-56 bg-slate-50 relative overflow-hidden">
-                 {prize.image ? (
-                   <img src={prize.image} alt={prize.name} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700 opacity-90 group-hover:opacity-100" />
-                 ) : (
-                   <div className="w-full h-full flex flex-col items-center justify-center text-slate-300 gap-3">
-                     <ImageIcon size={48} className="animate-pulse" />
+            .map((prize) => {
+              const isFiltered = filterCategory !== 'ALL' && prize.category !== filterCategory;
+              
+              return (
+              <div 
+                key={prize.id} 
+                className={cn(
+                  "bg-white border-2 rounded-[2.5rem] overflow-hidden group transition-all duration-300 relative",
+                  isFiltered 
+                    ? "opacity-60 grayscale border-dashed border-slate-300 bg-slate-100 scale-[0.97]" 
+                    : "border-slate-100 hover:border-indigo-400 hover:shadow-2xl hover:shadow-indigo-600/10"
+                )}
+              >
+                 {isFiltered && (
+                   <div className="absolute inset-0 z-20 flex items-center justify-center pointer-events-none">
+                     <div className="bg-slate-900/10 backdrop-blur-[2px] w-full h-full flex items-center justify-center">
+                       <span className="bg-slate-900 text-white text-[10px] font-black uppercase tracking-[0.3em] px-6 py-3 rounded-2xl shadow-2xl rotate-[-5deg]">
+                         Hidden by Category Filter
+                       </span>
+                     </div>
                    </div>
                  )}
-                 
-                 {/* Visual Badges Layer */}
-                 <div className="absolute top-6 left-6 flex flex-col gap-2 z-10">
-                   <div className="bg-indigo-600 shadow-xl text-white text-[10px] font-black tracking-[0.3em] px-5 py-2 rounded-full uppercase border-2 border-white/20">
-                     RANK #{prize.priority}
-                   </div>
-                   {prize.category ? (
-                     <div className="bg-amber-500 shadow-lg text-white text-[9px] font-black tracking-[0.2em] px-4 py-1.5 rounded-full uppercase border-2 border-white/30 backdrop-blur-sm">
-                       {prize.category}
-                     </div>
+
+                 <div className="h-56 bg-slate-50 relative overflow-hidden">
+                   {prize.image ? (
+                     <img 
+                       src={prize.image} 
+                       alt={prize.name} 
+                       className={cn(
+                        "w-full h-full object-cover transition-transform duration-700 opacity-90 group-hover:opacity-100",
+                        !isFiltered && "group-hover:scale-110"
+                       )}
+                     />
                    ) : (
-                     <div className="bg-slate-800/80 shadow-lg text-white text-[9px] font-black tracking-[0.2em] px-4 py-1.5 rounded-full uppercase border-2 border-white/20 backdrop-blur-sm">
-                       ALL ACCESS
+                     <div className="w-full h-full flex flex-col items-center justify-center text-slate-300 gap-3">
+                       <ImageIcon size={48} className="animate-pulse" />
                      </div>
                    )}
+                   
+                   {/* Visual Badges Layer */}
+                   <div className="absolute top-6 left-6 flex flex-col gap-2 z-10">
+                     <div className="bg-indigo-600 shadow-xl text-white text-[10px] font-black tracking-[0.3em] px-5 py-2 rounded-full uppercase border-2 border-white/20">
+                       RANK #{prize.priority}
+                     </div>
+                     {prize.category && (
+                       <div className="bg-amber-500 shadow-lg text-white text-[9px] font-black tracking-[0.2em] px-4 py-1.5 rounded-full uppercase border-2 border-white/30 backdrop-blur-sm">
+                         {prize.category}
+                       </div>
+                     )}
+                   </div>
+                   
+                   <div className="absolute top-6 right-6 z-10">
+                      <button 
+                        onClick={() => updatePrize(prize.id, { isActive: !prize.isActive })}
+                        className={cn(
+                          "w-12 h-12 flex items-center justify-center rounded-2xl shadow-xl transition-all border-2",
+                          prize.isActive 
+                            ? "bg-emerald-500 text-white border-emerald-400 rotate-0" 
+                            : "bg-slate-800 text-slate-400 border-slate-700 rotate-12"
+                        )}
+                      >
+                        <ShieldCheck size={20} />
+                      </button>
+                   </div>
+  
+                   {/* Gradient Overlay */}
+                   <div className="absolute inset-x-0 bottom-0 h-24 bg-gradient-to-t from-black/50 to-transparent"></div>
                  </div>
                  
-                 <div className="absolute top-6 right-6 z-10">
-                    <button 
-                      onClick={() => updatePrize(prize.id, { isActive: !prize.isActive })}
-                      className={cn(
-                        "w-12 h-12 flex items-center justify-center rounded-2xl shadow-xl transition-all border-2",
-                        prize.isActive 
-                          ? "bg-emerald-500 text-white border-emerald-400 rotate-0" 
-                          : "bg-slate-800 text-slate-400 border-slate-700 rotate-12"
-                      )}
-                    >
-                      <ShieldCheck size={20} />
-                    </button>
-                 </div>
-
-                 {/* Gradient Overlay */}
-                 <div className="absolute inset-x-0 bottom-0 h-24 bg-gradient-to-t from-black/50 to-transparent"></div>
-               </div>
-               
-               <div className="p-6 md:p-10 -mt-6 relative bg-white rounded-t-[3rem] border-t border-slate-50">
-                    <div className="flex flex-col gap-4 mb-8">
-                       <div className="flex items-center justify-between group/title">
-                        <input 
-                          type="text" 
-                          value={prize.name}
-                          onChange={(e) => updatePrize(prize.id, { name: e.target.value })}
-                          className="font-black text-2xl italic uppercase tracking-tighter text-slate-900 focus:outline-none focus:text-indigo-600 bg-transparent py-1 px-2 rounded-lg border border-transparent hover:border-slate-100 focus:border-indigo-200 transition-all flex-1"
-                          placeholder="Tên giải thưởng"
-                        />
-                       </div>
-
-                       <div className="flex items-center gap-3">
-                          <button 
-                            onClick={() => setIsEditingPrize(prize)}
-                            className="flex-1 px-5 py-3 flex items-center justify-center gap-3 text-indigo-600 bg-indigo-50 hover:bg-indigo-600 hover:text-white rounded-2xl transition-all shadow-sm font-black text-[10px] uppercase tracking-widest border-2 border-indigo-100/50"
-                          >
-                            <Edit3 size={16} /> CHỈNH SỬA CHI TIẾT
-                          </button>
-                          <button 
-                           onClick={() => handleDeletePrize(prize.id)}
-                           className="w-12 h-12 flex items-center justify-center text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-2xl transition-all border-2 border-slate-100"
-                          >
-                            <Trash2 size={20} />
-                          </button>
-                       </div>
-                    </div>
+                 <div className={cn(
+                   "p-6 md:p-10 -mt-6 relative rounded-t-[3rem] border-t transition-colors",
+                   isFiltered ? "bg-slate-50 border-slate-200" : "bg-white border-slate-50"
+                 )}>
+                      <div className="flex flex-col gap-4 mb-4">
+                         <div className="space-y-1">
+                           <div className="flex items-center gap-2">
+                             {prize.category ? (
+                               <span className="text-[9px] font-black uppercase text-amber-600 bg-amber-50 px-2 py-0.5 rounded border border-amber-100 tracking-widest">
+                                 {prize.category}
+                               </span>
+                             ) : (
+                               <span className="text-[9px] font-black uppercase text-slate-400 bg-slate-50 px-2 py-0.5 rounded border border-slate-100 tracking-widest">
+                                 GLOBAL PRIZE
+                               </span>
+                             )}
+                           </div>
+                           <div className="flex items-center justify-between group/title">
+                            <input 
+                              type="text" 
+                              value={prize.name}
+                              onChange={(e) => updatePrize(prize.id, { name: e.target.value })}
+                              className="font-black text-2xl italic uppercase tracking-tighter text-slate-900 focus:outline-none focus:text-indigo-600 bg-transparent py-1 px-2 rounded-lg border border-transparent hover:border-slate-100 focus:border-indigo-200 transition-all flex-1"
+                              placeholder="Tên giải thưởng"
+                            />
+                           </div>
+                         </div>
+  
+                         <div className="flex items-center gap-3">
+                            <button 
+                              onClick={() => setIsEditingPrize(prize)}
+                              className="flex-1 px-5 py-3 flex items-center justify-center gap-3 text-indigo-600 bg-indigo-50 hover:bg-indigo-600 hover:text-white rounded-2xl transition-all shadow-sm font-black text-[10px] uppercase tracking-widest border-2 border-indigo-100/50"
+                            >
+                              <Edit3 size={16} /> CHỈNH SỬA CHI TIẾT
+                            </button>
+                            <button 
+                             onClick={() => handleDeletePrize(prize.id)}
+                             className="w-12 h-12 flex items-center justify-center text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-2xl transition-all border-2 border-slate-100"
+                            >
+                              <Trash2 size={20} />
+                            </button>
+                         </div>
+                      </div>
 
                   {/* Quick Stats Panel */}
                   <div className="grid grid-cols-2 gap-4">
@@ -418,9 +457,10 @@ export default function PrizeManager({ state, updateState }: { state: AppState, 
                   )}
                </div>
             </div>
-          ))}
-        </div>
-      </section>
+          );
+        })}
+      </div>
+    </section>
 
       {/* Edit Prize Modal */}
       <AnimatePresence>
@@ -492,13 +532,31 @@ export default function PrizeManager({ state, updateState }: { state: AppState, 
                         <p className="text-[9px] text-slate-400 font-medium px-1">Hoặc dán link ảnh bên dưới</p>
                       </div>
                     </div>
-                    <input 
-                      type="text"
-                      value={isEditingPrize.image}
-                      onChange={e => setIsEditingPrize({ ...isEditingPrize, image: e.target.value })}
-                      className="w-full px-4 py-3 bg-slate-50 border-2 border-slate-100 rounded-2xl focus:border-indigo-500 font-bold outline-none text-[10px]"
-                      placeholder="https://..."
-                    />
+                    <div className="relative group/url">
+                      <input 
+                        type="text"
+                        value={isEditingPrize.image}
+                        onChange={e => setIsEditingPrize({ ...isEditingPrize, image: e.target.value })}
+                        className="w-full pl-4 pr-24 py-3 bg-slate-50 border-2 border-slate-100 rounded-2xl focus:border-indigo-500 font-bold outline-none text-[10px]"
+                        placeholder="https://..."
+                      />
+                      <button 
+                        onClick={async () => {
+                          try {
+                            const text = await navigator.clipboard.readText();
+                            if (text) {
+                              setIsEditingPrize({ ...isEditingPrize, image: text });
+                            }
+                          } catch (err) {
+                            console.error('Clipboard access denied:', err);
+                          }
+                        }}
+                        className="absolute right-2 top-1/2 -translate-y-1/2 px-3 py-1.5 bg-white border border-slate-200 rounded-xl text-[9px] font-black uppercase tracking-widest text-slate-500 hover:text-indigo-600 hover:border-indigo-200 transition-all shadow-sm"
+                        title="Paste from clipboard"
+                      >
+                        Paste Link
+                      </button>
+                    </div>
                   </div>
                 </div>
 

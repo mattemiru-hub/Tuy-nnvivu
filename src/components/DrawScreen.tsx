@@ -3,7 +3,7 @@ import { AppState, Prize, Winner, Ticket, DrawProgram } from '../types';
 import { motion, AnimatePresence } from 'motion/react';
 import confetti from 'canvas-confetti';
 import { Trophy, RefreshCcw, LayoutGrid, ChevronRight, AlertTriangle, Power, Users, Ticket as TicketIcon, Play, Check, Info, X, Zap, Clock, Star, Gift, Music, Image as ImageIcon, Trash2, Maximize2, Minimize2 } from 'lucide-react';
-import { cn, generateId } from '../lib/utils';
+import { cn, generateId, compressImage } from '../lib/utils';
 import { shuffleArray, pickWinner, getEligibleTickets } from '../lib/engine';
 import { sounds } from '../lib/sounds';
 import { useTranslation } from 'react-i18next';
@@ -25,26 +25,46 @@ const DrawHeader = ({
   isFullscreen: boolean,
   toggleFullscreen: () => void
 }) => {
-  const handleBannerUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleBannerUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
       const reader = new FileReader();
-      reader.onload = (event) => {
+      reader.onload = async (event) => {
         const result = event.target?.result as string;
-        updateState(prev => ({
-          ...prev,
-          programs: prev.programs.map(p => p.id === currentProgram.id ? { ...p, thumbnail: result } : p)
-        }));
+        try {
+          const compressed = await compressImage(result);
+          
+          // Update local state first for immediate feedback
+          updateState(prev => ({
+            ...prev,
+            programs: prev.programs.map(p => p.id === currentProgram.id ? { ...p, thumbnail: compressed } : p)
+          }));
+
+          // Persist to Supabase
+          if (isSupabaseConfigured()) {
+            await supabaseService.updateProgram(currentProgram.id, { thumbnail: compressed });
+          }
+        } catch (err) {
+          console.error('Failed to process/save banner:', err);
+        }
       };
       reader.readAsDataURL(file);
     }
   };
 
-  const removeBanner = () => {
-    updateState(prev => ({
-      ...prev,
-      programs: prev.programs.map(p => p.id === currentProgram.id ? { ...p, thumbnail: undefined } : p)
-    }));
+  const removeBanner = async () => {
+    try {
+      updateState(prev => ({
+        ...prev,
+        programs: prev.programs.map(p => p.id === currentProgram.id ? { ...p, thumbnail: undefined } : p)
+      }));
+
+      if (isSupabaseConfigured()) {
+        await supabaseService.updateProgram(currentProgram.id, { thumbnail: '' });
+      }
+    } catch (err) {
+      console.error('Failed to remove banner:', err);
+    }
   };
 
   return (

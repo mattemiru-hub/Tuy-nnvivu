@@ -21,7 +21,7 @@ export function generateId() {
   return Math.random().toString(36).substring(2, 11);
 }
 
-export function compressImage(dataUrl: string, maxWidth = 800, quality = 0.7): Promise<string> {
+export function compressImage(dataUrl: string, maxWidth = 1920, quality = 0.9): Promise<string> {
   return new Promise((resolve) => {
     const img = new Image();
     img.src = dataUrl;
